@@ -1,8 +1,10 @@
 import { db } from "@/lib/db";
+import { requireManagerPage } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function CoursesPage() {
+  await requireManagerPage();
   const courses = await db.course.findMany({
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { lessons: true, enrollments: true } } },

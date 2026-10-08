@@ -11,8 +11,17 @@ type Props = {
   aspects: Aspect[];
   currentUrl?: string | null;
   maxWidth?: number; // output width cap (px) — keeps files small
+  recommendedWidth?: number; // shown as guidance (source image width)
+  minWidth?: number; // below this the admin gets a "too small" warning
+  safeZone?: boolean; // draw a dashed "keep important text inside" frame in the crop view
   onPreview?: (url: string | null) => void;
+  /** Fired when the user picks a local file (as opposed to one handed in through handleRef). */
+  onLocalChoose?: () => void;
+  /** Lets a parent open the crop dialog with a file it obtained elsewhere (e.g. a Drive thumbnail). */
+  handleRef?: React.MutableRefObject<CropHandle | null>;
 };
+
+export type CropHandle = { openFile: (file: File) => void };
 
 const kb = (n: number) => (n < 1024 * 1024 ? `${Math.round(n / 1024)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
 
@@ -21,7 +30,7 @@ const kb = (n: number) => (n < 1024 * 1024 ? `${Math.round(n / 1024)} KB` : `${(
  * ratio. The result is drawn on a canvas at a capped width and re-encoded as WebP, so only a
  * small standard file is uploaded (the server re-validates and re-encodes it anyway).
  */
-export default function CropImageField({ name, label, aspects, currentUrl, maxWidth = 1920, onPreview }: Props) {
+export default function CropImageField({ name, label, aspects, currentUrl, maxWidth = 1920, recommendedWidth, minWidth, safeZone = false, onPreview, onLocalChoose, handleRef }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const viewRef = useRef<HTMLDivElement>(null);
   const chooserRef = useRef<HTMLInputElement>(null);
@@ -32,6 +41,7 @@ export default function CropImageField({ name, label, aspects, currentUrl, maxWi
   const [view, setView] = useState({ w: 0, h: 0 });
   const [aspect, setAspect] = useState(aspects[0]);
   const [zoom, setZoom] = useState(1);
+  const [showSafe, setShowSafe] = useState(true);
   const [off, setOff] = useState({ x: 0, y: 0 });
   const [result, setResult] = useState<{ url: string; info: string } | null>(null);
   const drag = useRef<{ px: number; py: number; ox: number; oy: number } | null>(null);
@@ -84,6 +94,10 @@ export default function CropImageField({ name, label, aspects, currentUrl, maxWi
     };
     img.src = url;
   }
+
+  useEffect(() => {
+    if (handleRef) handleRef.current = { openFile: open };
+  });
 
   function changeZoom(z: number) {
     // zoom around the viewport centre
@@ -163,7 +177,10 @@ export default function CropImageField({ name, label, aspects, currentUrl, maxWi
             className="block text-sm"
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) open(f);
+              if (f) {
+                onLocalChoose?.();
+                open(f);
+              }
             }}
           />
           {result ? (
@@ -172,7 +189,7 @@ export default function CropImageField({ name, label, aspects, currentUrl, maxWi
               <button type="button" onClick={clear} className="underline">ยกเลิกรูปใหม่</button>
             </p>
           ) : (
-            <p className="text-xs text-neutral-500">เลือกรูปแล้วจะเปิดหน้าต่างครอบรูป และย่อเป็น WebP ไม่เกิน {maxWidth}px อัตโนมัติ</p>
+            <p className="text-xs text-neutral-500">เลือกรูปแล้วจะเปิดหน้าต่างครอบรูป และย่อเป็น WebP ไม่เกิน {maxWidth}px อัตโนมัติ{recommendedWidth ? ` (แนะนำภาพต้นฉบับกว้างอย่างน้อย ${minWidth ?? recommendedWidth} px)` : ""}</p>
           )}
         </div>
       </div>
@@ -237,11 +254,31 @@ export default function CropImageField({ name, label, aspects, currentUrl, maxWi
                 style={{ width: natural.w * scale, height: natural.h * scale, transform: `translate(${off.x}px, ${off.y}px)` }}
               />
             )}
+            {safeZone && showSafe && (
+              <div className="pointer-events-none absolute inset-[6%] rounded border-2 border-dashed border-amber-300/90">
+                <span className="absolute -top-0.5 left-1 -translate-y-full rounded bg-amber-300 px-1.5 text-[10px] font-semibold text-neutral-900">พื้นที่ปลอดภัย</span>
+              </div>
+            )}
             {/* rule-of-thirds guide */}
             <div className="pointer-events-none absolute inset-0 grid grid-cols-3 grid-rows-3 opacity-40">
               {Array.from({ length: 9 }, (_, i) => <span key={i} className="border border-white/70" />)}
             </div>
           </div>
+
+          {(recommendedWidth || natural.w > 0) && (
+            <div className="space-y-1 text-xs">
+              <p className="text-neutral-600">ภาพต้นฉบับ {natural.w}×{natural.h} px{recommendedWidth ? ` · ขนาดที่แนะนำกว้าง ${recommendedWidth} px` : ""}</p>
+              {minWidth && natural.w > 0 && natural.w < minWidth && (
+                <p role="alert" className="rounded bg-amber-50 px-2 py-1 text-amber-800">ภาพนี้เล็กกว่าที่แนะนำ (กว้าง {natural.w} px ต่ำกว่า {minWidth} px) อาจไม่คมบนจอใหญ่ ควรใช้ภาพที่ใหญ่กว่านี้</p>
+              )}
+              {safeZone && (
+                <label className="flex min-h-8 items-center gap-2 text-neutral-700">
+                  <input type="checkbox" checked={showSafe} onChange={(e) => setShowSafe(e.target.checked)} className="h-4 w-4" />
+                  แสดงกรอบ “พื้นที่ปลอดภัย” — ข้อความสำคัญควรอยู่ในกรอบสีเหลือง
+                </label>
+              )}
+            </div>
+          )}
 
           <label className="flex items-center gap-3 text-sm">
             ซูม

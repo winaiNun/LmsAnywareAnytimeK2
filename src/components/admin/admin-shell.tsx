@@ -16,7 +16,7 @@ const ICONS: Record<string, string> = {
   close: "M6 6l12 12M18 6 6 18",
 };
 
-type NavItem = { href: string; label: string; icon: string; exact?: boolean };
+type NavItem = { href: string; label: string; icon: string; exact?: boolean; teacher?: boolean };
 const GROUPS: { title: string; items: NavItem[] }[] = [
   { title: "ภาพรวม", items: [{ href: "/admin", label: "แดชบอร์ด", icon: "dashboard", exact: true }] },
   {
@@ -25,7 +25,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/admin/books", label: "คลังสื่อการเรียนรู้", icon: "book" },
       { href: "/admin/courses", label: "คอร์สเรียน", icon: "course" },
       { href: "/admin/sections", label: "เซกชันหน้าแรก", icon: "layout" },
-      { href: "/admin/banners", label: "สไลด์แนะนำ", icon: "banner" },
+      { href: "/admin/banners", label: "สไลด์แนะนำ", icon: "banner", teacher: true },
     ],
   },
   {
@@ -53,9 +53,13 @@ export default function AdminShell({ site, user, children }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
+  // Teachers (lesson creators) only get the pages they may use.
+  const manager = user.role === "ADMIN" || user.role === "LIBRARIAN";
+  const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter((it) => manager || it.teacher) })).filter((g) => g.items.length > 0);
+
   const sidebar = (
     <div className="flex h-full flex-col bg-white">
-      <Link href="/admin" className="flex h-14 shrink-0 items-center gap-3 border-b border-neutral-200 px-5 font-bold">
+      <Link href={manager ? "/admin" : "/admin/banners"} className="flex h-14 shrink-0 items-center gap-3 border-b border-neutral-200 px-5 font-bold">
         {site.logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={site.logoUrl} alt="" className="h-8 w-8 object-contain" />
@@ -65,7 +69,7 @@ export default function AdminShell({ site, user, children }: Props) {
         <span className="truncate">{site.systemName}</span>
       </Link>
       <nav aria-label="เมนูแอดมิน" className="flex-1 space-y-5 overflow-y-auto p-3">
-        {GROUPS.map((g) => (
+        {groups.map((g) => (
           <div key={g.title}>
             <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-neutral-400">{g.title}</p>
             {g.items.map((it) => {
@@ -118,7 +122,7 @@ export default function AdminShell({ site, user, children }: Props) {
           <div className="ml-auto flex items-center gap-3">
             <div className="hidden text-right text-sm leading-tight sm:block">
               <p className="font-semibold">{user.name}</p>
-              <p className="text-xs text-white/70">{user.role === "ADMIN" ? "ผู้ดูแลระบบ" : "บรรณารักษ์"}</p>
+              <p className="text-xs text-white/70">{user.role === "ADMIN" ? "ผู้ดูแลระบบ" : user.role === "LIBRARIAN" ? "บรรณารักษ์" : "ผู้สร้างบทเรียน"}</p>
             </div>
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 font-semibold">{user.name.slice(0, 1) || "A"}</span>
           </div>

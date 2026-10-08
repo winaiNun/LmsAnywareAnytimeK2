@@ -37,3 +37,9 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .hero-aurora { animation: none; }
 }
+
+/* Slideshow: the active pill fills over one slide interval. */
+@keyframes slide-progress {
+  from { width: 0; }
+  to { width: 100%; }
+}

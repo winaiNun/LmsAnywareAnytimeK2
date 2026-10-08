@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { requireManagerPage } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ const ROLE: Record<string, [string, string]> = {
 };
 
 export default async function UsersPage() {
+  await requireManagerPage();
   const [users, total] = await Promise.all([
     db.user.findMany({ orderBy: { createdAt: "desc" }, take: 50, include: { _count: { select: { loans: true, enrollments: true } } } }),
     db.user.count(),

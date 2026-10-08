@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { requireManagerPage } from "@/lib/permissions";
 import { BarChart, Donut } from "@/components/admin/charts";
 import { db } from "@/lib/db";
+import { THAI_MONTHS_SHORT, formatThaiDate, lastMonthsBangkok } from "@/lib/thai-date";
 
 export const dynamic = "force-dynamic";
 
 const nf = new Intl.NumberFormat("th-TH");
-const dt = (d: Date) => d.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
+const dt = (d: Date) => formatThaiDate(d);
 
 function StatCard({ label, value, hint, from, to, icon }: { label: string; value: number; hint: string; from: string; to: string; icon: string }) {
   return (
@@ -29,9 +31,12 @@ const Card = ({ title, action, children }: { title: string; action?: React.React
 );
 
 export default async function AdminDashboard() {
+  await requireManagerPage();
   const now = new Date();
   const since30 = new Date(now.getTime() - 30 * 86400000);
-  const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+  // Month buckets are Bangkok calendar months, not the server's (a sign-up at 00:30 on the 1st counts for that month).
+  const months = lastMonthsBangkok(6, now);
+  const sixMonthsAgo = months[0].start;
 
   const [users, newUsers, books, copies, courses, publishedCourses, activeLoans, overdueLoans, returnedLoans, enrollments, recentUsers, latestLoans, memberDates, courseStats] =
     await Promise.all([
@@ -53,10 +58,9 @@ export default async function AdminDashboard() {
 
   const courseTitles = new Map((await db.course.findMany({ where: { id: { in: courseStats.map((c) => c.courseId) } } })).map((c) => [c.id, c.title]));
 
-  const months = Array.from({ length: 6 }, (_, i) => new Date(now.getFullYear(), now.getMonth() - 5 + i, 1));
   const monthly = months.map((m) => ({
-    label: m.toLocaleDateString("th-TH", { month: "short" }),
-    value: memberDates.filter((u) => u.createdAt.getFullYear() === m.getFullYear() && u.createdAt.getMonth() === m.getMonth()).length,
+    label: THAI_MONTHS_SHORT[m.month - 1],
+    value: memberDates.filter((u) => u.createdAt >= m.start && u.createdAt < m.end).length,
   }));
 
   const onTime = activeLoans - overdueLoans;

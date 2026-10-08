@@ -1,4 +1,5 @@
 import { getHomeSections } from "@/lib/sections";
+import { requireManagerPage } from "@/lib/permissions";
 import { moveSection } from "./actions";
 import { SectionAccordion, SectionCard } from "./section-accordion";
 import SectionForm from "./section-form";
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 const BG_LABEL = { none: "", solid: "พื้นหลังสีเดียว", gradient: "พื้นหลังไล่สี", image: "พื้นหลังภาพ" } as const;
 
 export default async function SectionsPage() {
+  await requireManagerPage();
   const sections = await getHomeSections();
 
   return (

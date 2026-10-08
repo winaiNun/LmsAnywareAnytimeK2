@@ -3,7 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { getSiteInfo } from "@/lib/site";
 import NavbarClient from "./navbar-client";
 
-const STAFF = ["ADMIN", "LIBRARIAN"];
+const STAFF = ["ADMIN", "LIBRARIAN", "TEACHER"]; // may open the back office
 
 export default async function SiteNavbar() {
   const [session, site] = await Promise.all([getServerSession(authOptions), getSiteInfo()]);

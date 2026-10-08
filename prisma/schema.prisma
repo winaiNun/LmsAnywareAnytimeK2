@@ -27,6 +27,7 @@ model User {
 
   loans       Loan[]
   enrollments Enrollment[]
+  banners     Banner[]     @relation("BannerCreator")
 }
 
 // ---------- Library ----------
@@ -149,6 +150,12 @@ model Banner {
   sortOrder  Int       @default(0)
   startAt    DateTime?
   endAt      DateTime?
+  newTab     Boolean   @default(false) // open the link in a new tab (always true for external links)
+  sourceUrl  String? // public Google Drive link the image was taken from (a snapshot is stored)
+  pinned     Boolean   @default(false) // admin-only: pinned slides always come first
+  published  Boolean   @default(true) // approved by an admin; slides made by others start as false
+  createdById String?
+  createdBy  User?     @relation("BannerCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
@@ -168,6 +175,15 @@ model SiteSetting {
   heroBgColor    String   @default("#0B2A6F") // behind / under the video
   overlayOpacity Int      @default(45) // 0-90, dark layer over the video
   fadeSeconds    Float    @default(1.5) // video fade in/out at each loop
+  // recommended-slides slideshow look
+  slideRadius    Int      @default(0) // corner radius px, 0-32 (ignored when full width)
+  slideEffect    String   @default("slide") // slide | fade | zoom | wipe | blur
+  slideInterval  Float    @default(5) // seconds per slide
+  slideLayout    String   @default("contained") // contained | full
+  slideAutoplay  Boolean  @default(true)
+  slideArrows    Boolean  @default(true)
+  slideRandom    Boolean  @default(false) // use every effect, picked at random for each change
+  slideShuffle   Boolean  @default(false) // shuffle slide order on each page load (pinned stay first)
   updatedAt      DateTime @updatedAt
 }
 

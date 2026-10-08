@@ -14,7 +14,10 @@
     "db:demo:clear": "tsx prisma/demo.ts --clear",
     "storage:migrate": "tsx scripts/migrate-local-to-s3.ts",
     "postinstall": "prisma generate",
-    "vercel-build": "prisma generate && prisma migrate deploy && next build"
+    "vercel-build": "prisma generate && prisma migrate deploy && next build",
+    "test:dates": "tsx scripts/test-dates.ts",
+    "test:drive": "tsx scripts/test-drive.ts",
+    "test": "npm run test:dates && npm run test:drive"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1147.0",

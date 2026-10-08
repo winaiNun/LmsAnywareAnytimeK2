@@ -2,7 +2,7 @@ import Link from "next/link";
 import SiteNavbar from "@/components/site-navbar";
 import BannerCarousel from "@/components/banner-carousel";
 import SiteHero from "@/components/site-hero";
-import { getActiveBanners } from "@/lib/banners";
+import { getActiveBanners, getSlideshowConfig, orderForDisplay } from "@/lib/banners";
 import { db } from "@/lib/db";
 import { HEADING_ALIGN, HEADING_SIZE, sectionBackground } from "@/lib/section-styles";
 import { getHomeSections, type HomeSectionConfig } from "@/lib/sections";
@@ -14,7 +14,7 @@ const PALETTE = ["#1E3A8A", "#0F766E", "#9F1239", "#475569", "#7C3AED", "#B45309
 const colorOf = (id: string) => PALETTE[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % PALETTE.length];
 
 /** One home-page block: full-width background, centered content, styled heading. */
-function Block({ cfg, anchor, children }: { cfg: HomeSectionConfig; anchor?: string; children: React.ReactNode }) {
+function Block({ cfg, anchor, bleed = false, children }: { cfg: HomeSectionConfig; anchor?: string; bleed?: boolean; children: React.ReactNode }) {
   const bg = sectionBackground({ mode: cfg.bgMode, color: cfg.bgColor, color2: cfg.bgColor2, direction: cfg.bgDirection, imageUrl: cfg.bgImageUrl, overlay: cfg.bgOverlay });
   return (
     <section
@@ -31,24 +31,27 @@ function Block({ cfg, anchor, children }: { cfg: HomeSectionConfig; anchor?: str
           </h2>
           {cfg.subtitle && <p className="mt-1 opacity-80">{cfg.subtitle}</p>}
         </header>
-        {children}
+        {!bleed && children}
       </div>
+      {/* edge-to-edge content (full-width slideshow) sits outside the centred container */}
+      {bleed && <div className="relative mt-6">{children}</div>}
     </section>
   );
 }
 
 export default async function HomePage() {
-  const [site, sections, banners, categories, books, courses] = await Promise.all([
+  const [site, sections, banners, slideshow, categories, books, courses] = await Promise.all([
     getSiteInfo(),
     getHomeSections(),
     getActiveBanners(),
+    getSlideshowConfig(),
     db.category.findMany({ include: { _count: { select: { books: true } } }, orderBy: { name: "asc" }, take: 4 }),
     db.book.findMany({ orderBy: { createdAt: "desc" }, take: 5, include: { authors: { include: { author: true } } } }),
     db.course.findMany({ where: { published: true }, orderBy: { createdAt: "desc" }, take: 3, include: { _count: { select: { lessons: true, enrollments: true } } } }),
   ]);
 
   const content: Record<string, React.ReactNode> = {
-    recommended: banners.length > 0 && <BannerCarousel banners={banners} />,
+    recommended: banners.length > 0 && <BannerCarousel banners={orderForDisplay(banners, slideshow.shuffle)} config={slideshow} />,
     categories: (
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {categories.map((c) => (
@@ -94,7 +97,7 @@ export default async function HomePage() {
       {sections
         .filter((s) => s.visible && content[s.key])
         .map((s) => (
-          <Block key={s.key} cfg={s} anchor={anchors[s.key]}>
+          <Block key={s.key} cfg={s} anchor={anchors[s.key]} bleed={s.key === "recommended" && slideshow.layout === "full"}>
             {content[s.key]}
           </Block>
         ))}
@@ -105,6 +108,7 @@ export default async function HomePage() {
           <Link href="/login" className="hover:text-brand">เข้าสู่ระบบ</Link>
         </div>
       </footer>
+      <div className="h-[calc(4rem+env(safe-area-inset-bottom))] md:hidden" aria-hidden />
     </>
   );
 }

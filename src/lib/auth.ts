@@ -40,6 +40,26 @@ export const authOptions: NextAuthOptions = {
         return { id: user.id, email: user.email, name: user.name, role: user.role, remember: raw?.remember === "true" };
       },
     }),
+    // ---- DEV-ONLY shortcut (remove before go-live) --------------------------------------------
+    // One-click sign-in as the first active user of a role. Only registered when NODE_ENV is
+    // "development" (npm run dev), so it does not exist in `next build` / on Vercel.
+    ...(process.env.NODE_ENV === "development"
+      ? [
+          CredentialsProvider({
+            id: "dev-quick-login",
+            name: "Dev quick login",
+            credentials: { role: { label: "Role", type: "text" } },
+            async authorize(raw) {
+              const role = z.enum(["ADMIN", "LIBRARIAN", "TEACHER", "STUDENT"]).safeParse(raw?.role);
+              if (!role.success) return null;
+              const user = await db.user.findFirst({ where: { role: role.data, active: true }, orderBy: { createdAt: "asc" } });
+              if (!user) return null;
+              return { id: user.id, email: user.email, name: user.name, role: user.role, remember: true };
+            },
+          }),
+        ]
+      : []),
+    // ---- end DEV-ONLY ---------------------------------------------------------------------------
   ],
   callbacks: {
     jwt({ token, user }) {

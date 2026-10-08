@@ -1,8 +1,10 @@
 import { db } from "@/lib/db";
+import { requireManagerPage } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function BooksPage() {
+  await requireManagerPage();
   const [books, total] = await Promise.all([
     db.book.findMany({
       orderBy: { createdAt: "desc" },

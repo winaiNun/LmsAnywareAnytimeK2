@@ -11,5 +11,5 @@ function safePath(v: string | string[] | undefined) {
 
 export default async function LoginPage({ searchParams }: { searchParams: { callbackUrl?: string } }) {
   const site = await getSiteInfo();
-  return <LoginForm systemName={site.systemName} areaName={site.areaName} logoUrl={site.logoUrl} callbackUrl={safePath(searchParams.callbackUrl)} />;
+  return <LoginForm systemName={site.systemName} areaName={site.areaName} logoUrl={site.logoUrl} logoBackdrop={site.logoBackdrop} callbackUrl={safePath(searchParams.callbackUrl)} devShortcut={process.env.NODE_ENV === "development"} />;
 }
