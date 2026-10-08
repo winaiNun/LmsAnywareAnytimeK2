@@ -4,7 +4,7 @@ import { fileUrl } from "@/lib/site";
 
 export { ALIGNS, SIZES, BG_MODES, HEADING_ALIGN, HEADING_SIZE } from "@/lib/section-styles";
 
-export const SECTION_KEYS = ["recommended", "categories", "media", "courses"] as const;
+export const SECTION_KEYS = ["recommended", "categories", "media", "courses", "schools"] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 
 export type HomeSectionConfig = {
@@ -45,6 +45,7 @@ const DEFAULTS: Record<SectionKey, Defaults> = {
   categories: { ...base, kind: "หมวดหมู่", title: "เลือกสำรวจตามหมวด" },
   media: { ...base, kind: "สื่อการเรียนรู้", title: "สื่อการเรียนรู้" },
   courses: { ...base, kind: "คอร์สเรียน", title: "คอร์สเรียน" },
+  schools: { ...base, kind: "ทำเนียบโรงเรียน (Anywhere Anytime)", title: "Anywhere Anytime ของโรงเรียนในเขต", subtitle: "สุ่มโรงเรียนมาให้ชมทุกครั้งที่เข้าเว็บ" },
 };
 
 const isOneOf = <T extends readonly string[]>(list: T, v: string): v is T[number] => (list as readonly string[]).includes(v);

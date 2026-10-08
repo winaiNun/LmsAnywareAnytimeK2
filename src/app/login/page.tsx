@@ -9,7 +9,7 @@ function safePath(v: string | string[] | undefined) {
   return p && p.startsWith("/") && !p.startsWith("//") ? p : null;
 }
 
-export default async function LoginPage({ searchParams }: { searchParams: { callbackUrl?: string } }) {
+export default async function LoginPage({ searchParams }: { searchParams: { callbackUrl?: string; changed?: string } }) {
   const site = await getSiteInfo();
-  return <LoginForm systemName={site.systemName} areaName={site.areaName} logoUrl={site.logoUrl} logoBackdrop={site.logoBackdrop} callbackUrl={safePath(searchParams.callbackUrl)} devShortcut={process.env.NODE_ENV === "development"} />;
+  return <LoginForm systemName={site.systemName} areaName={site.areaName} logoUrl={site.logoUrl} logoBackdrop={site.logoBackdrop} callbackUrl={safePath(searchParams.callbackUrl)} devShortcut={process.env.NODE_ENV === "development"} notice={searchParams.changed ? "เปลี่ยนรหัสผ่านเรียบร้อยแล้ว กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่" : null} />;
 }

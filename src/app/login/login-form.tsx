@@ -11,6 +11,7 @@ type Props = {
   logoUrl: string | null;
   logoBackdrop: boolean;
   callbackUrl: string | null;
+  notice?: string | null;
   devShortcut?: boolean; // DEV-ONLY: one-click test logins (only passed when NODE_ENV=development)
 };
 
@@ -31,7 +32,7 @@ function Field({ icon, label, children }: { icon: IconName; label: string; child
   );
 }
 
-export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop, callbackUrl, devShortcut }: Props) {
+export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop, callbackUrl, devShortcut, notice }: Props) {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -110,6 +111,8 @@ export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop,
           <h1 className="text-xl font-semibold">{systemName}</h1>
           {areaName && <p className="mt-1 text-sm text-white/85">{areaName}</p>}
         </div>
+
+        {notice && <p role="status" className="mb-4 rounded bg-white/95 px-3 py-2 text-sm font-medium text-green-700">{notice}</p>}
 
         <form onSubmit={onSubmit} className="space-y-5">
           {mode === "register" && (

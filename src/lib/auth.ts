@@ -37,7 +37,7 @@ export const authOptions: NextAuthOptions = {
         const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
         if (!ok) return null;
 
-        return { id: user.id, email: user.email, name: user.name, role: user.role, remember: raw?.remember === "true" };
+        return { id: user.id, email: user.email, name: user.name, role: user.role, remember: raw?.remember === "true", mustChange: user.mustChangePassword };
       },
     }),
     // ---- DEV-ONLY shortcut (remove before go-live) --------------------------------------------
@@ -67,6 +67,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = user.role;
         token.remember = user.remember;
+        token.mustChange = user.mustChange ?? false;
       }
       return token;
     },
@@ -74,6 +75,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as typeof session.user.role;
+        session.user.mustChange = !!token.mustChange;
       }
       return session;
     },

@@ -20,6 +20,7 @@ export async function getLinkTargets(): Promise<LinkGroup[]> {
         { label: "หน้าแรก", url: "/" },
         { label: "ส่วนสื่อการเรียนรู้ (หน้าแรก)", url: "/#media" },
         { label: "ส่วนคอร์สเรียน (หน้าแรก)", url: "/#courses" },
+        { label: "ทำเนียบ Anywhere Anytime ของโรงเรียน", url: "/schools" },
         { label: "เข้าสู่ระบบ / สมัครสมาชิก", url: "/login" },
       ],
     },

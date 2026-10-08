@@ -1,11 +1,13 @@
 import Link from "next/link";
 import SiteNavbar from "@/components/site-navbar";
 import BannerCarousel from "@/components/banner-carousel";
+import SchoolCard from "@/components/school-card";
 import SiteHero from "@/components/site-hero";
 import { getActiveBanners, getSlideshowConfig, orderForDisplay } from "@/lib/banners";
 import { db } from "@/lib/db";
 import { HEADING_ALIGN, HEADING_SIZE, sectionBackground } from "@/lib/section-styles";
 import { getHomeSections, type HomeSectionConfig } from "@/lib/sections";
+import { countPublicSchools, getRandomSchools } from "@/lib/schools";
 import { getSiteInfo } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +42,7 @@ function Block({ cfg, anchor, bleed = false, children }: { cfg: HomeSectionConfi
 }
 
 export default async function HomePage() {
-  const [site, sections, banners, slideshow, categories, books, courses] = await Promise.all([
+  const [site, sections, banners, slideshow, categories, books, courses, schools, schoolTotal] = await Promise.all([
     getSiteInfo(),
     getHomeSections(),
     getActiveBanners(),
@@ -48,6 +50,8 @@ export default async function HomePage() {
     db.category.findMany({ include: { _count: { select: { books: true } } }, orderBy: { name: "asc" }, take: 4 }),
     db.book.findMany({ orderBy: { createdAt: "desc" }, take: 5, include: { authors: { include: { author: true } } } }),
     db.course.findMany({ where: { published: true }, orderBy: { createdAt: "desc" }, take: 3, include: { _count: { select: { lessons: true, enrollments: true } } } }),
+    getRandomSchools(), // 12 = 4 columns × 3 rows, different on every visit
+    countPublicSchools(),
   ]);
 
   const content: Record<string, React.ReactNode> = {
@@ -87,8 +91,26 @@ export default async function HomePage() {
         ))}
       </div>
     ),
+    schools:
+      schools.length > 0 && (
+        <div className="space-y-6">
+          <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+            {schools.map((s) => (
+              <li key={s.id}>
+                <SchoolCard school={s} />
+              </li>
+            ))}
+          </ul>
+          <div className="flex justify-center">
+            <Link href="/schools" className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-brand px-7 font-semibold text-white shadow-sm hover:bg-brand-dark">
+              ดูข้อมูลทั้งหมด ({schoolTotal.toLocaleString("th-TH")} โรงเรียน)
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            </Link>
+          </div>
+        </div>
+      ),
   };
-  const anchors: Record<string, string> = { media: "media", courses: "courses" };
+  const anchors: Record<string, string> = { media: "media", courses: "courses", schools: "schools" };
 
   return (
     <>

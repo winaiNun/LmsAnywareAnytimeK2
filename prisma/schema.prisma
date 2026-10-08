@@ -28,6 +28,8 @@ model User {
   loans       Loan[]
   enrollments Enrollment[]
   banners     Banner[]     @relation("BannerCreator")
+  school      School?      @relation("SchoolAccount") // set when this account manages a school
+  mustChangePassword Boolean @default(false) // temporary password issued by an admin/import
 }
 
 // ---------- Library ----------
@@ -205,4 +207,41 @@ model HomeSection {
   bgImageKey  String? // site/section-<uuid>.webp
   bgOverlay   Int     @default(0) // 0-80, dark layer over a background image
   updatedAt  DateTime @updatedAt
+}
+
+// ---------- School directory (Anywhere Anytime sites of the district) ----------
+model School {
+  id            String    @id @default(cuid())
+  code          String    @unique // รหัสโรงเรียน (8 digits)
+  name          String
+  district      String // อำเภอ
+  center        String // ศูนย์เครือข่าย
+  email         String? // login e-mail of the school account (kept here for the admin list)
+  siteUrl       String? // link to the school's Anywhere Anytime site
+  cardSourceUrl String? // Google Drive link of the school's card image
+  cardKey       String? // stored WebP: schools/<code>-<rand>.webp (public prefix)
+  cardStatus    String    @default("none") // none | ok | failed
+  cardError     String?
+  cardFetchedAt DateTime?
+  active        Boolean   @default(true)
+  accountId     String?   @unique
+  account       User?     @relation("SchoolAccount", fields: [accountId], references: [id], onDelete: SetNull)
+  updatedById   String? // last editor (admin or the school itself)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([district, center])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String // e.g. school.import, school.edit
+  entity    String
+  entityId  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
 }

@@ -12,6 +12,7 @@ const ICONS: Record<string, string> = {
   book: "M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM8 7h7",
   course: "M5 3l14 9-14 9z",
   layout: "M3 4h18v5H3zM3 13h8v7H3zM15 13h6v7h-6z",
+  school: "M3 10.2 12 4l9 6.2M5 10v9.5a.5.5 0 0 0 .5.5H9v-5.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V20h3.5a.5.5 0 0 0 .5-.5V10M12 4V2M12 2h3",
   menu: "M4 7h16M4 12h16M4 17h16",
   close: "M6 6l12 12M18 6 6 18",
 };
@@ -25,6 +26,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/admin/books", label: "คลังสื่อการเรียนรู้", icon: "book" },
       { href: "/admin/courses", label: "คอร์สเรียน", icon: "course" },
       { href: "/admin/sections", label: "เซกชันหน้าแรก", icon: "layout" },
+      { href: "/admin/schools", label: "โรงเรียน", icon: "school" },
       { href: "/admin/banners", label: "สไลด์แนะนำ", icon: "banner", teacher: true },
     ],
   },

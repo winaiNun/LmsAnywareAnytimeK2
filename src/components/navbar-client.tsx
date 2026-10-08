@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/", label: "หน้าแรก" },
   { href: "/#media", label: "สื่อการเรียนรู้" },
   { href: "/#courses", label: "คอร์สเรียน" },
+  { href: "/schools", label: "โรงเรียน" },
   { href: "/#about", label: "เกี่ยวกับ" },
 ];
 
@@ -47,7 +48,7 @@ export default function NavbarClient({ user, name, logoUrl }: Props) {
     { href: "/", label: "หน้าแรก", icon: "home" },
     { href: "/#media", label: "สื่อ", icon: "library", id: "media" },
     { href: "/#courses", label: "คอร์ส", icon: "course", id: "courses" },
-    user?.isStaff ? { href: "/admin", label: "จัดการ", icon: "shield" } : { href: "/#about", label: "เกี่ยวกับ", icon: "info", id: "about" },
+    user?.isStaff ? { href: "/admin", label: "จัดการ", icon: "shield" } : { href: "/schools", label: "โรงเรียน", icon: "school" },
     user ? { href: "/dashboard", label: "บัญชี", icon: "userCircle" } : { href: "/login", label: "เข้าสู่ระบบ", icon: "login" },
   ];
 

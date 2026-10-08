@@ -38,3 +38,6 @@ next-env.d.ts
 # local storage / env
 /storage
 .env
+
+# private data (school lists, issued credentials) — never commit
+/data/

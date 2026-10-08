@@ -1,10 +1,14 @@
 import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
+import { db } from "@/lib/db";
 import Link from "next/link";
 import SignOutButton from "./sign-out-button";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
+  // a school account goes straight to its own page
+  if (session && (await db.school.findUnique({ where: { accountId: session.user.id }, select: { id: true } }))) redirect("/school");
 
   return (
     <main className="mx-auto max-w-2xl space-y-4 p-6">
@@ -16,6 +20,7 @@ export default async function DashboardPage() {
         {["ADMIN", "LIBRARIAN"].includes(session?.user.role ?? "") && (
           <Link href="/admin" className="flex min-h-10 items-center rounded bg-brand px-4 font-semibold text-white">ไปหลังบ้าน</Link>
         )}
+        <Link href="/account/password" className="flex min-h-10 items-center rounded border px-4">เปลี่ยนรหัสผ่าน</Link>
         <Link href="/" className="flex min-h-10 items-center rounded border px-4">หน้าแรก</Link>
         <SignOutButton />
       </div>

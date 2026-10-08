@@ -11,7 +11,7 @@ const TYPES: Record<string, string> = {
 
 // Only public site assets are served here. Member-only files (books, lessons)
 // will get their own permission-checked route.
-const PUBLIC_PREFIXES = ["banners/", "site/"];
+const PUBLIC_PREFIXES = ["banners/", "site/", "schools/"];
 
 export async function GET(req: Request, { params }: { params: { key: string[] } }) {
   const key = params.key.join("/");

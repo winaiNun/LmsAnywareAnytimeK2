@@ -6,9 +6,10 @@ declare module "next-auth" {
   interface User {
     role: Role;
     remember?: boolean;
+    mustChange?: boolean;
   }
   interface Session {
-    user: { id: string; role: Role; name?: string | null; email?: string | null };
+    user: { id: string; role: Role; mustChange?: boolean; name?: string | null; email?: string | null };
   }
 }
 
@@ -17,5 +18,6 @@ declare module "next-auth/jwt" {
     id?: string;
     role?: Role;
     remember?: boolean;
+    mustChange?: boolean;
   }
 }
