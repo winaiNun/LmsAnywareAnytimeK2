@@ -1,0 +1,192 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url       = env("DATABASE_URL") // app connection (pooled on serverless hosts)
+  directUrl = env("DIRECT_URL") // direct connection, used by prisma migrate
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  LIBRARIAN
+  STUDENT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(STUDENT)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  loans       Loan[]
+  enrollments Enrollment[]
+}
+
+// ---------- Library ----------
+model Author {
+  id    String @id @default(cuid())
+  name  String
+  books BookAuthor[]
+}
+
+model Category {
+  id    String @id @default(cuid())
+  name  String @unique
+  books Book[]
+}
+
+model Book {
+  id          String   @id @default(cuid())
+  title       String
+  isbn        String?  @unique
+  description String?
+  coverKey    String? // storage key
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime @default(now())
+
+  authors BookAuthor[]
+  files   BookFile[]
+  copies  BookCopy[]
+
+  @@index([title])
+}
+
+model BookAuthor {
+  bookId   String
+  authorId String
+  book     Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  author   Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, authorId])
+}
+
+model BookFile {
+  id         String @id @default(cuid())
+  bookId     String
+  book       Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  storageKey String // fileId หรือ path ขึ้นกับ STORAGE_DRIVER
+  driver     String
+  mimeType   String
+  sizeBytes  Int
+}
+
+model BookCopy {
+  id       String @id @default(cuid())
+  bookId   String
+  book     Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  barcode  String @unique
+  loans    Loan[]
+}
+
+model Loan {
+  id         String    @id @default(cuid())
+  copyId     String
+  userId     String
+  copy       BookCopy  @relation(fields: [copyId], references: [id])
+  user       User      @relation(fields: [userId], references: [id])
+  borrowedAt DateTime  @default(now())
+  dueAt      DateTime
+  returnedAt DateTime?
+
+  @@index([userId])
+}
+
+// ---------- LMS ----------
+model Course {
+  id          String  @id @default(cuid())
+  title       String
+  description String?
+  published   Boolean @default(false)
+  createdAt   DateTime @default(now())
+
+  lessons     Lesson[]
+  enrollments Enrollment[]
+}
+
+model Lesson {
+  id       String  @id @default(cuid())
+  courseId String
+  course   Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title    String
+  position Int
+  content  String? // markdown
+  videoUrl String?
+
+  @@index([courseId, position])
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress  Int      @default(0) // 0-100
+  createdAt DateTime @default(now())
+
+  @@unique([userId, courseId])
+}
+
+// ---------- Site content ----------
+model Banner {
+  id         String    @id @default(cuid())
+  title      String
+  subtitle   String?
+  imageKey   String? // storage key, e.g. banners/<uuid>.webp
+  linkUrl    String?
+  buttonText String?
+  bgColor    String    @default("#EAF0FF")
+  showText   Boolean   @default(true) // overlay title/subtitle/button on the image
+  active     Boolean   @default(true)
+  sortOrder  Int       @default(0)
+  startAt    DateTime?
+  endAt      DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([active, sortOrder])
+}
+
+// One row (id = "main"): identity of this deployment/district. Another district
+// gets its own database (or, later, its own row keyed by area).
+model SiteSetting {
+  id             String   @id @default("main")
+  systemName     String   @default("Anyware Anytime")
+  areaName       String   @default("")
+  tagline        String   @default("")
+  logoKey        String?
+  logoBackdrop   Boolean  @default(false) // white rounded plate behind the hero logo
+  heroVideoKey   String?
+  heroBgColor    String   @default("#0B2A6F") // behind / under the video
+  overlayOpacity Int      @default(45) // 0-90, dark layer over the video
+  fadeSeconds    Float    @default(1.5) // video fade in/out at each loop
+  updatedAt      DateTime @updatedAt
+}
+
+// Home page blocks below the hero. A row only exists once an admin edits/moves it;
+// missing rows fall back to the defaults in src/lib/sections.ts.
+model HomeSection {
+  key        String   @id // recommended | categories | media | courses
+  title      String
+  subtitle   String   @default("")
+  visible    Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  align      String   @default("left") // left | center | right (heading position)
+  titleSize  String   @default("md") // sm | md | lg
+  titleColor String   @default("#1E1E1E")
+  bgColor    String? // solid colour, or gradient start
+  bgMode      String  @default("none") // none | solid | gradient | image
+  bgColor2    String? // gradient end
+  bgDirection String  @default("to right")
+  bgImageKey  String? // site/section-<uuid>.webp
+  bgOverlay   Int     @default(0) // 0-80, dark layer over a background image
+  updatedAt  DateTime @updatedAt
+}

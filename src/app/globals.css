@@ -3,25 +3,37 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f9f9f9;
+  --foreground: #1e1e1e;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+/* Hero background when no video is uploaded: slow drifting light. */
+.hero-aurora {
+  background:
+    radial-gradient(60% 80% at 20% 25%, rgba(0, 82, 255, 0.6), transparent 60%),
+    radial-gradient(50% 70% at 80% 75%, rgba(120, 170, 255, 0.45), transparent 60%);
+  background-size: 140% 140%;
+  animation: aurora 14s ease-in-out infinite alternate;
+}
+@keyframes aurora {
+  from { background-position: 0% 0%; }
+  to { background-position: 100% 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-aurora { animation: none; }
 }

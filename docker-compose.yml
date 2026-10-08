@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lms
+      POSTGRES_PASSWORD: lms_dev_password
+      POSTGRES_DB: lms
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lms -d lms"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8025:8025" # web UI
+      - "1025:1025" # SMTP
+
+  # Local stand-in for Cloudflare R2 / S3 (dev only, no auth). Enable with:
+  #   docker compose --profile s3 up -d s3
+  # (MinIO's images are no longer published on Docker Hub, hence S3Mock.)
+  # Files here are lost when the container is removed - fine for dev; re-run npm run db:demo.
+  s3:
+    image: adobe/s3mock:latest
+    restart: unless-stopped
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: lms
+    ports:
+      - "9090:9090" # S3 API (http)
+    profiles: ["s3"]
+
+volumes:
+  pgdata:
