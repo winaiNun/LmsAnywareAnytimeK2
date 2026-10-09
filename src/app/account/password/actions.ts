@@ -32,6 +32,7 @@ export async function changePassword(_prev: PasswordState, formData: FormData): 
   if (local && next.toLowerCase().includes(local)) return { error: "รหัสผ่านต้องไม่มีส่วนของอีเมลหรือชื่อผู้ใช้" };
 
   await db.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(next, 12), mustChangePassword: false } });
+  await db.trustedDevice.deleteMany({ where: { userId: user.id } }); // PINs set with the old password stop working
   await audit({ actorId: user.id, action: "user.password-change", entity: "User", entityId: user.id });
   return { done: true };
 }

@@ -46,9 +46,7 @@ model User {
   gradeLevel   String? // students: ชั้น
   creatorStatus CreatorStatus @default(NONE)
   creatorReason String?
-  pinHash       String? // optional 6-digit PIN for quick sign-in on a trusted device
-  pinFailCount  Int       @default(0)
-  pinLockedUntil DateTime?
+  devices       TrustedDevice[]
   passwordHash String
   role         Role     @default(STUDENT)
   active       Boolean  @default(true)
@@ -60,6 +58,22 @@ model User {
   banners     Banner[]     @relation("BannerCreator")
   school      School?      @relation("SchoolAccount") // set when this account manages a school
   mustChangePassword Boolean @default(false) // temporary password issued by an admin/import
+}
+
+/// A phone that signed in with a password once and then chose a 6-digit PIN. The PIN only works together
+/// with the random device token kept on that phone (only its hash is stored here).
+model TrustedDevice {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  pinHash    String
+  failCount  Int      @default(0)
+  label      String // e.g. "iPhone · Safari"
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // ---------- Library ----------

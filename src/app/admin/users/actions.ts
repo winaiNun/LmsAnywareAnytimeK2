@@ -98,7 +98,8 @@ export async function resetPassword(id: string, typed?: string): Promise<{ error
   const actor = await assertRole(isAdmin);
   if (typed && typed.length < 8) return { error: "รหัสผ่านอย่างน้อย 8 ตัว" };
   const password = typed || generateTempPassword();
-  const r = await db.user.updateMany({ where: { id }, data: { passwordHash: await bcrypt.hash(password, 10), mustChangePassword: true, pinHash: null, pinFailCount: 0, pinLockedUntil: null } });
+  const r = await db.user.updateMany({ where: { id }, data: { passwordHash: await bcrypt.hash(password, 10), mustChangePassword: true } });
+  await db.trustedDevice.deleteMany({ where: { userId: id } });
   if (!r.count) return { error: "ไม่พบผู้ใช้" };
   await audit({ actorId: actor.id, action: "user.password-reset", entity: "User", entityId: id });
   return { password };

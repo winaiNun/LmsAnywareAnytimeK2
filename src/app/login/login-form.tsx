@@ -5,6 +5,7 @@ import { getSession, signIn } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { Icon, Spinner, type IconName } from "@/components/icons";
 import PinPad from "@/components/pin-pad";
+import { forgetDevice, readDevice, usePhone, type StoredDevice } from "@/lib/use-phone";
 
 type Props = {
   systemName: string;
@@ -36,50 +37,46 @@ function Field({ icon, label, children }: { icon: IconName; label: string; child
 export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop, callbackUrl, devShortcut, notice }: Props) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [method, setMethod] = useState<"password" | "pin">("password");
-  const [saved, setSaved] = useState(""); // last identifier used on this device (PIN sign-in needs it)
+  const phone = usePhone();
+  const [device, setDevice] = useState<StoredDevice | null>(null);
+  const [usePassword, setUsePassword] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [pin, setPin] = useState("");
-
-  // 6th digit entered: sign in straight away (the hidden input already carries the full PIN by now).
-  useEffect(() => {
-    if (method !== "pin" || pin.length !== 6 || !formRef.current) return;
-    if (formRef.current.checkValidity()) formRef.current.requestSubmit();
-    else { formRef.current.reportValidity(); setPin(""); } // username still empty: let them fill it and re-enter
-  }, [pin, method]);
+  const [saved, setSaved] = useState(""); // last identifier used on this device
+  // PIN sign-in exists only on a phone that was set up (device token on it); everywhere else it is the normal form.
+  const method: "pin" | "password" = phone && device && !usePassword ? "pin" : "password";
 
   useEffect(() => {
-    try {
-      const last = localStorage.getItem("lms.lastLogin");
-      if (last) { setSaved(last); setMethod(localStorage.getItem("lms.loginMethod") === "pin" ? "pin" : "password"); }
-    } catch {}
+    setDevice(readDevice());
+    try { setSaved(localStorage.getItem("lms.lastLogin") ?? ""); } catch {}
   }, []);
 
-  function pick(m: "password" | "pin") {
-    setMethod(m);
-    setError("");
-    try { localStorage.setItem("lms.loginMethod", m); } catch {}
-  }
+  // 6th digit entered: sign in straight away.
+  useEffect(() => {
+    if (method === "pin" && pin.length === 6) formRef.current?.requestSubmit();
+  }, [pin, method]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     setBusy(true);
     const form = new FormData(e.currentTarget);
-    const email = String(form.get("email")).trim();
+    const email = String(form.get("email") ?? "").trim();
     const remember = String(form.get("remember") === "on");
 
     const result =
       method === "pin"
-        ? await signIn("pin", { email, pin: String(form.get("pin")), remember, redirect: false })
+        ? await signIn("pin", { token: device?.token, pin, redirect: false })
         : await signIn("credentials", { email, password: String(form.get("password")), remember, redirect: false });
     if (result?.error) {
       setBusy(false);
-      setPin("");
-      setError(method === "pin" ? "PIN ไม่ถูกต้อง หรือถูกล็อกชั่วคราว (ใส่ผิด 5 ครั้งจะล็อก 15 นาที)" : "อีเมล/ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้อง");
+      if (method === "pin") {
+        setPin("");
+        setError("PIN ไม่ถูกต้อง หรือเครื่องนี้ถูกยกเลิกแล้ว (ใส่ผิด 5 ครั้งเครื่องจะถูกยกเลิก) — ใช้รหัสผ่านเข้าสู่ระบบได้");
+      } else setError("อีเมล/ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้อง");
       return;
     }
-    try { localStorage.setItem("lms.lastLogin", email); } catch {}
+    try { if (email) localStorage.setItem("lms.lastLogin", email); } catch {}
     // No explicit destination: staff land in the back office, members on their own page.
     const role = (await getSession())?.user.role;
     window.location.href = callbackUrl ?? (home(role));
@@ -131,29 +128,27 @@ export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop,
         {notice && <p role="status" className="mb-4 rounded bg-white/95 px-3 py-2 text-sm font-medium text-green-700">{notice}</p>}
 
         <form ref={formRef} onSubmit={onSubmit} className="space-y-5">
-          <div role="tablist" aria-label="วิธีเข้าสู่ระบบ" className="grid grid-cols-2 rounded-full bg-white/15 p-1 text-sm font-semibold">
-            {([["password", "รหัสผ่าน"], ["pin", "PIN 6 หลัก"]] as const).map(([m, label]) => (
-              <button key={m} type="button" role="tab" aria-selected={method === m} onClick={() => pick(m)} className={`min-h-10 rounded-full transition ${method === m ? "bg-white text-[#0B2A6F] shadow" : "text-white/90"}`}>
-                {label}
-              </button>
-            ))}
-          </div>
-          <Field icon="mail" label="อีเมลหรือชื่อผู้ใช้">
-            <input key={saved} name="email" type="text" required defaultValue={saved} placeholder="อีเมลหรือชื่อผู้ใช้" autoComplete="username" autoCapitalize="none" className={field} />
-          </Field>
-          {method === "password" ? (
-            <Field icon="lock" label="รหัสผ่าน">
-              <input name="password" type="password" required minLength={8} placeholder="รหัสผ่าน" autoComplete="current-password" className={field} />
-            </Field>
-          ) : (
+          {method === "pin" ? (
             <div>
-              <input type="hidden" name="pin" value={pin} />
+              <p className="mb-4 text-center text-sm text-white/90">สวัสดี <strong className="text-base">{device?.name || "สมาชิก"}</strong><br />กรอก PIN 6 หลักเพื่อเข้าสู่ระบบ</p>
               <PinPad value={pin} onChange={setPin} disabled={busy} />
-              <p className="mt-3 text-center text-xs text-white/80">ตั้ง PIN ได้ที่หน้า “บัญชีของฉัน” หลังเข้าสู่ระบบด้วยรหัสผ่านครั้งแรก</p>
+              <div className="mt-4 flex flex-wrap justify-center gap-x-5 text-sm">
+                <button type="button" onClick={() => { setUsePassword(true); setError(""); }} className="min-h-11 underline underline-offset-4">ใช้รหัสผ่านแทน</button>
+                <button type="button" onClick={() => { forgetDevice(); setDevice(null); setError(""); }} className="min-h-11 underline underline-offset-4">ไม่ใช่ฉัน</button>
+              </div>
             </div>
+          ) : (
+            <>
+              <Field icon="mail" label="อีเมลหรือชื่อผู้ใช้">
+                <input key={saved} name="email" type="text" required defaultValue={saved} placeholder="อีเมลหรือชื่อผู้ใช้" autoComplete="username" autoCapitalize="none" className={field} />
+              </Field>
+              <Field icon="lock" label="รหัสผ่าน">
+                <input name="password" type="password" required minLength={8} placeholder="รหัสผ่าน" autoComplete="current-password" className={field} />
+              </Field>
+            </>
           )}
 
-          {(
+          {method === "password" && (
             <label className="flex min-h-9 items-center gap-2 text-sm text-white/90">
               <input type="checkbox" name="remember" className="h-4 w-4 rounded border-white/70 bg-transparent text-[#0B2A6F] focus:ring-white" />
               จดจำฉันไว้ 30 วัน
@@ -166,23 +161,25 @@ export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop,
             </p>
           )}
 
+          {method === "password" && (
           <button
-            disabled={busy}
-            className="group mt-2 flex min-h-12 w-full items-center justify-center gap-2 bg-[#0B2A6F] text-sm font-semibold tracking-wide text-white shadow-lg transition hover:bg-[#071d52] focus:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-70"
-          >
-            {busy ? (
-              <>
-                <Spinner className="h-5 w-5" />
-                กำลังตรวจสอบ...
-              </>
-            ) : (
-              <>
-                <Icon name="login" className="h-5 w-5" />
-                เข้าสู่ระบบ
-                <Icon name="arrowRight" className="h-4 w-4 opacity-70 transition-transform group-hover:translate-x-1" />
-              </>
-            )}
-          </button>
+              disabled={busy}
+              className="group mt-2 flex min-h-12 w-full items-center justify-center gap-2 bg-[#0B2A6F] text-sm font-semibold tracking-wide text-white shadow-lg transition hover:bg-[#071d52] focus:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-70"
+            >
+              {busy ? (
+                <>
+                  <Spinner className="h-5 w-5" />
+                  กำลังตรวจสอบ...
+                </>
+              ) : (
+                <>
+                  <Icon name="login" className="h-5 w-5" />
+                  เข้าสู่ระบบ
+                  <Icon name="arrowRight" className="h-4 w-4 opacity-70 transition-transform group-hover:translate-x-1" />
+                </>
+              )}
+            </button>
+          )}
         </form>
 
         <Link href="/register" className="mx-auto mt-5 flex min-h-11 w-fit items-center gap-2 text-sm text-white underline underline-offset-4">

@@ -8,7 +8,8 @@ import { audit } from "@/lib/audit";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { profileData, profileSchema } from "@/lib/members";
-import { pinAllowed, pinProblem } from "@/lib/pin";
+import { headers } from "next/headers";
+import { deviceLabel, hashToken, newDeviceToken, pinAllowed, pinProblem } from "@/lib/pin";
 
 export type ProfileState = { error?: string; saved?: boolean } | undefined;
 
@@ -44,8 +45,14 @@ export async function requestCreator(_prev: ProfileState, formData: FormData): P
   return { saved: true };
 }
 
-/** Set or change the quick-sign-in PIN. Needs the account password so a borrowed phone cannot add one. */
-export async function setPin(_prev: ProfileState, formData: FormData): Promise<ProfileState> {
+export type PinState = { error?: string; saved?: boolean; token?: string; name?: string } | undefined;
+
+/**
+ * Set a PIN for THIS phone. Needs the account password so a borrowed phone cannot add one.
+ * With `token` of a device that already exists the PIN is changed, otherwise a new device is registered
+ * and its secret token is returned once for the phone to keep.
+ */
+export async function setPin(formData: FormData): Promise<PinState> {
   const session = await getServerSession(authOptions);
   if (!session) return { error: "กรุณาเข้าสู่ระบบ" };
   const user = await db.user.findUnique({ where: { id: session.user.id } });
@@ -58,16 +65,27 @@ export async function setPin(_prev: ProfileState, formData: FormData): Promise<P
   if (bad) return { error: bad };
   if (!(await bcrypt.compare(String(formData.get("password") ?? ""), user.passwordHash))) return { error: "รหัสผ่านไม่ถูกต้อง" };
 
-  await db.user.update({ where: { id: user.id }, data: { pinHash: await bcrypt.hash(pin, 10), pinFailCount: 0, pinLockedUntil: null } });
+  const pinHash = await bcrypt.hash(pin, 10);
+  const oldToken = String(formData.get("token") ?? "");
+  const existing = /^[0-9a-f]{64}$/.test(oldToken) ? await db.trustedDevice.findFirst({ where: { tokenHash: hashToken(oldToken), userId: user.id } }) : null;
+  if (existing) {
+    await db.trustedDevice.update({ where: { id: existing.id }, data: { pinHash, failCount: 0 } });
+    await audit({ actorId: user.id, action: "user.pin-change", entity: "User", entityId: user.id });
+    revalidatePath("/dashboard");
+    return { saved: true, token: oldToken, name: user.name };
+  }
+  const token = newDeviceToken();
+  await db.trustedDevice.create({ data: { userId: user.id, tokenHash: hashToken(token), pinHash, label: deviceLabel(headers().get("user-agent") ?? "") } });
   await audit({ actorId: user.id, action: "user.pin-set", entity: "User", entityId: user.id });
   revalidatePath("/dashboard");
-  return { saved: true };
+  return { saved: true, token, name: user.name };
 }
 
-export async function removePin(): Promise<void> {
+/** Forget one phone (own devices only). */
+export async function removeDevice(id: string): Promise<void> {
   const session = await getServerSession(authOptions);
   if (!session) return;
-  await db.user.update({ where: { id: session.user.id }, data: { pinHash: null, pinFailCount: 0, pinLockedUntil: null } });
+  await db.trustedDevice.deleteMany({ where: { id, userId: session.user.id } });
   await audit({ actorId: session.user.id, action: "user.pin-remove", entity: "User", entityId: session.user.id });
   revalidatePath("/dashboard");
 }

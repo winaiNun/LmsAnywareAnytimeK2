@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { MEMBER_TYPE_LABEL } from "@/lib/members";
 import { pinAllowed } from "@/lib/pin";
+import { formatThaiDate } from "@/lib/thai-date";
 import Link from "next/link";
 import SignOutButton from "./sign-out-button";
 import { CreatorRequestForm, PinForm, ProfileForm } from "./profile-form";
@@ -16,9 +17,10 @@ export default async function DashboardPage() {
   // a school account goes straight to its own page
   if (await db.school.findUnique({ where: { accountId: session.user.id }, select: { id: true } })) redirect("/school");
 
-  const [user, schools] = await Promise.all([
+  const [user, schools, devices] = await Promise.all([
     db.user.findUnique({ where: { id: session.user.id } }),
     db.school.findMany({ where: { active: true }, select: { id: true, name: true, district: true, center: true }, orderBy: { name: "asc" } }),
+    db.trustedDevice.findMany({ where: { userId: session.user.id }, orderBy: { lastUsedAt: "desc" } }),
   ]);
   if (!user) redirect("/login");
   const isStaff = user.role !== "STUDENT";
@@ -53,7 +55,7 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {pinAllowed(user.role) && <PinForm hasPin={!!user.pinHash} />}
+      {pinAllowed(user.role) && <PinForm devices={devices.map((d) => ({ id: d.id, label: d.label, lastUsed: formatThaiDate(d.lastUsedAt) }))} />}
 
       <ProfileForm
         schools={schools}
