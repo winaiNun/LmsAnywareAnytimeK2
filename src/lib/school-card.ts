@@ -6,6 +6,8 @@ import { randomBytes } from "node:crypto";
 import sharp from "sharp";
 import { db } from "@/lib/db";
 import { fetchDriveImage } from "@/lib/drive-fetch";
+import { storageIsDurable } from "@/lib/schools";
+import { getSiteInfo } from "@/lib/site";
 import { getStorage } from "@/lib/storage";
 
 const CARD_WIDTH = 960; // px; cards are ~16:9 and shown at most ~300 px wide ×2 for high-DPI
@@ -19,6 +21,12 @@ export async function refreshSchoolCard(schoolId: string): Promise<CardResult> {
   if (!school.cardSourceUrl) {
     await db.school.update({ where: { id: schoolId }, data: { cardStatus: "none", cardError: null } });
     return { ok: false, error: "ไม่มีลิงก์การ์ด" };
+  }
+
+  // No durable file storage yet: the public site shows the Drive thumbnail straight from the saved link.
+  if (!storageIsDurable()) {
+    await db.school.update({ where: { id: schoolId }, data: { cardStatus: "ok", cardError: null } });
+    return { ok: true, key: "" };
   }
 
   const img = await fetchDriveImage(school.cardSourceUrl, 1200);
@@ -46,6 +54,7 @@ export async function refreshSchoolCard(schoolId: string): Promise<CardResult> {
 
 /** Store a card the school/admin uploaded directly (already cropped in the browser). */
 export async function storeUploadedCard(schoolId: string, input: Buffer): Promise<CardResult> {
+  if (!storageIsDurable() || !(await getSiteInfo()).allowServerUploads) return { ok: false, error: "ขณะนี้ปิดการอัปโหลดภาพเข้าเซิร์ฟเวอร์ — ใช้ลิงก์ Google Drive แทน" };
   const school = await db.school.findUnique({ where: { id: schoolId } });
   if (!school) return { ok: false, error: "ไม่พบโรงเรียน" };
   let webp: Buffer;

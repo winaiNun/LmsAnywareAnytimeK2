@@ -5,7 +5,8 @@ import SchoolCard from "@/components/school-card";
 import SiteNavbar from "@/components/site-navbar";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { toListItem } from "@/lib/schools";
+import { storageIsDurable, toListItem } from "@/lib/schools";
+import { getSiteInfo } from "@/lib/site";
 import { formatThaiDate } from "@/lib/thai-date";
 import SchoolPortalForm from "./portal-form";
 
@@ -15,7 +16,7 @@ export default async function SchoolPortalPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login?callbackUrl=/school");
 
-  const school = await db.school.findUnique({ where: { accountId: session.user.id } });
+  const [school, site] = await Promise.all([db.school.findUnique({ where: { accountId: session.user.id } }), getSiteInfo()]);
 
   return (
     <>
@@ -42,7 +43,7 @@ export default async function SchoolPortalPage() {
                 <Link href={`/schools?q=${school.code}`} className="text-sm text-brand">ดูในหน้าทำเนียบโรงเรียน →</Link>
               </section>
               <section className="md:col-span-3">
-                <SchoolPortalForm siteUrl={school.siteUrl ?? ""} cardSourceUrl={school.cardSourceUrl ?? ""} cardUrl={toListItem(school).cardUrl} cardError={school.cardStatus === "failed" ? school.cardError : null} />
+                <SchoolPortalForm siteUrl={school.siteUrl ?? ""} cardSourceUrl={school.cardSourceUrl ?? ""} cardUrl={toListItem(school).cardUrl} allowUpload={storageIsDurable() && site.allowServerUploads} cardError={school.cardStatus === "failed" ? school.cardError : null} />
               </section>
             </div>
 

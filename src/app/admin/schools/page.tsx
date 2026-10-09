@@ -3,7 +3,7 @@ import Pager from "@/components/pager";
 import { db } from "@/lib/db";
 import { requireManagerPage } from "@/lib/permissions";
 import { SCHOOL_SORTS, filterOptions, isSort, querySchools, schoolsHref, type SchoolListItem } from "@/lib/schools-data";
-import { fileUrl } from "@/lib/site";
+import { cardUrlFor } from "@/lib/schools";
 import { setSchoolActive } from "./actions";
 import CardJob from "./card-job";
 
@@ -25,7 +25,7 @@ export default async function AdminSchoolsPage({ searchParams }: { searchParams:
   await requireManagerPage();
   const rows = await db.school.findMany({ include: { account: { select: { mustChangePassword: true } } } });
   const all: Admin[] = rows.map((s) => ({
-    id: s.id, code: s.code, name: s.name, district: s.district, center: s.center, siteUrl: s.siteUrl, cardUrl: fileUrl(s.cardKey), updatedAt: s.updatedAt.getTime(),
+    id: s.id, code: s.code, name: s.name, district: s.district, center: s.center, siteUrl: s.siteUrl, cardUrl: cardUrlFor(s), updatedAt: s.updatedAt.getTime(),
     email: s.email, active: s.active, cardStatus: s.cardStatus, cardError: s.cardError, cardSource: !!s.cardSourceUrl, hasAccount: !!s.accountId, mustChange: !!s.account?.mustChangePassword,
   }));
 

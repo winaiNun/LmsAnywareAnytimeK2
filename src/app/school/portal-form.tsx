@@ -18,7 +18,7 @@ function Submit() {
   );
 }
 
-export default function SchoolPortalForm({ siteUrl, cardSourceUrl, cardUrl, cardError }: { siteUrl: string; cardSourceUrl: string; cardUrl: string | null; cardError: string | null }) {
+export default function SchoolPortalForm({ siteUrl, cardSourceUrl, cardUrl, cardError, allowUpload }: { siteUrl: string; cardSourceUrl: string; cardUrl: string | null; cardError: string | null; allowUpload: boolean }) {
   const [state, action] = useFormState<OwnSchoolState, FormData>(saveOwnSchool, undefined);
   const crop = useRef<CropHandle | null>(null);
 
@@ -36,9 +36,21 @@ export default function SchoolPortalForm({ siteUrl, cardSourceUrl, cardUrl, card
           <span className="text-sm font-medium">ลิงก์ไฟล์ภาพ/PDF ใน Google Drive (แชร์เป็น “ทุกคนที่มีลิงก์”)</span>
           <input name="cardSourceUrl" defaultValue={cardSourceUrl} placeholder="https://drive.google.com/file/d/…/view" className={input} />
         </label>
-        <p className="text-center text-xs text-neutral-400">— หรือ —</p>
-        <CropImageField name="card" label="อัปโหลดภาพการ์ดจากเครื่อง (สัดส่วน 16:9)" aspects={[{ label: "16:9", value: 16 / 9 }]} currentUrl={cardUrl} maxWidth={960} handleRef={crop} />
-        <p className="text-xs text-neutral-500">ถ้ากรอกลิงก์ Drive ระบบจะดึงภาพมาย่อและเก็บไว้ให้ ถ้าเลือกอัปโหลดภาพจากเครื่อง จะใช้ภาพที่อัปโหลดแทน</p>
+        {allowUpload ? (
+          <>
+            <p className="text-center text-xs text-neutral-400">— หรือ —</p>
+            <CropImageField name="card" label="อัปโหลดภาพการ์ดจากเครื่อง (สัดส่วน 16:9)" aspects={[{ label: "16:9", value: 16 / 9 }]} currentUrl={cardUrl} maxWidth={960} handleRef={crop} />
+            <p className="text-xs text-neutral-500">ถ้ากรอกลิงก์ Drive ระบบจะดึงภาพมาย่อและเก็บไว้ให้ ถ้าเลือกอัปโหลดภาพจากเครื่อง จะใช้ภาพที่อัปโหลดแทน</p>
+          </>
+        ) : (
+          <>
+            {cardUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={cardUrl} alt="ภาพการ์ดปัจจุบัน" referrerPolicy="no-referrer" className="aspect-video w-full max-w-xs rounded-lg border border-neutral-200 object-cover" />
+            )}
+            <p className="text-xs text-neutral-500">แนะนำภาพสัดส่วน 16:9 (เช่น 1280 × 720 px) ไฟล์ภาพหรือ PDF · ระบบแสดงภาพจากลิงก์ Drive โดยตรง ถ้าลบไฟล์หรือเลิกแชร์ ภาพจะหาย</p>
+          </>
+        )}
         {cardError && <p className="text-xs text-red-600">ครั้งล่าสุดดึงภาพไม่สำเร็จ: {cardError}</p>}
       </fieldset>
 

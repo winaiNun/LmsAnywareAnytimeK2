@@ -15,6 +15,7 @@ export default function SchoolCard({ school, priority = false }: { school: Schoo
           <img
             src={school.cardUrl}
             alt={`การ์ด Anywhere Anytime ของ${school.name}`}
+            referrerPolicy="no-referrer"
             loading={priority ? "eager" : "lazy"}
             decoding="async"
             className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.03]"
