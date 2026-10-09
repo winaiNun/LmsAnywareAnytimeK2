@@ -15,10 +15,37 @@ enum Role {
   STUDENT
 }
 
+enum MemberType {
+  STUDENT // นักเรียน
+  TEACHER // ครู
+  SUPERVISOR // ศึกษานิเทศก์
+  GENERAL // บุคคลทั่วไป
+}
+
+enum CreatorStatus {
+  NONE
+  PENDING // asked to become a course creator, waiting for an admin
+  APPROVED
+  REJECTED
+}
+
 model User {
   id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
+  email        String?  @unique
+  username     String?  @unique // log in without an e-mail (students)
+  name         String // full display name (prefix + first + last as typed)
+  memberType   MemberType @default(GENERAL)
+  prefix       String? // คำนำหน้า
+  firstName    String?
+  lastName     String?
+  phone        String?
+  schoolId     String? // teachers / students pick their school from the directory
+  memberSchool School?  @relation("SchoolMembers", fields: [schoolId], references: [id], onDelete: SetNull)
+  organization String? // supervisors / general: home agency
+  position     String? // ตำแหน่ง/วิทยฐานะ
+  gradeLevel   String? // students: ชั้น
+  creatorStatus CreatorStatus @default(NONE)
+  creatorReason String?
   passwordHash String
   role         Role     @default(STUDENT)
   active       Boolean  @default(true)
@@ -226,6 +253,7 @@ model School {
   active        Boolean   @default(true)
   accountId     String?   @unique
   account       User?     @relation("SchoolAccount", fields: [accountId], references: [id], onDelete: SetNull)
+  members       User[]    @relation("SchoolMembers")
   updatedById   String? // last editor (admin or the school itself)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

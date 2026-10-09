@@ -59,6 +59,15 @@ npm run dev                 # http://localhost:3000
 
 **ฐานข้อมูล (Prisma)**: User, Author, Category, Book, BookAuthor, BookFile, BookCopy, Loan, Course, Lesson, Enrollment, Banner, SiteSetting, HomeSection
 
+## 3.6 สมาชิก 4 ประเภท + จัดการผู้ใช้ (ทำเสร็จ 9 ต.ค. — ทดสอบด้วย curl/คำสั่ง ยังไม่ได้คลิกในเบราว์เซอร์)
+- **สมัครเอง `/register`:** นักเรียน/ครู (เลือกโรงเรียนจาก dropdown ตาราง School) · ศึกษานิเทศก์ (หน่วยงาน) · บุคคลทั่วไป · อีเมลหรือชื่อผู้ใช้อย่างน้อยหนึ่งอย่าง · ติ๊กยินยอม PDPA · ไม่เก็บเลขบัตร/ที่อยู่ · สิทธิ์ที่ได้เป็น STUDENT เสมอ (`memberType` แยกจาก `Role`) · จำกัด 10 ครั้ง/15 นาทีต่อ IP (`rate-limit.ts` in-memory)
+- **ล็อกอินด้วยอีเมลหรือชื่อผู้ใช้** (`auth.ts`) · `User.email` เป็นไม่บังคับ
+- **`/dashboard`:** แก้ข้อมูลส่วนตัว + ปุ่ม "สมัครเป็นผู้สร้างคอร์สเรียน" (`creatorStatus` PENDING) → แอดมินอนุมัติที่ `/admin/users/[id]` = ตั้งเป็น TEACHER
+- **แอดมิน `/admin/users`:** ค้นหา/กรอง/แบ่งหน้า, เพิ่ม, แก้ (อีเมล/ชื่อผู้ใช้/สิทธิ์/ข้อมูล/เปิด-ปิด), ตั้งรหัสผ่านใหม่ (สุ่มหรือพิมพ์เอง, บังคับเปลี่ยน), ลบ (เฉพาะบัญชีที่ไม่มีประวัติ — กันแอดมินคนสุดท้าย), ส่งออก .xlsx
+- **โรงเรียนแก้ลิงก์เอง:** ใช้ `/school` เดิม (บัญชีโรงเรียน)
+- **โค้ด:** `lib/members.ts`, `components/profile-fields.tsx`, `app/register`, `app/dashboard/*`, `app/admin/users/*` · ทดสอบ `npm run test:members`
+- **ยังไม่ทำ:** รหัสสมัคร (RegistrationCode), นำเข้าผู้ใช้ Excel, ลืมรหัสผ่านทางอีเมล, หน้ารายงานสถิติในแดชบอร์ด (ตอนนี้ส่งออก xlsx ได้)
+
 ## 4. แผนผังโค้ดที่ควรรู้
 ```
 prisma/schema.prisma        โครงสร้างข้อมูล + migrations/

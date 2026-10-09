@@ -12,7 +12,7 @@ export default async function PasswordPage() {
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-5 p-6">
       <div>
         <h1 className="text-2xl font-bold">เปลี่ยนรหัสผ่าน</h1>
-        <p className="text-sm text-neutral-600">บัญชี {session.user.email}</p>
+        <p className="text-sm text-neutral-600">บัญชี {session.user.email ?? session.user.name}</p>
       </div>
       <PasswordForm forced={!!session.user.mustChange} />
     </main>

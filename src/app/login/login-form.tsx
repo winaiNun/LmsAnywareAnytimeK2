@@ -33,7 +33,6 @@ function Field({ icon, label, children }: { icon: IconName; label: string; child
 }
 
 export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop, callbackUrl, devShortcut, notice }: Props) {
-  const [mode, setMode] = useState<"login" | "register">("login");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -45,23 +44,10 @@ export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop,
     const email = String(form.get("email"));
     const password = String(form.get("password"));
 
-    if (mode === "register") {
-      const res = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: form.get("name"), email, password }),
-      });
-      if (!res.ok) {
-        setError((await res.json().catch(() => ({}))).error ?? "สมัครสมาชิกไม่สำเร็จ");
-        setBusy(false);
-        return;
-      }
-    }
-
     const result = await signIn("credentials", { email, password, remember: String(form.get("remember") === "on"), redirect: false });
     if (result?.error) {
       setBusy(false);
-      setError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+      setError("อีเมล/ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้อง");
       return;
     }
     // No explicit destination: staff land in the back office, members on their own page.
@@ -115,19 +101,14 @@ export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop,
         {notice && <p role="status" className="mb-4 rounded bg-white/95 px-3 py-2 text-sm font-medium text-green-700">{notice}</p>}
 
         <form onSubmit={onSubmit} className="space-y-5">
-          {mode === "register" && (
-            <Field icon="user" label="ชื่อ-นามสกุล">
-              <input name="name" required maxLength={100} placeholder="ชื่อ-นามสกุล" autoComplete="name" className={field} />
-            </Field>
-          )}
-          <Field icon="mail" label="อีเมล">
-            <input name="email" type="email" required placeholder="อีเมล" autoComplete="email" className={field} />
+          <Field icon="mail" label="อีเมลหรือชื่อผู้ใช้">
+            <input name="email" type="text" required placeholder="อีเมลหรือชื่อผู้ใช้" autoComplete="username" className={field} />
           </Field>
           <Field icon="lock" label="รหัสผ่าน">
-            <input name="password" type="password" required minLength={8} placeholder={mode === "register" ? "รหัสผ่าน (อย่างน้อย 8 ตัว)" : "รหัสผ่าน"} autoComplete={mode === "login" ? "current-password" : "new-password"} className={field} />
+            <input name="password" type="password" required minLength={8} placeholder="รหัสผ่าน" autoComplete="current-password" className={field} />
           </Field>
 
-          {mode === "login" && (
+          {(
             <label className="flex min-h-9 items-center gap-2 text-sm text-white/90">
               <input type="checkbox" name="remember" className="h-4 w-4 rounded border-white/70 bg-transparent text-[#0B2A6F] focus:ring-white" />
               จดจำฉันไว้ 30 วัน
@@ -151,25 +132,18 @@ export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop,
               </>
             ) : (
               <>
-                <Icon name={mode === "login" ? "login" : "userPlus"} className="h-5 w-5" />
-                {mode === "login" ? "เข้าสู่ระบบ" : "สมัครและเข้าสู่ระบบ"}
+                <Icon name="login" className="h-5 w-5" />
+                เข้าสู่ระบบ
                 <Icon name="arrowRight" className="h-4 w-4 opacity-70 transition-transform group-hover:translate-x-1" />
               </>
             )}
           </button>
         </form>
 
-        <button
-          type="button"
-          onClick={() => {
-            setMode(mode === "login" ? "register" : "login");
-            setError("");
-          }}
-          className="mx-auto mt-5 flex min-h-11 items-center gap-2 text-sm text-white underline underline-offset-4"
-        >
-          <Icon name={mode === "login" ? "userPlus" : "login"} className="h-4 w-4" />
-          {mode === "login" ? "ยังไม่มีบัญชี? สมัครสมาชิก" : "มีบัญชีแล้ว? เข้าสู่ระบบ"}
-        </button>
+        <Link href="/register" className="mx-auto mt-5 flex min-h-11 w-fit items-center gap-2 text-sm text-white underline underline-offset-4">
+          <Icon name="userPlus" className="h-4 w-4" />
+          ยังไม่มีบัญชี? สมัครสมาชิก
+        </Link>
         {devShortcut && (
           <div className="mt-4 rounded-lg border border-dashed border-white/60 p-3">
             <p className="mb-2 flex items-center gap-2 text-xs text-white/90">

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 
 const credentialsSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().min(3).max(120), // e-mail or username
   password: z.string().min(8),
 });
 
@@ -19,9 +19,9 @@ export const authOptions: NextAuthOptions = {
   pages: { signIn: "/login" },
   providers: [
     CredentialsProvider({
-      name: "Email",
+      name: "Email or username",
       credentials: {
-        email: { label: "Email", type: "email" },
+        email: { label: "Email or username", type: "text" },
         password: { label: "Password", type: "password" },
         remember: { label: "Remember", type: "text" },
       },
@@ -29,15 +29,14 @@ export const authOptions: NextAuthOptions = {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
 
-        const user = await db.user.findUnique({
-          where: { email: parsed.data.email.toLowerCase() },
-        });
+        const id = parsed.data.email.toLowerCase();
+        const user = await db.user.findUnique({ where: id.includes("@") ? { email: id } : { username: id } });
         if (!user || !user.active) return null;
 
         const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
         if (!ok) return null;
 
-        return { id: user.id, email: user.email, name: user.name, role: user.role, remember: raw?.remember === "true", mustChange: user.mustChangePassword };
+        return { id: user.id, email: user.email ?? undefined, name: user.name, role: user.role, remember: raw?.remember === "true", mustChange: user.mustChangePassword };
       },
     }),
     // ---- DEV-ONLY shortcut (remove before go-live) --------------------------------------------
@@ -54,7 +53,7 @@ export const authOptions: NextAuthOptions = {
               if (!role.success) return null;
               const user = await db.user.findFirst({ where: { role: role.data, active: true }, orderBy: { createdAt: "asc" } });
               if (!user) return null;
-              return { id: user.id, email: user.email, name: user.name, role: user.role, remember: true };
+              return { id: user.id, email: user.email ?? undefined, name: user.name, role: user.role, remember: true };
             },
           }),
         ]
