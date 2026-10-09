@@ -11,7 +11,7 @@ export default async function EditUserPage({ params }: { params: { id: string } 
   if (!isAdmin(me.role)) return <p className="p-6">เฉพาะผู้ดูแลระบบเท่านั้น</p>;
   const [u, schools] = await Promise.all([
     db.user.findUnique({ where: { id: params.id } }),
-    db.school.findMany({ select: { id: true, name: true, district: true }, orderBy: { name: "asc" } }),
+    db.school.findMany({ select: { id: true, name: true, district: true, center: true }, orderBy: { name: "asc" } }),
   ]);
   if (!u) notFound();
 

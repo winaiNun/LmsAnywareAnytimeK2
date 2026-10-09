@@ -1,5 +1,6 @@
 /* Run with: npm run test:members */
 import assert from "node:assert/strict";
+import { pinAllowed, pinProblem } from "../src/lib/pin";
 import { profileData, profileSchema, usernameField } from "../src/lib/members";
 
 let passed = 0;
@@ -39,6 +40,15 @@ t("usernames", () => {
   assert.equal(usernameField.safeParse("ab").success, false);
   assert.equal(usernameField.safeParse("a b c").success, false);
   assert.equal(usernameField.safeParse("a@b.com").success, false);
+});
+
+t("pin rules", () => {
+  assert.equal(pinProblem("482915"), null);
+  for (const bad of ["12345", "1234567", "abcdef", "111111", "123456", "654321", "012345"]) assert.notEqual(pinProblem(bad), null, bad);
+  assert.equal(pinAllowed("STUDENT"), true);
+  assert.equal(pinAllowed("TEACHER"), true);
+  assert.equal(pinAllowed("ADMIN"), false);
+  assert.equal(pinAllowed("LIBRARIAN"), false);
 });
 
 console.log(`members: ${passed} passed`);

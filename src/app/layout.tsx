@@ -1,23 +1,31 @@
-import type { Metadata } from "next";
-import { Sarabun } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import Pwa from "@/components/pwa";
 import "./globals.css";
-
-const sarabun = Sarabun({
-  subsets: ["thai", "latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-sarabun",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Anyware Anytime — ห้องสมุดและระบบเรียนรู้ออนไลน์",
   description: "ห้องสมุดดิจิทัลและระบบเรียนรู้ออนไลน์ เข้าถึงได้ทุกที่ ทุกเวลา",
+  applicationName: "Anywhere Anytime",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "Anywhere Anytime", statusBarStyle: "default" },
+  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0052FF",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="th">
-      <body className={`${sarabun.variable} font-sans antialiased`}>{children}</body>
+      <body className="font-sans antialiased">
+        {children}
+        <Pwa />
+      </body>
     </html>
   );
 }

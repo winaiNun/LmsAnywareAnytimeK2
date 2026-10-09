@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { PIN_LOCK_MS, PIN_MAX_FAILS, pinAllowed } from "@/lib/pin";
 
 const credentialsSchema = z.object({
   email: z.string().trim().min(3).max(120), // e-mail or username
@@ -36,6 +37,28 @@ export const authOptions: NextAuthOptions = {
         const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
         if (!ok) return null;
 
+        return { id: user.id, email: user.email ?? undefined, name: user.name, role: user.role, remember: raw?.remember === "true", mustChange: user.mustChangePassword };
+      },
+    }),
+    // Quick sign-in with a 6-digit PIN set from the profile page (not for ADMIN / LIBRARIAN).
+    CredentialsProvider({
+      id: "pin",
+      name: "PIN",
+      credentials: { email: { label: "Email or username", type: "text" }, pin: { label: "PIN", type: "password" }, remember: { label: "Remember", type: "text" } },
+      async authorize(raw) {
+        const id = String(raw?.email ?? "").trim().toLowerCase();
+        const pin = String(raw?.pin ?? "");
+        if (id.length < 3 || !/^\d{6}$/.test(pin)) return null;
+        const user = await db.user.findUnique({ where: id.includes("@") ? { email: id } : { username: id } });
+        if (!user || !user.active || !user.pinHash || !pinAllowed(user.role)) return null;
+        if (user.pinLockedUntil && user.pinLockedUntil > new Date()) return null;
+
+        if (!(await bcrypt.compare(pin, user.pinHash))) {
+          const fails = user.pinFailCount + 1;
+          await db.user.update({ where: { id: user.id }, data: fails >= PIN_MAX_FAILS ? { pinFailCount: 0, pinLockedUntil: new Date(Date.now() + PIN_LOCK_MS) } : { pinFailCount: fails } });
+          return null;
+        }
+        if (user.pinFailCount || user.pinLockedUntil) await db.user.update({ where: { id: user.id }, data: { pinFailCount: 0, pinLockedUntil: null } });
         return { id: user.id, email: user.email ?? undefined, name: user.name, role: user.role, remember: raw?.remember === "true", mustChange: user.mustChangePassword };
       },
     }),

@@ -46,6 +46,9 @@ model User {
   gradeLevel   String? // students: ชั้น
   creatorStatus CreatorStatus @default(NONE)
   creatorReason String?
+  pinHash       String? // optional 6-digit PIN for quick sign-in on a trusted device
+  pinFailCount  Int       @default(0)
+  pinLockedUntil DateTime?
   passwordHash String
   role         Role     @default(STUDENT)
   active       Boolean  @default(true)

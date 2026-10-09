@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { getSession, signIn } from "next-auth/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon, Spinner, type IconName } from "@/components/icons";
 
 type Props = {
@@ -35,21 +35,41 @@ function Field({ icon, label, children }: { icon: IconName; label: string; child
 export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop, callbackUrl, devShortcut, notice }: Props) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [method, setMethod] = useState<"password" | "pin">("password");
+  const [saved, setSaved] = useState(""); // last identifier used on this device (PIN sign-in needs it)
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    try {
+      const last = localStorage.getItem("lms.lastLogin");
+      if (last) { setSaved(last); setMethod(localStorage.getItem("lms.loginMethod") === "pin" ? "pin" : "password"); }
+    } catch {}
+  }, []);
+
+  function pick(m: "password" | "pin") {
+    setMethod(m);
+    setError("");
+    try { localStorage.setItem("lms.loginMethod", m); } catch {}
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     setBusy(true);
     const form = new FormData(e.currentTarget);
-    const email = String(form.get("email"));
-    const password = String(form.get("password"));
+    const email = String(form.get("email")).trim();
+    const remember = String(form.get("remember") === "on");
 
-    const result = await signIn("credentials", { email, password, remember: String(form.get("remember") === "on"), redirect: false });
+    const result =
+      method === "pin"
+        ? await signIn("pin", { email, pin: String(form.get("pin")), remember, redirect: false })
+        : await signIn("credentials", { email, password: String(form.get("password")), remember, redirect: false });
     if (result?.error) {
       setBusy(false);
-      setError("อีเมล/ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้อง");
+      setError(method === "pin" ? "PIN ไม่ถูกต้อง หรือถูกล็อกชั่วคราว (ใส่ผิด 5 ครั้งจะล็อก 15 นาที)" : "อีเมล/ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้อง");
       return;
     }
+    try { localStorage.setItem("lms.lastLogin", email); } catch {}
     // No explicit destination: staff land in the back office, members on their own page.
     const role = (await getSession())?.user.role;
     window.location.href = callbackUrl ?? (home(role));
@@ -71,7 +91,7 @@ export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop,
   const logoAlt = `โลโก้ ${systemName}`;
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-[#4F8BFF] via-[#2B6BFF] to-[#0052FF] px-4 py-10">
+    <main className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-gradient-to-b from-[#4F8BFF] via-[#2B6BFF] to-[#0052FF] px-4 py-10">
       <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-white/10 blur-3xl" aria-hidden />
       <div className="pointer-events-none absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-[#0B2A6F]/30 blur-3xl" aria-hidden />
 
@@ -100,13 +120,40 @@ export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop,
 
         {notice && <p role="status" className="mb-4 rounded bg-white/95 px-3 py-2 text-sm font-medium text-green-700">{notice}</p>}
 
-        <form onSubmit={onSubmit} className="space-y-5">
+        <form ref={formRef} onSubmit={onSubmit} className="space-y-5">
+          <div role="tablist" aria-label="วิธีเข้าสู่ระบบ" className="grid grid-cols-2 rounded-full bg-white/15 p-1 text-sm font-semibold">
+            {([["password", "รหัสผ่าน"], ["pin", "PIN 6 หลัก"]] as const).map(([m, label]) => (
+              <button key={m} type="button" role="tab" aria-selected={method === m} onClick={() => pick(m)} className={`min-h-10 rounded-full transition ${method === m ? "bg-white text-[#0B2A6F] shadow" : "text-white/90"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
           <Field icon="mail" label="อีเมลหรือชื่อผู้ใช้">
-            <input name="email" type="text" required placeholder="อีเมลหรือชื่อผู้ใช้" autoComplete="username" className={field} />
+            <input key={saved} name="email" type="text" required defaultValue={saved} placeholder="อีเมลหรือชื่อผู้ใช้" autoComplete="username" autoCapitalize="none" className={field} />
           </Field>
-          <Field icon="lock" label="รหัสผ่าน">
-            <input name="password" type="password" required minLength={8} placeholder="รหัสผ่าน" autoComplete="current-password" className={field} />
-          </Field>
+          {method === "password" ? (
+            <Field icon="lock" label="รหัสผ่าน">
+              <input name="password" type="password" required minLength={8} placeholder="รหัสผ่าน" autoComplete="current-password" className={field} />
+            </Field>
+          ) : (
+            <div>
+              <Field icon="lock" label="PIN 6 หลัก">
+                <input
+                  name="pin"
+                  type="password"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  required
+                  autoComplete="one-time-code"
+                  placeholder="PIN 6 หลัก"
+                  onChange={(e) => { e.target.value = e.target.value.replace(/\D/g, ""); if (e.target.value.length === 6) formRef.current?.requestSubmit(); }}
+                  className={`${field} tracking-[0.5em]`}
+                />
+              </Field>
+              <p className="mt-2 text-xs text-white/80">ตั้ง PIN ได้ที่หน้า “บัญชีของฉัน” หลังเข้าสู่ระบบด้วยรหัสผ่านครั้งแรก</p>
+            </div>
+          )}
 
           {(
             <label className="flex min-h-9 items-center gap-2 text-sm text-white/90">

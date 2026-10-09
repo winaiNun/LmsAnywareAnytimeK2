@@ -19,7 +19,7 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["var(--font-sarabun)", ...defaultTheme.fontFamily.sans],
+        sans: ["Sarabun", ...defaultTheme.fontFamily.sans],
       },
     },
   },

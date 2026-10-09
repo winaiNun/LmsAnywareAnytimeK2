@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import SchoolPicker, { type SchoolOption } from "@/components/school-picker";
 import { MEMBER_TYPES, MEMBER_TYPE_LABEL, PREFIXES, needsSchool, type MemberTypeKey } from "@/lib/members";
 
-export type SchoolOption = { id: string; name: string; district: string };
+export type { SchoolOption };
 export type ProfileValues = {
   memberType: MemberTypeKey;
   prefix: string;
@@ -42,12 +43,7 @@ export default function ProfileFields({ values, schools }: { values: ProfileValu
         <label className="block space-y-1"><span className="text-sm font-medium">นามสกุล *</span><input name="lastName" required maxLength={60} defaultValue={values.lastName} className={input} /></label>
       </div>
       {needsSchool(type) ? (
-        <label className="block space-y-1"><span className="text-sm font-medium">โรงเรียน *</span>
-          <select name="schoolId" required defaultValue={values.schoolId} className={input}>
-            <option value="" disabled>— เลือกโรงเรียน —</option>
-            {schools.map((s) => <option key={s.id} value={s.id}>{s.name} (อ.{s.district})</option>)}
-          </select>
-        </label>
+        <div className="space-y-1"><span className="text-sm font-medium">โรงเรียน *</span><SchoolPicker schools={schools} defaultValue={values.schoolId} required /></div>
       ) : (
         <label className="block space-y-1"><span className="text-sm font-medium">หน่วยงาน/สังกัด{type === "SUPERVISOR" && " *"}</span><input name="organization" required={type === "SUPERVISOR"} maxLength={120} defaultValue={values.organization} className={input} /></label>
       )}

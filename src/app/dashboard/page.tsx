@@ -3,9 +3,10 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { MEMBER_TYPE_LABEL } from "@/lib/members";
+import { pinAllowed } from "@/lib/pin";
 import Link from "next/link";
 import SignOutButton from "./sign-out-button";
-import { CreatorRequestForm, ProfileForm } from "./profile-form";
+import { CreatorRequestForm, PinForm, ProfileForm } from "./profile-form";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export default async function DashboardPage() {
 
   const [user, schools] = await Promise.all([
     db.user.findUnique({ where: { id: session.user.id } }),
-    db.school.findMany({ where: { active: true }, select: { id: true, name: true, district: true }, orderBy: { name: "asc" } }),
+    db.school.findMany({ where: { active: true }, select: { id: true, name: true, district: true, center: true }, orderBy: { name: "asc" } }),
   ]);
   if (!user) redirect("/login");
   const isStaff = user.role !== "STUDENT";
@@ -51,6 +52,8 @@ export default async function DashboardPage() {
           )}
         </section>
       )}
+
+      {pinAllowed(user.role) && <PinForm hasPin={!!user.pinHash} />}
 
       <ProfileForm
         schools={schools}

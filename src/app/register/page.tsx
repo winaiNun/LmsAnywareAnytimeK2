@@ -8,7 +8,7 @@ export const metadata = { title: "สมัครสมาชิก" };
 export default async function RegisterPage() {
   const [site, schools] = await Promise.all([
     getSiteInfo(),
-    db.school.findMany({ where: { active: true }, select: { id: true, name: true, district: true }, orderBy: { name: "asc" } }),
+    db.school.findMany({ where: { active: true }, select: { id: true, name: true, district: true, center: true }, orderBy: { name: "asc" } }),
   ]);
-  return <RegisterForm systemName={site.systemName} schools={schools} />;
+  return <RegisterForm systemName={site.systemName} areaName={site.areaName} logoUrl={site.logoUrl} schools={schools} />;
 }
