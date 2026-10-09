@@ -15,6 +15,7 @@ type Initial = {
   logoUrl: string | null;
   logoBackdrop: boolean;
   heroVideoUrl: string | null;
+  allowServerUploads: boolean;
 };
 
 const input = "min-h-11 w-full rounded-lg border border-neutral-300 bg-white px-3";
@@ -48,6 +49,17 @@ export default function SettingsForm({ initial }: { initial: Initial }) {
         <span className="text-sm font-medium">ข้อความรอง</span>
         <input name="tagline" maxLength={200} defaultValue={initial.tagline} className={input} />
       </label>
+
+      <fieldset className="space-y-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+        <legend className="px-1 text-sm font-medium">การอัปโหลดรูปภาพเข้าเซิร์ฟเวอร์</legend>
+        <label className="flex min-h-11 items-start gap-3 text-sm">
+          <input type="checkbox" name="allowServerUploads" defaultChecked={initial.allowServerUploads} className="mt-0.5 h-5 w-5 shrink-0" />
+          <span>
+            <strong>อนุญาตให้สมาชิกอัปโหลดรูปเข้าเซิร์ฟเวอร์</strong> (ตอนนี้ใช้กับรูปโปรไฟล์)
+            <span className="mt-1 block text-neutral-500">ปิดไว้ = สมาชิกใช้ได้เฉพาะ “ลิงก์ Google Drive สาธารณะ” ไม่มีไฟล์ใหม่เข้ามาในเซิร์ฟเวอร์ — เหมาะช่วงที่ยังไม่มี VPS/ที่เก็บไฟล์ เปิดเมื่อพร้อมแล้ว รูปที่อัปโหลดไว้ก่อนหน้ายังแสดงตามปกติ</span>
+          </span>
+        </label>
+      </fieldset>
 
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">โลโก้ (PNG/WebP พื้นโปร่งใสได้ ไม่เกิน 4 MB, ระบบย่อไม่เกิน 512 px โดยไม่บิดสัดส่วน และคงความโปร่งใส)</legend>

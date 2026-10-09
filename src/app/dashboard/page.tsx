@@ -6,6 +6,9 @@ import { MEMBER_TYPE_LABEL } from "@/lib/members";
 import { pinAllowed } from "@/lib/pin";
 import { formatThaiDate } from "@/lib/thai-date";
 import Link from "next/link";
+import Avatar from "@/components/avatar";
+import AvatarEditor from "@/components/avatar-editor";
+import { avatarOf, getSiteInfo } from "@/lib/site";
 import SignOutButton from "./sign-out-button";
 import { CreatorRequestForm, PinForm, ProfileForm } from "./profile-form";
 
@@ -17,10 +20,11 @@ export default async function DashboardPage() {
   // a school account goes straight to its own page
   if (await db.school.findUnique({ where: { accountId: session.user.id }, select: { id: true } })) redirect("/school");
 
-  const [user, schools, devices] = await Promise.all([
+  const [user, schools, devices, site] = await Promise.all([
     db.user.findUnique({ where: { id: session.user.id } }),
     db.school.findMany({ where: { active: true }, select: { id: true, name: true, district: true, center: true }, orderBy: { name: "asc" } }),
     db.trustedDevice.findMany({ where: { userId: session.user.id }, orderBy: { lastUsedAt: "desc" } }),
+    getSiteInfo(),
   ]);
   if (!user) redirect("/login");
   const isStaff = user.role !== "STUDENT";
@@ -28,9 +32,12 @@ export default async function DashboardPage() {
   return (
     <main className="mx-auto max-w-2xl space-y-4 p-6">
       <h1 className="text-2xl font-bold">บัญชีของฉัน</h1>
-      <p>
-        สวัสดี {user.name} <span className="text-sm text-neutral-500">({MEMBER_TYPE_LABEL[user.memberType]} · {user.email ?? user.username})</span>
-      </p>
+      <div className="flex items-center gap-4">
+        <Avatar avatar={avatarOf(user)} name={user.name} size={64} />
+        <p>
+          สวัสดี {user.name} <span className="block text-sm text-neutral-500">{MEMBER_TYPE_LABEL[user.memberType]} · {user.email ?? user.username}</span>
+        </p>
+      </div>
       <div className="flex flex-wrap gap-3">
         {["ADMIN", "LIBRARIAN"].includes(user.role) && (
           <Link href="/admin" className="flex min-h-10 items-center rounded bg-brand px-4 font-semibold text-white">ไปหลังบ้าน</Link>
@@ -54,6 +61,8 @@ export default async function DashboardPage() {
           )}
         </section>
       )}
+
+      <AvatarEditor avatar={avatarOf(user)} name={user.name} allowUpload={site.allowServerUploads} />
 
       {pinAllowed(user.role) && <PinForm devices={devices.map((d) => ({ id: d.id, label: d.label, lastUsed: formatThaiDate(d.lastUsedAt) }))} />}
 

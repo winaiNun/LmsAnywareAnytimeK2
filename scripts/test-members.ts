@@ -1,5 +1,6 @@
 /* Run with: npm run test:members */
 import assert from "node:assert/strict";
+import { avatarBox, clampCenter } from "../src/lib/avatar";
 import { pinAllowed, pinProblem } from "../src/lib/pin";
 import { profileData, profileSchema, usernameField } from "../src/lib/members";
 
@@ -49,6 +50,20 @@ t("pin rules", () => {
   assert.equal(pinAllowed("TEACHER"), true);
   assert.equal(pinAllowed("ADMIN"), false);
   assert.equal(pinAllowed("LIBRARIAN"), false);
+});
+
+t("avatar crop geometry", () => {
+  // square image, no zoom: fills the circle exactly
+  assert.deepEqual(avatarBox({ cx: 0.5, cy: 0.5, zoom: 1, aspect: 1 }), { width: "100%", height: "100%", left: "0%", top: "0%" });
+  // 2x zoom on a square, centred: image is twice the viewport, shifted back by half the viewport
+  assert.deepEqual(avatarBox({ cx: 0.5, cy: 0.5, zoom: 2, aspect: 1 }), { width: "200%", height: "200%", left: "-50%", top: "-50%" });
+  // landscape 2:1, no zoom: height fills, width is 200%, centred horizontally
+  assert.deepEqual(avatarBox({ cx: 0.5, cy: 0.5, zoom: 1, aspect: 2 }), { width: "200%", height: "100%", left: "-50%", top: "0%" });
+  // window may not leave the image
+  assert.deepEqual(clampCenter(0, 1, 2, 1), { cx: 0.25, cy: 0.75 });
+  assert.deepEqual(clampCenter(0.5, 0.5, 1, 1), { cx: 0.5, cy: 0.5 });
+  const c = clampCenter(0, 0.5, 1, 2); // landscape, zoom 1: window is half the width
+  assert.equal(c.cx, 0.25);
 });
 
 console.log(`members: ${passed} passed`);

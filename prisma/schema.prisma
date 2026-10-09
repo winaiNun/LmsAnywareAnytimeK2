@@ -47,6 +47,14 @@ model User {
   creatorStatus CreatorStatus @default(NONE)
   creatorReason String?
   devices       TrustedDevice[]
+  // profile picture: either an uploaded, already-cropped square (avatarKey) or a public Google Drive file
+  // shown through Drive's thumbnail with a stored circular crop window (centre cx/cy 0..1 of the image, zoom >= 1)
+  avatarKey     String?
+  avatarDriveId String?
+  avatarCx      Float     @default(0.5)
+  avatarCy      Float     @default(0.5)
+  avatarZoom    Float     @default(1)
+  avatarAspect  Float     @default(1) // width / height of the Drive thumbnail
   passwordHash String
   role         Role     @default(STUDENT)
   active       Boolean  @default(true)
@@ -230,6 +238,7 @@ model SiteSetting {
   slideArrows    Boolean  @default(true)
   slideRandom    Boolean  @default(false) // use every effect, picked at random for each change
   slideShuffle   Boolean  @default(false) // shuffle slide order on each page load (pinned stay first)
+  allowServerUploads Boolean @default(false) // may members upload images to our storage? (off until there is a server; Drive links work without)
   updatedAt      DateTime @updatedAt
 }
 

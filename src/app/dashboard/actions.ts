@@ -3,8 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import bcrypt from "bcryptjs";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { audit } from "@/lib/audit";
+import { AVATAR_OUT, MAX_ZOOM, clampCenter } from "@/lib/avatar";
+import { parseDriveFileId, driveViewUrl } from "@/lib/drive";
+import { fetchDriveImage } from "@/lib/drive-fetch";
+import { processAvatar } from "@/lib/image";
+import { rateLimited } from "@/lib/rate-limit";
+import { getSiteInfo } from "@/lib/site";
+import { getStorage } from "@/lib/storage";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { profileData, profileSchema } from "@/lib/members";
@@ -87,5 +95,95 @@ export async function removeDevice(id: string): Promise<void> {
   if (!session) return;
   await db.trustedDevice.deleteMany({ where: { id, userId: session.user.id } });
   await audit({ actorId: session.user.id, action: "user.pin-remove", entity: "User", entityId: session.user.id });
+  revalidatePath("/dashboard");
+}
+
+// ---------------------------------------------------------------------------------------------
+// Profile picture. Two ways in: upload (only while the admin allows server uploads) or a public Google
+// Drive link, which is shown straight from Drive's thumbnail with a stored circular crop window.
+// ---------------------------------------------------------------------------------------------
+
+export type AvatarState = { error?: string; saved?: boolean } | undefined;
+
+const MAX_AVATAR_BYTES = 4 * 1024 * 1024;
+
+async function requireMember() {
+  const session = await getServerSession(authOptions);
+  return session?.user ?? null;
+}
+
+export type DriveAvatarPreview =
+  | { ok: true; id: string; dataUrl: string; width: number; height: number }
+  | { ok: false; error: string };
+
+/** Step 1 for Drive: fetch the public thumbnail so the browser can show the circular crop dialog. */
+export async function fetchAvatarFromDrive(link: string): Promise<DriveAvatarPreview> {
+  const user = await requireMember();
+  if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
+  if (rateLimited(`avatar-fetch:${user.id}`, 20, 10 * 60 * 1000)) return { ok: false, error: "ดึงภาพบ่อยเกินไป กรุณารอสักครู่" };
+  const img = await fetchDriveImage(link, 800);
+  if (!img.ok) return img;
+  return { ok: true, id: img.id, dataUrl: `data:${img.mime};base64,${img.buffer.toString("base64")}`, width: img.width, height: img.height };
+}
+
+const driveSchema = z.object({
+  link: z.string().max(500),
+  cx: z.number().min(0).max(1),
+  cy: z.number().min(0).max(1),
+  zoom: z.number().min(1).max(MAX_ZOOM),
+  aspect: z.number().min(0.2).max(5),
+});
+
+/** Step 2 for Drive: keep only the link (no file) and the crop window. */
+export async function saveAvatarDrive(input: z.infer<typeof driveSchema>): Promise<AvatarState> {
+  const user = await requireMember();
+  if (!user) return { error: "กรุณาเข้าสู่ระบบ" };
+  const parsed = driveSchema.safeParse(input);
+  if (!parsed.success) return { error: "ข้อมูลการครอบรูปไม่ถูกต้อง" };
+  const id = parseDriveFileId(parsed.data.link);
+  if (!id) return { error: "ลิงก์ไม่ถูกต้อง — ต้องเป็นลิงก์ไฟล์จาก drive.google.com" };
+
+  const { cx, cy } = clampCenter(parsed.data.cx, parsed.data.cy, parsed.data.zoom, parsed.data.aspect);
+  const old = await db.user.findUnique({ where: { id: user.id }, select: { avatarKey: true } });
+  await db.user.update({ where: { id: user.id }, data: { avatarKey: null, avatarDriveId: id, avatarCx: cx, avatarCy: cy, avatarZoom: parsed.data.zoom, avatarAspect: parsed.data.aspect } });
+  if (old?.avatarKey) await getStorage().delete(old.avatarKey).catch(() => {});
+  await audit({ actorId: user.id, action: "user.avatar-drive", entity: "User", entityId: user.id, meta: { view: driveViewUrl(id) } });
+  revalidatePath("/dashboard");
+  return { saved: true };
+}
+
+/** Upload path: the browser already cropped a square; we re-validate and re-encode it. Admin switch must be on. */
+export async function saveAvatarUpload(formData: FormData): Promise<AvatarState> {
+  const user = await requireMember();
+  if (!user) return { error: "กรุณาเข้าสู่ระบบ" };
+  if (!(await getSiteInfo()).allowServerUploads) return { error: "ขณะนี้ผู้ดูแลปิดการอัปโหลดรูปเข้าเซิร์ฟเวอร์ — ใช้ลิงก์ Google Drive แทน" };
+  if (rateLimited(`avatar-up:${user.id}`, 10, 10 * 60 * 1000)) return { error: "อัปโหลดบ่อยเกินไป กรุณารอสักครู่" };
+  const file = formData.get("avatar");
+  if (!(file instanceof File) || file.size === 0) return { error: "กรุณาเลือกรูป" };
+  if (file.size > MAX_AVATAR_BYTES) return { error: "ไฟล์ใหญ่เกินไป (ไม่เกิน 4 MB)" };
+
+  let processed: Buffer;
+  try {
+    processed = await processAvatar(Buffer.from(await file.arrayBuffer()), AVATAR_OUT);
+  } catch {
+    return { error: "ไฟล์นี้ไม่ใช่รูปภาพที่อ่านได้" };
+  }
+  const storage = getStorage();
+  const key = `avatars/${user.id}-${randomUUID().slice(0, 8)}.webp`;
+  await storage.put(key, processed, "image/webp");
+  const old = await db.user.findUnique({ where: { id: user.id }, select: { avatarKey: true } });
+  await db.user.update({ where: { id: user.id }, data: { avatarKey: key, avatarDriveId: null, avatarCx: 0.5, avatarCy: 0.5, avatarZoom: 1, avatarAspect: 1 } });
+  if (old?.avatarKey) await storage.delete(old.avatarKey).catch(() => {});
+  await audit({ actorId: user.id, action: "user.avatar-upload", entity: "User", entityId: user.id });
+  revalidatePath("/dashboard");
+  return { saved: true };
+}
+
+export async function removeAvatar(): Promise<void> {
+  const user = await requireMember();
+  if (!user) return;
+  const old = await db.user.findUnique({ where: { id: user.id }, select: { avatarKey: true } });
+  await db.user.update({ where: { id: user.id }, data: { avatarKey: null, avatarDriveId: null, avatarCx: 0.5, avatarCy: 0.5, avatarZoom: 1, avatarAspect: 1 } });
+  if (old?.avatarKey) await getStorage().delete(old.avatarKey).catch(() => {});
   revalidatePath("/dashboard");
 }

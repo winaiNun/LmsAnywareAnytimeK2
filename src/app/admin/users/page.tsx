@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
+import Avatar from "@/components/avatar";
 import { db } from "@/lib/db";
+import { avatarOf } from "@/lib/site";
 import { MEMBER_TYPES, MEMBER_TYPE_LABEL, type MemberTypeKey } from "@/lib/members";
 import { isAdmin, requireManagerPage } from "@/lib/permissions";
 
@@ -92,6 +94,7 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
             {users.map((u) => (
               <tr key={u.id} className="border-t border-neutral-100">
                 <td className="p-3 font-medium">
+                  <Avatar avatar={avatarOf(u)} name={u.name} size={32} className="mr-2 align-middle" />
                   <Link href={`/admin/users/${u.id}`} className="text-brand hover:underline">{u.name}</Link>
                   {u.creatorStatus === "PENDING" && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">ขอเป็นผู้สร้างคอร์ส</span>}
                 </td>

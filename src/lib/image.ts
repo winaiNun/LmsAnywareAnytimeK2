@@ -47,3 +47,12 @@ export async function processBackground(input: Buffer, maxWidth = 1920) {
     .webp({ quality: 78 })
     .toBuffer();
 }
+
+/** Profile pictures: centre-square, bounded size, WebP. (The browser already cropped; this guards against odd uploads.) */
+export async function processAvatar(input: Buffer, size = 512) {
+  return sharp(input, { failOn: "error" })
+    .rotate()
+    .resize({ width: size, height: size, fit: "cover", position: "centre" })
+    .webp({ quality: 85 })
+    .toBuffer();
+}
