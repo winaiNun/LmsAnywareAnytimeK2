@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getSession, signIn } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { Icon, Spinner, type IconName } from "@/components/icons";
+import PinPad from "@/components/pin-pad";
 
 type Props = {
   systemName: string;
@@ -38,6 +39,14 @@ export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop,
   const [method, setMethod] = useState<"password" | "pin">("password");
   const [saved, setSaved] = useState(""); // last identifier used on this device (PIN sign-in needs it)
   const formRef = useRef<HTMLFormElement>(null);
+  const [pin, setPin] = useState("");
+
+  // 6th digit entered: sign in straight away (the hidden input already carries the full PIN by now).
+  useEffect(() => {
+    if (method !== "pin" || pin.length !== 6 || !formRef.current) return;
+    if (formRef.current.checkValidity()) formRef.current.requestSubmit();
+    else { formRef.current.reportValidity(); setPin(""); } // username still empty: let them fill it and re-enter
+  }, [pin, method]);
 
   useEffect(() => {
     try {
@@ -66,6 +75,7 @@ export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop,
         : await signIn("credentials", { email, password: String(form.get("password")), remember, redirect: false });
     if (result?.error) {
       setBusy(false);
+      setPin("");
       setError(method === "pin" ? "PIN ไม่ถูกต้อง หรือถูกล็อกชั่วคราว (ใส่ผิด 5 ครั้งจะล็อก 15 นาที)" : "อีเมล/ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้อง");
       return;
     }
@@ -137,21 +147,9 @@ export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop,
             </Field>
           ) : (
             <div>
-              <Field icon="lock" label="PIN 6 หลัก">
-                <input
-                  name="pin"
-                  type="password"
-                  inputMode="numeric"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  required
-                  autoComplete="one-time-code"
-                  placeholder="PIN 6 หลัก"
-                  onChange={(e) => { e.target.value = e.target.value.replace(/\D/g, ""); if (e.target.value.length === 6) formRef.current?.requestSubmit(); }}
-                  className={`${field} tracking-[0.5em]`}
-                />
-              </Field>
-              <p className="mt-2 text-xs text-white/80">ตั้ง PIN ได้ที่หน้า “บัญชีของฉัน” หลังเข้าสู่ระบบด้วยรหัสผ่านครั้งแรก</p>
+              <input type="hidden" name="pin" value={pin} />
+              <PinPad value={pin} onChange={setPin} disabled={busy} />
+              <p className="mt-3 text-center text-xs text-white/80">ตั้ง PIN ได้ที่หน้า “บัญชีของฉัน” หลังเข้าสู่ระบบด้วยรหัสผ่านครั้งแรก</p>
             </div>
           )}
 
