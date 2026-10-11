@@ -57,6 +57,7 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
         {isAdmin(me.role) && (
           <div className="flex gap-2">
             <a href={`/admin/users/export?${new URLSearchParams(searchParams as Record<string, string>)}`} className="flex min-h-11 items-center rounded-lg border px-4 text-sm">ส่งออก .xlsx</a>
+            <Link href="/admin/users/import" className="flex min-h-11 items-center rounded-lg border px-4 text-sm">นำเข้า Excel</Link>
             <Link href="/admin/users/new" className="flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-white">+ เพิ่มผู้ใช้</Link>
           </div>
         )}

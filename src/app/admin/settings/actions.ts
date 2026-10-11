@@ -100,7 +100,7 @@ export async function saveSettings(_prev: SettingsState, formData: FormData): Pr
     heroVideoKey = null;
   }
 
-  const data = { ...parsed.data, logoKey, heroVideoKey, logoBackdrop: formData.get("logoBackdrop") === "on", allowServerUploads: formData.get("allowServerUploads") === "on" };
+  const data = { ...parsed.data, logoKey, heroVideoKey, logoBackdrop: formData.get("logoBackdrop") === "on", allowServerUploads: formData.get("allowServerUploads") === "on", requireRegistrationCode: formData.get("requireRegistrationCode") === "on" };
   await db.siteSetting.upsert({ where: { id: "main" }, update: data, create: { id: "main", ...data } });
   await Promise.all(toDelete.map((k) => storage.delete(k)));
 

@@ -10,5 +10,5 @@ export default async function RegisterPage() {
     getSiteInfo(),
     db.school.findMany({ where: { active: true }, select: { id: true, name: true, district: true, center: true }, orderBy: { name: "asc" } }),
   ]);
-  return <RegisterForm systemName={site.systemName} areaName={site.areaName} logoUrl={site.logoUrl} schools={schools} />;
+  return <RegisterForm requireCode={site.requireRegistrationCode} systemName={site.systemName} areaName={site.areaName} logoUrl={site.logoUrl} schools={schools} />;
 }

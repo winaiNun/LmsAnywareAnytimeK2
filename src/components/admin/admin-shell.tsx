@@ -34,6 +34,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     title: "ระบบ",
     items: [
       { href: "/admin/users", label: "สมาชิก", icon: "users" },
+      { href: "/admin/registration-codes", label: "รหัสสมัคร", icon: "users" },
       { href: "/admin/settings", label: "ตั้งค่าเขตพื้นที่", icon: "settings" },
     ],
   },

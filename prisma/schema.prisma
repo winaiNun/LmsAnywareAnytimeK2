@@ -47,6 +47,8 @@ model User {
   creatorStatus CreatorStatus @default(NONE)
   creatorReason String?
   devices       TrustedDevice[]
+  registrationCodeId String? // the sign-up code this member used (for the per-code member list)
+  registrationCode   RegistrationCode? @relation("CodeUsers", fields: [registrationCodeId], references: [id], onDelete: SetNull)
   // profile picture: either an uploaded, already-cropped square (avatarKey) or a public Google Drive file
   // shown through Drive's thumbnail with a stored circular crop window (centre cx/cy 0..1 of the image, zoom >= 1)
   avatarKey     String?
@@ -66,6 +68,26 @@ model User {
   banners     Banner[]     @relation("BannerCreator")
   school      School?      @relation("SchoolAccount") // set when this account manages a school
   mustChangePassword Boolean @default(false) // temporary password issued by an admin/import
+}
+
+/// Admin-issued sign-up code. Redeemed atomically (see src/lib/registration.ts) so a code with 1 use left
+/// can only be used by one of two people signing up at the same moment.
+model RegistrationCode {
+  id          String     @id @default(cuid())
+  code        String     @unique // normalised: upper-case, no dashes
+  label       String
+  memberType  MemberType
+  schoolId    String? // locks the school of everyone who uses the code
+  school      School?    @relation("CodeSchool", fields: [schoolId], references: [id], onDelete: SetNull)
+  expiresAt   DateTime?
+  maxUses     Int? // null = unlimited
+  usedCount   Int        @default(0)
+  active      Boolean    @default(true)
+  createdById String?
+  createdAt   DateTime   @default(now())
+  users       User[]     @relation("CodeUsers")
+
+  @@index([active, expiresAt])
 }
 
 /// A phone that signed in with a password once and then chose a 6-digit PIN. The PIN only works together
@@ -238,6 +260,7 @@ model SiteSetting {
   slideArrows    Boolean  @default(true)
   slideRandom    Boolean  @default(false) // use every effect, picked at random for each change
   slideShuffle   Boolean  @default(false) // shuffle slide order on each page load (pinned stay first)
+  requireRegistrationCode Boolean @default(true) // sign-up only with an admin-issued code (turn off to allow open sign-up)
   allowServerUploads Boolean @default(false) // may members upload images to our storage? (off until there is a server; Drive links work without)
   updatedAt      DateTime @updatedAt
 }
@@ -280,6 +303,7 @@ model School {
   accountId     String?   @unique
   account       User?     @relation("SchoolAccount", fields: [accountId], references: [id], onDelete: SetNull)
   members       User[]    @relation("SchoolMembers")
+  registrationCodes RegistrationCode[] @relation("CodeSchool")
   updatedById   String? // last editor (admin or the school itself)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

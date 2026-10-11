@@ -16,6 +16,7 @@ type Initial = {
   logoBackdrop: boolean;
   heroVideoUrl: string | null;
   allowServerUploads: boolean;
+  requireRegistrationCode: boolean;
 };
 
 const input = "min-h-11 w-full rounded-lg border border-neutral-300 bg-white px-3";
@@ -49,6 +50,17 @@ export default function SettingsForm({ initial }: { initial: Initial }) {
         <span className="text-sm font-medium">ข้อความรอง</span>
         <input name="tagline" maxLength={200} defaultValue={initial.tagline} className={input} />
       </label>
+
+      <fieldset className="space-y-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+        <legend className="px-1 text-sm font-medium">การสมัครสมาชิก</legend>
+        <label className="flex min-h-11 items-start gap-3 text-sm">
+          <input type="checkbox" name="requireRegistrationCode" defaultChecked={initial.requireRegistrationCode} className="mt-0.5 h-5 w-5 shrink-0" />
+          <span>
+            <strong>สมัครได้เฉพาะผู้ที่มีรหัสสมัคร</strong>
+            <span className="mt-1 block text-neutral-500">เปิดไว้ = ต้องกรอกรหัสที่แอดมินออกให้ (สร้างที่เมนู “รหัสสมัคร”) รหัสกำหนดประเภทสมาชิกและโรงเรียนให้เอง · ปิด = ใครก็สมัครได้โดยเลือกประเภทเอง (เหมาะช่วงทดสอบเท่านั้น)</span>
+          </span>
+        </label>
+      </fieldset>
 
       <fieldset className="space-y-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
         <legend className="px-1 text-sm font-medium">การอัปโหลดรูปภาพเข้าเซิร์ฟเวอร์</legend>

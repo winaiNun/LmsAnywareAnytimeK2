@@ -6,8 +6,9 @@ import { useRef, useState } from "react";
 import { Icon, Spinner, type IconName } from "@/components/icons";
 import SchoolPicker, { type SchoolOption } from "@/components/school-picker";
 import { MEMBER_TYPES, MEMBER_TYPE_LABEL, PREFIXES, needsSchool, type MemberTypeKey } from "@/lib/members";
+import { checkRegistrationCode } from "./actions";
 
-type Props = { systemName: string; areaName: string; logoUrl: string | null; schools: SchoolOption[] };
+type Props = { requireCode: boolean; systemName: string; areaName: string; logoUrl: string | null; schools: SchoolOption[] };
 
 const TYPE_INFO: Record<MemberTypeKey, { icon: IconName; hint: string }> = {
   STUDENT: { icon: "book", hint: "เรียนรู้และอ่านสื่อ" },
@@ -15,13 +16,17 @@ const TYPE_INFO: Record<MemberTypeKey, { icon: IconName; hint: string }> = {
   SUPERVISOR: { icon: "shield", hint: "ศึกษานิเทศก์" },
   GENERAL: { icon: "user", hint: "ผู้สนใจทั่วไป" },
 };
-const STEPS = ["ประเภท", "ข้อมูล", "บัญชี"];
+const STEPS_OPEN = ["ประเภท", "ข้อมูล", "บัญชี"];
+const STEPS_CODE = ["รหัสสมัคร", "ข้อมูล", "บัญชี"];
 
 const label = "block text-sm font-medium text-white/90";
 const input =
   "mt-1.5 min-h-12 w-full rounded-xl border border-white/30 bg-white/10 px-4 text-white placeholder:text-white/55 focus:border-white focus:outline-none focus:ring-2 focus:ring-white/40 [&>option]:text-neutral-900";
 
-export default function RegisterForm({ systemName, areaName, logoUrl, schools }: Props) {
+export default function RegisterForm({ requireCode, systemName, areaName, logoUrl, schools }: Props) {
+  const STEPS = requireCode ? STEPS_CODE : STEPS_OPEN;
+  const [codeText, setCodeText] = useState("");
+  const [verified, setVerified] = useState<{ label: string; school: { id: string; name: string } | null } | null>(null);
   const [step, setStep] = useState(0);
   const [type, setType] = useState<MemberTypeKey>("STUDENT");
   const [error, setError] = useState("");
@@ -47,8 +52,22 @@ export default function RegisterForm({ systemName, areaName, logoUrl, schools }:
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  async function verifyCode() {
+    if (!stepValid(0)) return;
+    setError("");
+    setBusy(true);
+    const r = await checkRegistrationCode(codeText);
+    setBusy(false);
+    if (!r.ok) return setError(r.error);
+    setVerified({ label: r.label, school: r.school });
+    setType(r.memberType);
+    setStep(1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (step === 0 && requireCode) return verifyCode();
     if (step < 2) return go(step + 1);
     if (!stepValid(2)) return;
     const f = new FormData(e.currentTarget);
@@ -56,7 +75,7 @@ export default function RegisterForm({ systemName, areaName, logoUrl, schools }:
     if (f.get("password") !== f.get("confirm")) return setError("รหัสผ่านทั้งสองช่องไม่ตรงกัน");
     setError("");
     setBusy(true);
-    const body = { ...Object.fromEntries(f), memberType: type, consent: f.get("consent") === "on" };
+    const body = { ...Object.fromEntries(f), memberType: type, code: requireCode ? codeText : undefined, consent: f.get("consent") === "on" };
     const res = await fetch("/api/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (!res.ok) {
       setError((await res.json().catch(() => ({}))).error ?? "สมัครสมาชิกไม่สำเร็จ");
@@ -107,24 +126,48 @@ export default function RegisterForm({ systemName, areaName, logoUrl, schools }:
         <form onSubmit={onSubmit} noValidate className="rounded-3xl border border-white/20 bg-white/[0.08] p-5 text-white shadow-[0_20px_80px_rgba(0,20,120,0.45)] backdrop-blur-md sm:p-8">
           {/* step 1 — member type */}
           <div ref={(el) => { panels.current[0] = el; }} className={panel(0)}>
-            <fieldset>
-              <legend className="mb-3 text-lg font-semibold">คุณคือใคร?</legend>
-              <div className="grid grid-cols-2 gap-3">
-                {MEMBER_TYPES.map((t) => (
-                  <label key={t} className={`relative flex min-h-[7.5rem] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border p-3 text-center transition focus-within:ring-2 focus-within:ring-white ${type === t ? "border-white bg-white text-[#0B2A6F] shadow-xl" : "border-white/30 bg-white/5 hover:bg-white/15"}`}>
-                    <input type="radio" name="memberType" value={t} checked={type === t} onChange={() => setType(t)} className="sr-only" />
-                    <Icon name={TYPE_INFO[t].icon} className="h-8 w-8" strokeWidth={1.5} />
-                    <span className="font-semibold">{MEMBER_TYPE_LABEL[t]}</span>
-                    <span className={`text-xs ${type === t ? "text-[#0B2A6F]/70" : "text-white/70"}`}>{TYPE_INFO[t].hint}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+            {requireCode ? (
+              <>
+                <h2 className="text-lg font-semibold">กรอกรหัสสมัคร</h2>
+                <p className="text-sm text-white/80">รหัสสมัครได้จากครู ผู้บริหารโรงเรียน หรือผู้ดูแลระบบ รหัสจะกำหนดประเภทสมาชิกและโรงเรียนให้เอง</p>
+                <label className={label}>รหัสสมัคร *
+                  <input
+                    name="code"
+                    required
+                    value={codeText}
+                    onChange={(e) => { setCodeText(e.target.value.toUpperCase()); setVerified(null); }}
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    maxLength={20}
+                    placeholder="เช่น ABCD-EFGH"
+                    className={`${input} text-center text-xl font-semibold tracking-[0.2em]`}
+                  />
+                </label>
+              </>
+            ) : (
+              <fieldset>
+                <legend className="mb-3 text-lg font-semibold">คุณคือใคร?</legend>
+                <div className="grid grid-cols-2 gap-3">
+                  {MEMBER_TYPES.map((t) => (
+                    <label key={t} className={`relative flex min-h-[7.5rem] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border p-3 text-center transition focus-within:ring-2 focus-within:ring-white ${type === t ? "border-white bg-white text-[#0B2A6F] shadow-xl" : "border-white/30 bg-white/5 hover:bg-white/15"}`}>
+                      <input type="radio" name="memberType" value={t} checked={type === t} onChange={() => setType(t)} className="sr-only" />
+                      <Icon name={TYPE_INFO[t].icon} className="h-8 w-8" strokeWidth={1.5} />
+                      <span className="font-semibold">{MEMBER_TYPE_LABEL[t]}</span>
+                      <span className={`text-xs ${type === t ? "text-[#0B2A6F]/70" : "text-white/70"}`}>{TYPE_INFO[t].hint}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            )}
           </div>
 
           {/* step 2 — profile */}
           <div ref={(el) => { panels.current[1] = el; }} className={panel(1)}>
             <h2 className="text-lg font-semibold">ข้อมูลของคุณ</h2>
+            {verified && (
+              <p className="rounded-xl bg-white/15 px-3 py-2 text-sm">✓ รหัสถูกต้อง: <strong>{verified.label}</strong> — สมัครในฐานะ <strong>{MEMBER_TYPE_LABEL[type]}</strong></p>
+            )}
             <div className="grid grid-cols-3 gap-3">
               <label className={label}>คำนำหน้า
                 <select name="prefix" defaultValue="" className={input}>
@@ -139,7 +182,15 @@ export default function RegisterForm({ systemName, areaName, logoUrl, schools }:
             {needsSchool(type) && (
               <div className={label}>
                 <span>โรงเรียน *</span>
-                <div className="mt-1.5"><SchoolPicker schools={schools} required tone="dark" /></div>
+                {verified?.school ? (
+                  <div className="mt-1.5 rounded-xl border border-white/30 bg-white/10 px-4 py-3">
+                    <input type="hidden" name="schoolId" value={verified.school.id} />
+                    <span className="font-semibold">{verified.school.name}</span>
+                    <span className="block text-xs text-white/70">กำหนดโดยรหัสสมัคร</span>
+                  </div>
+                ) : (
+                  <div className="mt-1.5"><SchoolPicker schools={schools} required tone="dark" /></div>
+                )}
               </div>
             )}
             {type === "STUDENT" && <label className={label}>ชั้น (เช่น ป.5, ม.2)<input name="gradeLevel" maxLength={40} className={input} /></label>}

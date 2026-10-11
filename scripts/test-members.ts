@@ -1,6 +1,7 @@
 /* Run with: npm run test:members */
 import assert from "node:assert/strict";
 import { avatarBox, clampCenter } from "../src/lib/avatar";
+import { CODE_LENGTH, codeStatus, formatCode, generateCode, normalizeCode } from "../src/lib/registration";
 import { pinAllowed, pinProblem } from "../src/lib/pin";
 import { profileData, profileSchema, usernameField } from "../src/lib/members";
 
@@ -64,6 +65,23 @@ t("avatar crop geometry", () => {
   assert.deepEqual(clampCenter(0.5, 0.5, 1, 1), { cx: 0.5, cy: 0.5 });
   const c = clampCenter(0, 0.5, 1, 2); // landscape, zoom 1: window is half the width
   assert.equal(c.cx, 0.25);
+});
+
+t("registration codes", () => {
+  const c = generateCode();
+  assert.equal(c.length, CODE_LENGTH);
+  assert.match(c, /^[A-HJKMNP-Z2-9]+$/); // no 0 O 1 I L
+  assert.notEqual(generateCode(), generateCode());
+  assert.equal(normalizeCode(" abcd-ef gh "), "ABCDEFGH");
+  assert.equal(formatCode("ABCDEFGH"), "ABCD-EFGH");
+  const now = new Date("2026-10-11T00:00:00Z");
+  const base = { active: true, expiresAt: null, maxUses: null, usedCount: 0 };
+  assert.equal(codeStatus(base, now), "ok");
+  assert.equal(codeStatus({ ...base, active: false }, now), "inactive");
+  assert.equal(codeStatus({ ...base, expiresAt: new Date("2026-10-10T00:00:00Z") }, now), "expired");
+  assert.equal(codeStatus({ ...base, expiresAt: new Date("2026-10-12T00:00:00Z") }, now), "ok");
+  assert.equal(codeStatus({ ...base, maxUses: 2, usedCount: 2 }, now), "used-up");
+  assert.equal(codeStatus({ ...base, maxUses: 2, usedCount: 1 }, now), "ok");
 });
 
 console.log(`members: ${passed} passed`);

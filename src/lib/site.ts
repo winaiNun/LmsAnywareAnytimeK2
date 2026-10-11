@@ -12,6 +12,7 @@ export type SiteInfo = {
   overlayOpacity: number;
   fadeSeconds: number;
   allowServerUploads: boolean;
+  requireRegistrationCode: boolean;
 };
 
 /** URL for a stored file: straight from the CDN/public bucket when configured, else via /api/files. */
@@ -30,6 +31,7 @@ export async function getSiteInfo(): Promise<SiteInfo> {
     overlayOpacity: s?.overlayOpacity ?? 45,
     fadeSeconds: s?.fadeSeconds ?? 1.5,
     allowServerUploads: s?.allowServerUploads ?? false,
+    requireRegistrationCode: s?.requireRegistrationCode ?? true,
   };
 }
 
