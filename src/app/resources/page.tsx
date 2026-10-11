@@ -6,15 +6,18 @@ import LiveFilter from "@/components/live-filter";
 import ResourceCard from "@/components/resource-card";
 import SiteNavbar from "@/components/site-navbar";
 import { db } from "@/lib/db";
+import { getSiteTexts } from "@/lib/site-texts-server";
 import { resourceImageOf } from "@/lib/resource-image";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "แหล่งสื่อภายนอก", description: "รวมเว็บไซต์และช่องทางแหล่งสื่อการเรียนรู้ที่แนะนำ" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getSiteTexts())["resources.title"], description: "รวมเว็บไซต์และช่องทางแหล่งสื่อการเรียนรู้ที่แนะนำ" };
+}
 
 const select = "min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm";
 
 export default async function ResourcesPage({ searchParams }: { searchParams: { q?: string; group?: string } }) {
-  const all = await db.resourceLink.findMany({ where: { active: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] });
+  const [all, texts] = await Promise.all([db.resourceLink.findMany({ where: { active: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }), getSiteTexts()]);
   const groups = Array.from(new Set(all.map((r) => r.groupName)));
   const q = (searchParams.q ?? "").trim().slice(0, 80);
   const group = groups.includes(searchParams.group ?? "") ? searchParams.group! : "";
@@ -26,9 +29,9 @@ export default async function ResourcesPage({ searchParams }: { searchParams: { 
       <SiteNavbar />
       <main className="mx-auto max-w-6xl space-y-6 px-4 pb-12 pt-24">
         <header className="space-y-1">
-          <Breadcrumb items={[{ label: "แหล่งสื่อภายนอก" }]} />
-          <h1 className="text-2xl font-bold sm:text-3xl">แหล่งสื่อภายนอก</h1>
-          <p className="text-neutral-600">เว็บไซต์และช่องทางที่ผู้ดูแลคัดมาให้ เปิดในแท็บใหม่ ระบบไม่รับผิดชอบเนื้อหาของเว็บภายนอก</p>
+          <Breadcrumb items={[{ label: texts["resources.title"] }]} />
+          <h1 className="text-2xl font-bold sm:text-3xl">{texts["resources.title"]}</h1>
+          <p className="text-neutral-600">{texts["resources.subtitle"]}</p>
         </header>
 
         <LiveFilter

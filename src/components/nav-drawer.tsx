@@ -18,7 +18,7 @@ const row = "flex min-h-12 items-center gap-3 rounded-xl px-3 text-[15px] font-m
  * Phone-only "more" menu (hamburger, top right). The bottom tab bar keeps the everyday places; this drawer holds
  * the rest: the learning areas, my media / review / back office, about, install, sign out.
  */
-export default function NavDrawer({ user, areas }: { user: DrawerUser | null; areas: DrawerArea[] }) {
+export default function NavDrawer({ user, areas, aboutLabel = "เกี่ยวกับ" }: { user: DrawerUser | null; areas: DrawerArea[]; aboutLabel?: string }) {
   const [open, setOpen] = useState(false);
   const [installable, setInstallable] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -121,7 +121,7 @@ export default function NavDrawer({ user, areas }: { user: DrawerUser | null; ar
               {user && <Link href="/dashboard/media" className={row}><Glyph name="file-text" size={20} className="text-neutral-500" />สื่อของฉัน</Link>}
               {user?.canReview && <Link href="/dashboard/review" className={row}><Glyph name="clipboard-check" size={20} className="text-neutral-500" />ตรวจสื่อ</Link>}
               {user?.isStaff && <Link href="/admin" className={row}><Glyph name="wrench" size={20} className="text-neutral-500" />จัดการระบบ</Link>}
-              <Link href="/about" className={row}><Glyph name="help-circle" size={20} className="text-neutral-500" />เกี่ยวกับ</Link>
+              <Link href="/about" className={row}><Glyph name="help-circle" size={20} className="text-neutral-500" />{aboutLabel}</Link>
               {installable && (
                 <button type="button" onClick={() => { setOpen(false); window.dispatchEvent(new Event("pwa-open")); }} className={`${row} w-full text-left`}>
                   <Glyph name="download" size={20} className="text-neutral-500" />ติดตั้งแอปบนหน้าจอ

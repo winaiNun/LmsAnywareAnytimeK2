@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { safeHttpsUrl } from "../src/lib/embed";
 import { DEFAULT_PAGES, PAGE_SLUGS, parseBody, parseInline, safeHref } from "../src/lib/site-pages";
 import { isBot } from "../src/lib/site-stats";
+import { DEFAULT_TEXTS, TEXT_DEFS, resolveTexts } from "../src/lib/site-texts";
 
 // 1) page markup: paragraphs, headings, lists, links
 const blocks = parseBody("บรรทัดแรก\nต่อบรรทัด\n\n## หัวข้อ\n- ข้อหนึ่ง\n- ข้อสอง [ไปคลัง](/library)\n\nย่อหน้าใหม่");
@@ -40,4 +41,16 @@ assert.equal(isBot("curl/8.0"), true);
 assert.equal(isBot("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36"), false);
 assert.equal(isBot("Mozilla/5.0 HeadlessChrome/120"), false);
 
-console.log("site pages: 6 groups passed");
+// 7) editable menu names / headings: defaults, overrides, blanks, junk and over-long values
+assert.deepEqual(resolveTexts(undefined), DEFAULT_TEXTS);
+assert.deepEqual(resolveTexts(null), DEFAULT_TEXTS);
+assert.deepEqual(resolveTexts([1, 2]), DEFAULT_TEXTS);
+assert.equal(resolveTexts({ "nav.library": "  คลังความรู้  " })["nav.library"], "คลังความรู้");
+assert.equal(resolveTexts({ "nav.library": "   " })["nav.library"], DEFAULT_TEXTS["nav.library"]);
+assert.equal(resolveTexts({ "nav.library": 5 })["nav.library"], DEFAULT_TEXTS["nav.library"]);
+assert.equal(resolveTexts({ "tab.library": "ก".repeat(50) })["tab.library"].length, 10);
+assert.equal(resolveTexts({ "no.such.key": "x" })["no.such.key"], undefined);
+for (const d of TEXT_DEFS) assert.ok(d.def.length > 0 && d.def.length <= d.max, d.key);
+assert.equal(new Set(TEXT_DEFS.map((d) => d.key)).size, TEXT_DEFS.length);
+
+console.log("site pages: 7 groups passed");

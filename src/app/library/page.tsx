@@ -7,6 +7,7 @@ import { MediaGrid } from "@/components/media-card";
 import Pager from "@/components/pager";
 import SiteNavbar from "@/components/site-navbar";
 import { db } from "@/lib/db";
+import { getSiteTexts } from "@/lib/site-texts-server";
 import { PER_PAGE, SORTS, SORT_LABEL, areaCounts, isSort, queryMedia, type Sort } from "@/lib/media-list";
 
 export const dynamic = "force-dynamic";
@@ -18,11 +19,12 @@ const select = "min-h-11 w-full rounded-xl border border-neutral-300 bg-white px
 
 export default async function LibraryPage({ searchParams }: { searchParams: SP }) {
   const sort: Sort = isSort(searchParams.sort) ? searchParams.sort : "latest";
-  const [areas, types, levels, result] = await Promise.all([
+  const [areas, types, levels, result, texts] = await Promise.all([
     areaCounts(),
     db.mediaType.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" }, select: { slug: true, name: true, icon: true } }),
     db.educationLevel.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" }, select: { slug: true, name: true } }),
     queryMedia({ q: searchParams.q, area: searchParams.area, type: searchParams.type, level: searchParams.level, by: searchParams.by, sort, page: Number(searchParams.page) || 1 }),
+    getSiteTexts(),
   ]);
 
   const href = (over: Partial<SP>) => {
@@ -39,11 +41,11 @@ export default async function LibraryPage({ searchParams }: { searchParams: SP }
     <>
       <SiteNavbar />
       <main className="mx-auto max-w-6xl space-y-5 px-4 pb-28 pt-24 md:pb-16">
-        <Breadcrumb items={current ? [{ label: "คลังสื่อ", href: "/library" }, { label: current.name }] : [{ label: "คลังสื่อ" }]} />
+        <Breadcrumb items={current ? [{ label: texts["nav.library"], href: "/library" }, { label: current.name }] : [{ label: texts["nav.library"] }]} />
 
         <header className="space-y-1">
-          <h1 className="text-2xl font-bold sm:text-3xl">{current ? current.name : "คลังสื่อการเรียนรู้"}</h1>
-          <p className="text-sm text-neutral-500">{result.total.toLocaleString("th-TH")} รายการ{searchParams.q ? ` ที่ตรงกับ “${searchParams.q}”` : ""} · คลิกเพื่อเปิดใช้งานหรือดาวน์โหลดได้ทันที ไม่ต้องเข้าสู่ระบบ</p>
+          <h1 className="text-2xl font-bold sm:text-3xl">{current ? current.name : texts["library.title"]}</h1>
+          <p className="text-sm text-neutral-500">{result.total.toLocaleString("th-TH")} รายการ{searchParams.q ? ` ที่ตรงกับ “${searchParams.q}”` : ""} · {texts["library.subtitle"]}</p>
         </header>
 
         {/* learning areas: one swipeable row on a phone; on a computer they wrap onto two rows so every one is visible and clickable (a hidden scrollbar can not be dragged with a mouse) */}

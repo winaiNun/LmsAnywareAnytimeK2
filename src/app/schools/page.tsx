@@ -6,16 +6,19 @@ import SchoolCard from "@/components/school-card";
 import SchoolsFilters from "@/components/schools-filters";
 import SiteNavbar from "@/components/site-navbar";
 import { getPublicSchools } from "@/lib/schools";
+import { getSiteTexts } from "@/lib/site-texts-server";
 import { SCHOOL_SORTS, filterOptions, isSort, querySchools, schoolsHref } from "@/lib/schools-data";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "ทำเนียบ Anywhere Anytime ของโรงเรียน" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getSiteTexts())["schools.title"] };
+}
 
 type Params = { q?: string; district?: string; center?: string; sort?: string; page?: string };
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
 export default async function SchoolsPage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
-  const all = await getPublicSchools();
+  const [all, texts] = await Promise.all([getPublicSchools(), getSiteTexts()]);
   const { districts, centers } = filterOptions(all);
 
   const params: Params = { q: one(searchParams.q), district: one(searchParams.district), center: one(searchParams.center), sort: one(searchParams.sort), page: one(searchParams.page) };
@@ -35,9 +38,9 @@ export default async function SchoolsPage({ searchParams }: { searchParams: Reco
       <SiteNavbar />
       <main className="mx-auto max-w-6xl space-y-6 px-4 pb-28 pt-24 md:pb-16">
         <header className="space-y-1">
-          <Breadcrumb items={[{ label: "ทำเนียบโรงเรียน" }]} />
-          <h1 className="text-2xl font-bold sm:text-3xl">ทำเนียบ Anywhere Anytime ของโรงเรียน</h1>
-          <p className="text-neutral-600">เว็บไซต์การเรียนรู้ Anywhere Anytime ของทุกโรงเรียนในเขต กดที่การ์ดเพื่อเปิดเว็บไซต์ของโรงเรียน</p>
+          <Breadcrumb items={[{ label: texts["nav.schools"] }]} />
+          <h1 className="text-2xl font-bold sm:text-3xl">{texts["schools.title"]}</h1>
+          <p className="text-neutral-600">{texts["schools.subtitle"]}</p>
         </header>
 
         <SchoolsFilters

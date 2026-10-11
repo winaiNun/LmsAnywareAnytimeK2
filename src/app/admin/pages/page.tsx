@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import { isAdmin, requireManagerPage } from "@/lib/permissions";
 import { DEFAULT_PAGES, PAGE_META, PAGE_SLUGS } from "@/lib/site-pages";
-import { FooterSettingsForm, PageEditor } from "./forms";
+import { resolveTexts } from "@/lib/site-texts";
+import { FooterSettingsForm, PageEditor, TextsForm } from "./forms";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "หน้าข้อมูลและ Footer" };
@@ -19,7 +20,7 @@ export default async function PagesAdmin() {
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold">หน้าข้อมูลและ Footer</h1>
-        <p className="text-sm text-neutral-500">ช่องทางติดต่อ ตัวนับผู้เข้าชม และข้อความของหน้า เกี่ยวกับ / ติดต่อ / นโยบายความเป็นส่วนตัว / เงื่อนไข / วิธีใช้งาน</p>
+        <p className="text-sm text-neutral-500">ช่องทางติดต่อ ตัวนับผู้เข้าชม ชื่อเมนู/หัวข้อหน้า และข้อความของหน้า เกี่ยวกับ / ติดต่อ / นโยบายความเป็นส่วนตัว / เงื่อนไข / วิธีใช้งาน</p>
       </div>
       <FooterSettingsForm
         v={{
@@ -29,6 +30,7 @@ export default async function PagesAdmin() {
           showVisits: site?.showVisits ?? true,
         }}
       />
+      <TextsForm saved={resolveTexts(site?.texts)} />
       <PageEditor pages={pages} />
     </div>
   );

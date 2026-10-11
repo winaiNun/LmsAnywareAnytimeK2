@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { safeHttpsUrl } from "@/lib/embed";
 import { assertRole, isAdmin } from "@/lib/permissions";
 import { PAGE_META, isPageSlug } from "@/lib/site-pages";
+import { TEXT_DEFS } from "@/lib/site-texts";
 import { parseInstant } from "@/lib/thai-date";
 
 export type PagesFormState = { error?: string; saved?: boolean } | undefined;
@@ -74,4 +75,20 @@ export async function resetPage(slug: string): Promise<{ error?: string }> {
   revalidatePath(PAGE_META[slug].path);
   revalidatePath("/admin/pages");
   return {};
+}
+
+/** Menu names and page headings (text only). A blank box, or the same text as the default, means "use the default". */
+export async function saveTexts(_prev: PagesFormState, f: FormData): Promise<PagesFormState> {
+  const actor = await assertRole(isAdmin);
+  const texts: Record<string, string> = {};
+  for (const d of TEXT_DEFS) {
+    const v = String(f.get(d.key) ?? "").replace(/\s+/g, " ").trim();
+    if (v.length > d.max) return { error: `“${d.label}” ยาวเกินไป (ไม่เกิน ${d.max} ตัวอักษร)` };
+    if (v && v !== d.def) texts[d.key] = v;
+  }
+  await db.siteSetting.upsert({ where: { id: "main" }, update: { texts }, create: { id: "main", texts } });
+  await audit({ actorId: actor.id, action: "site.texts", entity: "SiteSetting", entityId: "main", meta: { changed: Object.keys(texts) } });
+  revalidateTag("texts");
+  revalidatePath("/", "layout");
+  return { saved: true };
 }

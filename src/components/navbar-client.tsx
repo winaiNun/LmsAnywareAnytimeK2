@@ -10,14 +10,14 @@ import UserMenu from "./user-menu";
 import { Icon, type IconName } from "./icons";
 
 const LINKS = [
-  { href: "/", label: "หน้าแรก" },
-  { href: "/library", label: "คลังสื่อ" },
-  { href: "/#courses", label: "คอร์สเรียน" },
-  { href: "/schools", label: "โรงเรียน" },
-  { href: "/about", label: "เกี่ยวกับ" },
+  { href: "/", key: "nav.home" },
+  { href: "/library", key: "nav.library" },
+  { href: "/#courses", key: "nav.courses" },
+  { href: "/schools", key: "nav.schools" },
+  { href: "/about", key: "nav.about" },
 ];
 
-type Props = { user: { name: string; isStaff: boolean; canReview: boolean; typeLabel: string; avatar: AvatarData | null } | null; name: string; areaName?: string; logoUrl: string | null; areas: DrawerArea[] };
+type Props = { user: { name: string; isStaff: boolean; canReview: boolean; typeLabel: string; avatar: AvatarData | null } | null; name: string; areaName?: string; logoUrl: string | null; areas: DrawerArea[]; texts: Record<string, string> };
 type Tab = { href: string; label: string; icon: IconName; id?: string; avatar?: boolean };
 
 /** Which home-page section is on screen, for highlighting the matching bottom tab. */
@@ -44,15 +44,15 @@ function useActiveSection(ids: string[]) {
   return active;
 }
 
-export default function NavbarClient({ user, name, areaName, logoUrl, areas }: Props) {
+export default function NavbarClient({ user, name, areaName, logoUrl, areas, texts }: Props) {
   const pathname = usePathname();
   const section = useActiveSection(["courses"]);
 
   const tabs: Tab[] = [
-    { href: "/", label: "หน้าแรก", icon: "home" },
-    { href: "/library", label: "สื่อ", icon: "library" },
-    { href: "/#courses", label: "คอร์ส", icon: "course", id: "courses" },
-    user?.isStaff ? { href: "/admin", label: "จัดการ", icon: "shield" } : { href: "/schools", label: "โรงเรียน", icon: "school" },
+    { href: "/", label: texts["tab.home"], icon: "home" },
+    { href: "/library", label: texts["tab.library"], icon: "library" },
+    { href: "/#courses", label: texts["tab.courses"], icon: "course", id: "courses" },
+    user?.isStaff ? { href: "/admin", label: "จัดการ", icon: "shield" } : { href: "/schools", label: texts["tab.schools"], icon: "school" },
     user ? { href: "/dashboard", label: "บัญชี", icon: "userCircle", avatar: true } : { href: "/login", label: "เข้าสู่ระบบ", icon: "login" },
   ];
 
@@ -91,14 +91,14 @@ export default function NavbarClient({ user, name, areaName, logoUrl, areas }: P
                   aria-current={current ? "page" : undefined}
                   className={`rounded-full px-4 py-2 text-[15px] transition-colors ${current ? "bg-brand-soft font-semibold text-brand" : "text-neutral-700 hover:bg-brand-soft hover:text-brand"}`}
                 >
-                  {l.label}
+                  {texts[l.key]}
                 </Link>
               );
             })}
           </nav>
 
           {/* phones: the hamburger holds everything the bottom tabs do not */}
-          <NavDrawer user={user} areas={areas} />
+          <NavDrawer user={user} areas={areas} aboutLabel={texts["nav.about"]} />
 
           {/* desktop account area; on phones this lives in the bottom tab bar */}
           <div className="hidden items-center gap-2 md:flex">

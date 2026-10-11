@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import ThaiDateField from "@/components/thai-date-field";
-import { resetPage, saveFooterSettings, savePage, type PagesFormState } from "./actions";
+import { TEXT_DEFS, type SiteTexts } from "@/lib/site-texts";
+import { resetPage, saveFooterSettings, savePage, saveTexts, type PagesFormState } from "./actions";
 
 const input = "min-h-11 w-full rounded-lg border border-neutral-300 bg-white px-3";
 
@@ -90,5 +91,39 @@ export function PageEditor({ pages }: { pages: PageValues[] }) {
         </div>
       </form>
     </section>
+  );
+}
+
+const GROUP_TITLE = { menu: "เมนูด้านบน (คอมพิวเตอร์ / แท็บเล็ต) และเมนูในแฮมเบอร์เกอร์", tabs: "แท็บล่างของมือถือ (ชื่อสั้น ไม่เกิน 10 ตัวอักษร)", pages: "หัวข้อและคำอธิบายของหน้าต่างๆ" } as const;
+
+export function TextsForm({ saved }: { saved: SiteTexts }) {
+  const [state, action] = useFormState<PagesFormState, FormData>(saveTexts, undefined);
+  return (
+    <form action={action} className="space-y-5 rounded-2xl bg-white p-5 shadow-sm">
+      <div>
+        <h2 className="font-semibold">ชื่อเมนูและหัวข้อหน้า</h2>
+        <p className="text-sm text-neutral-500">เปลี่ยนเฉพาะข้อความ (ไม่มีการอัปโหลดรูป) · ช่องที่ล้างให้ว่างหรือพิมพ์เหมือนค่าเริ่มต้น = ใช้ข้อความเดิมของระบบ · ชื่อที่ยาวเกินจะถูกตัดด้วย “…” ในแถบเมนู ควรสั้นๆ</p>
+      </div>
+      {(["menu", "tabs", "pages"] as const).map((g) => (
+        <fieldset key={g} className="space-y-3">
+          <legend className="text-sm font-semibold text-neutral-700">{GROUP_TITLE[g]}</legend>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {TEXT_DEFS.filter((d) => d.group === g).map((d) => (
+              <label key={d.key} className={`block space-y-1 ${d.long ? "sm:col-span-2" : ""}`}>
+                <span className="text-sm font-medium">{d.label}</span>
+                {d.long ? (
+                  <textarea name={d.key} rows={2} maxLength={d.max} defaultValue={saved[d.key] === d.def ? "" : saved[d.key]} placeholder={d.def} className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm" />
+                ) : (
+                  <input name={d.key} maxLength={d.max} defaultValue={saved[d.key] === d.def ? "" : saved[d.key]} placeholder={d.def} className={input} />
+                )}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ))}
+      {state?.error && <p role="alert" className="text-sm text-red-600">{state.error}</p>}
+      {state?.saved && <p role="status" className="text-sm text-green-700">บันทึกแล้ว — หน้าเว็บจะเปลี่ยนภายในไม่กี่วินาที</p>}
+      <Submit>บันทึก</Submit>
+    </form>
   );
 }
