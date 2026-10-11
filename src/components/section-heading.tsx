@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Glyph, { IconTile } from "@/components/glyph";
+import Lines from "@/components/lines";
 import { HEADING_SIZE, type HEADING_STYLES } from "@/lib/section-styles";
 
 export type HeadingProps = {
@@ -42,10 +43,10 @@ export default function SectionHeading(p: HeadingProps) {
 
   const title = (
     <h2 id={p.id} className={`-my-1.5 py-1.5 font-bold leading-[1.45] tracking-tight ${HEADING_SIZE[p.size]}`} style={titleStyle}>
-      {p.title}
+      <Lines text={p.title} />
     </h2>
   );
-  const sub = p.subtitle ? <p className={`mt-1.5 max-w-2xl text-[15px] leading-relaxed ${muted} ${p.align === "center" ? "mx-auto" : p.align === "right" ? "ml-auto" : ""}`}>{p.subtitle}</p> : null;
+  const sub = p.subtitle ? <p className={`mt-1.5 max-w-2xl text-[15px] leading-relaxed ${muted} ${p.align === "center" ? "mx-auto" : p.align === "right" ? "ml-auto" : ""}`}><Lines text={p.subtitle} /></p> : null;
   const label = p.eyebrow ? (
     <span
       className="mb-2 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold tracking-wide"
@@ -73,7 +74,7 @@ export default function SectionHeading(p: HeadingProps) {
     return (
       <header className={p.align === "center" ? "text-center" : p.align === "right" ? "text-right" : "text-left"}>
         {title}
-        {p.subtitle && <p className="mt-1 opacity-80">{p.subtitle}</p>}
+        {p.subtitle && <p className="mt-1 opacity-80"><Lines text={p.subtitle} /></p>}
       </header>
     );
   }

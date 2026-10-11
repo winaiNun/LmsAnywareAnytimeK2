@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AvatarData } from "@/lib/avatar";
+import { plainText } from "@/lib/site-texts";
 import Avatar from "./avatar";
 import NavDrawer, { type DrawerArea } from "./nav-drawer";
 import UserMenu from "./user-menu";
@@ -49,10 +50,10 @@ export default function NavbarClient({ user, name, areaName, logoUrl, areas, tex
   const section = useActiveSection(["courses"]);
 
   const tabs: Tab[] = [
-    { href: "/", label: texts["tab.home"], icon: "home" },
-    { href: "/library", label: texts["tab.library"], icon: "library" },
-    { href: "/#courses", label: texts["tab.courses"], icon: "course", id: "courses" },
-    user?.isStaff ? { href: "/admin", label: "จัดการ", icon: "shield" } : { href: "/schools", label: texts["tab.schools"], icon: "school" },
+    { href: "/", label: plainText(texts["tab.home"]), icon: "home" },
+    { href: "/library", label: plainText(texts["tab.library"]), icon: "library" },
+    { href: "/#courses", label: plainText(texts["tab.courses"]), icon: "course", id: "courses" },
+    user?.isStaff ? { href: "/admin", label: "จัดการ", icon: "shield" } : { href: "/schools", label: plainText(texts["tab.schools"]), icon: "school" },
     user ? { href: "/dashboard", label: "บัญชี", icon: "userCircle", avatar: true } : { href: "/login", label: "เข้าสู่ระบบ", icon: "login" },
   ];
 
@@ -91,14 +92,14 @@ export default function NavbarClient({ user, name, areaName, logoUrl, areas, tex
                   aria-current={current ? "page" : undefined}
                   className={`rounded-full px-4 py-2 text-[15px] transition-colors ${current ? "bg-brand-soft font-semibold text-brand" : "text-neutral-700 hover:bg-brand-soft hover:text-brand"}`}
                 >
-                  {texts[l.key]}
+                  {plainText(texts[l.key])}
                 </Link>
               );
             })}
           </nav>
 
           {/* phones: the hamburger holds everything the bottom tabs do not */}
-          <NavDrawer user={user} areas={areas} aboutLabel={texts["nav.about"]} />
+          <NavDrawer user={user} areas={areas} aboutLabel={plainText(texts["nav.about"])} />
 
           {/* desktop account area; on phones this lives in the bottom tab bar */}
           <div className="hidden items-center gap-2 md:flex">

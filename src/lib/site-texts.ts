@@ -4,6 +4,13 @@
  */
 export type TextDef = { key: string; group: "menu" | "tabs" | "pages"; label: string; def: string; max: number; long?: boolean };
 
+/** A "|" in an admin-written heading is the admin's own line break. `lineParts` = the lines, `plainText` = the same text on one line. */
+export const lineParts = (text: string): string[] => text.split("|").map((x) => x.trim()).filter(Boolean);
+export const plainText = (text: string): string => lineParts(text).join(" ");
+/** Keys whose text may contain "|" line breaks (headings and descriptions; menu and tab names are one line). */
+export const allowsBreaks = (key: string) => key.endsWith(".title") || key.endsWith(".subtitle");
+export const MAX_LINES = 4;
+
 export const TEXT_DEFS: TextDef[] = [
   { key: "nav.home", group: "menu", label: "เมนู: หน้าแรก", def: "หน้าแรก", max: 30 },
   { key: "nav.library", group: "menu", label: "เมนู: คลังสื่อ", def: "คลังสื่อ", max: 30 },

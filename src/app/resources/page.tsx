@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Breadcrumb from "@/components/breadcrumb";
+import Lines from "@/components/lines";
+import { plainText } from "@/lib/site-texts";
 import CenterGrid from "@/components/center-grid";
 import LiveFilter from "@/components/live-filter";
 import ResourceCard from "@/components/resource-card";
@@ -11,7 +13,7 @@ import { resourceImageOf } from "@/lib/resource-image";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: (await getSiteTexts())["resources.title"], description: "รวมเว็บไซต์และช่องทางแหล่งสื่อการเรียนรู้ที่แนะนำ" };
+  return { title: plainText((await getSiteTexts())["resources.title"]), description: "รวมเว็บไซต์และช่องทางแหล่งสื่อการเรียนรู้ที่แนะนำ" };
 }
 
 const select = "min-h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm";
@@ -29,9 +31,9 @@ export default async function ResourcesPage({ searchParams }: { searchParams: { 
       <SiteNavbar />
       <main className="mx-auto max-w-6xl space-y-6 px-4 pb-12 pt-24">
         <header className="space-y-1">
-          <Breadcrumb items={[{ label: texts["resources.title"] }]} />
-          <h1 className="text-2xl font-bold sm:text-3xl">{texts["resources.title"]}</h1>
-          <p className="text-neutral-600">{texts["resources.subtitle"]}</p>
+          <Breadcrumb items={[{ label: plainText(texts["resources.title"]) }]} />
+          <h1 className="text-2xl font-bold sm:text-3xl"><Lines text={texts["resources.title"]} /></h1>
+          <p className="text-neutral-600"><Lines text={texts["resources.subtitle"]} /></p>
         </header>
 
         <LiveFilter

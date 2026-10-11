@@ -1,4 +1,6 @@
 import Breadcrumb from "@/components/breadcrumb";
+import Lines from "@/components/lines";
+import { plainText } from "@/lib/site-texts";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Pager from "@/components/pager";
@@ -11,7 +13,7 @@ import { SCHOOL_SORTS, filterOptions, isSort, querySchools, schoolsHref } from "
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: (await getSiteTexts())["schools.title"] };
+  return { title: plainText((await getSiteTexts())["schools.title"]) };
 }
 
 type Params = { q?: string; district?: string; center?: string; sort?: string; page?: string };
@@ -38,9 +40,9 @@ export default async function SchoolsPage({ searchParams }: { searchParams: Reco
       <SiteNavbar />
       <main className="mx-auto max-w-6xl space-y-6 px-4 pb-28 pt-24 md:pb-16">
         <header className="space-y-1">
-          <Breadcrumb items={[{ label: texts["nav.schools"] }]} />
-          <h1 className="text-2xl font-bold sm:text-3xl">{texts["schools.title"]}</h1>
-          <p className="text-neutral-600">{texts["schools.subtitle"]}</p>
+          <Breadcrumb items={[{ label: plainText(texts["nav.schools"]) }]} />
+          <h1 className="text-2xl font-bold sm:text-3xl"><Lines text={texts["schools.title"]} /></h1>
+          <p className="text-neutral-600"><Lines text={texts["schools.subtitle"]} /></p>
         </header>
 
         <SchoolsFilters

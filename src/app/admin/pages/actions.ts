@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { safeHttpsUrl } from "@/lib/embed";
 import { assertRole, isAdmin } from "@/lib/permissions";
 import { PAGE_META, isPageSlug } from "@/lib/site-pages";
-import { TEXT_DEFS } from "@/lib/site-texts";
+import { MAX_LINES, TEXT_DEFS, allowsBreaks, lineParts } from "@/lib/site-texts";
 import { parseInstant } from "@/lib/thai-date";
 
 export type PagesFormState = { error?: string; saved?: boolean } | undefined;
@@ -82,7 +82,13 @@ export async function saveTexts(_prev: PagesFormState, f: FormData): Promise<Pag
   const actor = await assertRole(isAdmin);
   const texts: Record<string, string> = {};
   for (const d of TEXT_DEFS) {
-    const v = String(f.get(d.key) ?? "").replace(/\s+/g, " ").trim();
+    let v = String(f.get(d.key) ?? "").replace(/\s+/g, " ").trim();
+    if (v.includes("|")) {
+      const parts = lineParts(v);
+      if (!allowsBreaks(d.key)) v = parts.join(" "); // menu and tab names stay on one line
+      else if (parts.length > MAX_LINES) return { error: `“${d.label}” ขึ้นบรรทัดใหม่ได้ไม่เกิน ${MAX_LINES} บรรทัด` };
+      else v = parts.join(" | ");
+    }
     if (v.length > d.max) return { error: `“${d.label}” ยาวเกินไป (ไม่เกิน ${d.max} ตัวอักษร)` };
     if (v && v !== d.def) texts[d.key] = v;
   }

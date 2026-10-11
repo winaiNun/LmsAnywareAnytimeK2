@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Avatar from "@/components/avatar";
 import Breadcrumb from "@/components/breadcrumb";
+import { plainText } from "@/lib/site-texts";
 import { getSiteTexts } from "@/lib/site-texts-server";
 import Glyph from "@/components/glyph";
 import MediaDetailBody from "@/components/media-detail";
@@ -43,7 +44,7 @@ export default async function MediaPage({ params }: { params: { id: string } }) 
     <>
       <SiteNavbar />
       <main className="mx-auto max-w-5xl space-y-8 px-4 pb-28 pt-24 md:pb-16">
-        <Breadcrumb items={[{ label: texts["nav.library"], href: "/library" }, { label: media.area.name, href: `/library?area=${media.area.slug}` }, { label: media.title.length > 40 ? `${media.title.slice(0, 40)}…` : media.title }]} />
+        <Breadcrumb items={[{ label: plainText(texts["nav.library"]), href: "/library" }, { label: media.area.name, href: `/library?area=${media.area.slug}` }, { label: media.title.length > 40 ? `${media.title.slice(0, 40)}…` : media.title }]} />
 
         {!published && (
           <p role="status" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">

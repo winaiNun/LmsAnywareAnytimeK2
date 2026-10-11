@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { safeHttpsUrl } from "../src/lib/embed";
 import { DEFAULT_PAGES, PAGE_SLUGS, parseBody, parseInline, safeHref } from "../src/lib/site-pages";
 import { isBot } from "../src/lib/site-stats";
-import { DEFAULT_TEXTS, TEXT_DEFS, resolveTexts } from "../src/lib/site-texts";
+import { DEFAULT_TEXTS, MAX_LINES, TEXT_DEFS, allowsBreaks, lineParts, plainText, resolveTexts } from "../src/lib/site-texts";
 
 // 1) page markup: paragraphs, headings, lists, links
 const blocks = parseBody("บรรทัดแรก\nต่อบรรทัด\n\n## หัวข้อ\n- ข้อหนึ่ง\n- ข้อสอง [ไปคลัง](/library)\n\nย่อหน้าใหม่");
@@ -53,4 +53,13 @@ assert.equal(resolveTexts({ "no.such.key": "x" })["no.such.key"], undefined);
 for (const d of TEXT_DEFS) assert.ok(d.def.length > 0 && d.def.length <= d.max, d.key);
 assert.equal(new Set(TEXT_DEFS.map((d) => d.key)).size, TEXT_DEFS.length);
 
-console.log("site pages: 7 groups passed");
+// 8) admin line breaks with "|": parts are trimmed, empty parts dropped, plain text joins with one space
+assert.deepEqual(lineParts("เทคโนโลยีและการบริหาร | สำหรับครู"), ["เทคโนโลยีและการบริหาร", "สำหรับครู"]);
+assert.deepEqual(lineParts("  ก||  ข |"), ["ก", "ข"]);
+assert.deepEqual(lineParts("ไม่มีเครื่องหมาย"), ["ไม่มีเครื่องหมาย"]);
+assert.equal(plainText("ก | ข|ค"), "ก ข ค");
+assert.equal(plainText("|"), "");
+assert.ok(allowsBreaks("schools.title") && allowsBreaks("library.subtitle") && !allowsBreaks("nav.library") && !allowsBreaks("tab.home"));
+assert.equal(MAX_LINES, 4);
+
+console.log("site pages: 8 groups passed");

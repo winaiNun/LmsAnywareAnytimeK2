@@ -102,7 +102,7 @@ export function TextsForm({ saved }: { saved: SiteTexts }) {
     <form action={action} className="space-y-5 rounded-2xl bg-white p-5 shadow-sm">
       <div>
         <h2 className="font-semibold">ชื่อเมนูและหัวข้อหน้า</h2>
-        <p className="text-sm text-neutral-500">เปลี่ยนเฉพาะข้อความ (ไม่มีการอัปโหลดรูป) · ช่องที่ล้างให้ว่างหรือพิมพ์เหมือนค่าเริ่มต้น = ใช้ข้อความเดิมของระบบ · ชื่อที่ยาวเกินจะถูกตัดด้วย “…” ในแถบเมนู ควรสั้นๆ</p>
+        <p className="text-sm text-neutral-500">เปลี่ยนเฉพาะข้อความ (ไม่มีการอัปโหลดรูป) · ช่องที่ล้างให้ว่างหรือพิมพ์เหมือนค่าเริ่มต้น = ใช้ข้อความเดิมของระบบ · ชื่อที่ยาวเกินจะถูกตัดด้วย “…” ในแถบเมนู ควรสั้นๆ · ในหัวข้อและคำอธิบายของหน้า พิมพ์ | เพื่อขึ้นบรรทัดใหม่ได้ (เมนูและแท็บไม่ขึ้นบรรทัดใหม่)</p>
       </div>
       {(["menu", "tabs", "pages"] as const).map((g) => (
         <fieldset key={g} className="space-y-3">

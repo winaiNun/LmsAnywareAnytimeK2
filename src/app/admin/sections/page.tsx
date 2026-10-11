@@ -1,3 +1,4 @@
+import { plainText } from "@/lib/site-texts";
 import { getHomeSections } from "@/lib/sections";
 import { requireManagerPage } from "@/lib/permissions";
 import { moveSection } from "./actions";
@@ -29,7 +30,7 @@ export default async function SectionsPage() {
               sectionKey={s.key}
               index={i + 1}
               kind={s.kind}
-              title={s.title}
+              title={plainText(s.title)}
               badges={[
                 { label: s.visible ? "แสดงอยู่" : "ซ่อนอยู่", tone: s.visible ? "blue" : "amber" },
                 ...(BG_LABEL[s.bgMode] ? [{ label: BG_LABEL[s.bgMode], tone: "gray" as const }] : []),

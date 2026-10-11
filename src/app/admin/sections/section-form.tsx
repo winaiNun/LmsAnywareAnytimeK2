@@ -87,11 +87,11 @@ export default function SectionForm({ section }: { section: HomeSectionConfig })
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block space-y-1">
-          <span className="text-sm font-medium">ข้อความกำกับเซกชัน *</span>
+          <span className="text-sm font-medium">ข้อความกำกับเซกชัน * <span className="font-normal text-neutral-500">(พิมพ์ | เพื่อขึ้นบรรทัดใหม่)</span></span>
           <input name="title" required maxLength={80} value={title} onChange={(e) => setTitle(e.target.value)} className={input} />
         </label>
         <label className="block space-y-1">
-          <span className="text-sm font-medium">ข้อความรอง (ไม่บังคับ)</span>
+          <span className="text-sm font-medium">ข้อความรอง (ไม่บังคับ) <span className="font-normal text-neutral-500">(พิมพ์ | เพื่อขึ้นบรรทัดใหม่)</span></span>
           <input name="subtitle" maxLength={160} value={subtitle} onChange={(e) => setSubtitle(e.target.value)} className={input} />
         </label>
       </div>
