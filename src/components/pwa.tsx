@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type InstallEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
 
@@ -13,20 +13,37 @@ export default function Pwa() {
   const [hidden, setHidden] = useState(true);
   const [tip, setTip] = useState(false);
 
+  const deferredRef = useRef<InstallEvent | null>(null);
+
   useEffect(() => {
     if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
     const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as unknown as { standalone?: boolean }).standalone;
-    let dismissed = false;
-    try { dismissed = !!localStorage.getItem(DISMISS_KEY); } catch {}
-    if (standalone || dismissed) return;
+    if (standalone) return;
+    const wasDismissed = () => { try { return !!localStorage.getItem(DISMISS_KEY); } catch { return false; } };
 
     const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    if (isIos) { setIos(true); setHidden(false); }
-    const onPrompt = (e: Event) => { e.preventDefault(); setDeferred(e as InstallEvent); setHidden(false); };
+    const installable = () => { document.documentElement.dataset.pwaInstallable = "1"; }; // the menu drawer reads this
+    if (isIos) { setIos(true); installable(); if (!wasDismissed()) setHidden(false); }
+    const onPrompt = (e: Event) => {
+      e.preventDefault();
+      deferredRef.current = e as InstallEvent;
+      setDeferred(e as InstallEvent);
+      installable();
+      if (!wasDismissed()) setHidden(false);
+    };
+    // "install" chosen from the hamburger menu: Android installs right away, iPhone shows the how-to
+    const onOpen = async () => {
+      try { localStorage.removeItem(DISMISS_KEY); } catch {}
+      const d = deferredRef.current;
+      if (d) { await d.prompt(); await d.userChoice; deferredRef.current = null; setDeferred(null); return; }
+      setHidden(false);
+      setTip(true);
+    };
     window.addEventListener("beforeinstallprompt", onPrompt);
-    return () => window.removeEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("pwa-open", onOpen);
+    return () => { window.removeEventListener("beforeinstallprompt", onPrompt); window.removeEventListener("pwa-open", onOpen); };
   }, []);
 
   function dismiss() {

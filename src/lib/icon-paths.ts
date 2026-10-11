@@ -41,6 +41,8 @@ export const ICON_PATHS: Record<string, string> = {
   search: `${circle(11, 11, 7)}M21 21l-4.3-4.3`,
   x: "M18 6L6 18M6 6l12 12",
   check: "M20 6L9 17l-5-5",
+  menu: "M4 6h16M4 12h16M4 18h16",
+  logout: "M10 4H5.5A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20H10M16 16.5l4.5-4.5L16 7.5M20.5 12H9",
   sparkles: "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z",
 };
 

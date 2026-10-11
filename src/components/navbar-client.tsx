@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AvatarData } from "@/lib/avatar";
 import Avatar from "./avatar";
+import NavDrawer, { type DrawerArea } from "./nav-drawer";
 import { Icon, type IconName } from "./icons";
 
 const LINKS = [
@@ -15,7 +16,7 @@ const LINKS = [
   { href: "/#about", label: "เกี่ยวกับ" },
 ];
 
-type Props = { user: { name: string; isStaff: boolean; avatar: AvatarData | null } | null; name: string; areaName?: string; logoUrl: string | null };
+type Props = { user: { name: string; isStaff: boolean; canReview: boolean; avatar: AvatarData | null } | null; name: string; areaName?: string; logoUrl: string | null; areas: DrawerArea[] };
 type Tab = { href: string; label: string; icon: IconName; id?: string; avatar?: boolean };
 
 /** Which home-page section is on screen, for highlighting the matching bottom tab. */
@@ -42,7 +43,7 @@ function useActiveSection(ids: string[]) {
   return active;
 }
 
-export default function NavbarClient({ user, name, areaName, logoUrl }: Props) {
+export default function NavbarClient({ user, name, areaName, logoUrl, areas }: Props) {
   const pathname = usePathname();
   const section = useActiveSection(["courses", "about"]);
 
@@ -86,6 +87,9 @@ export default function NavbarClient({ user, name, areaName, logoUrl }: Props) {
               </Link>
             ))}
           </nav>
+
+          {/* phones: the hamburger holds everything the bottom tabs do not */}
+          <NavDrawer user={user} areas={areas} />
 
           {/* desktop account area; on phones this lives in the bottom tab bar */}
           <div className="hidden items-center gap-2 md:flex">
