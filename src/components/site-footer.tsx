@@ -23,14 +23,14 @@ const link = "inline-flex min-h-9 items-center text-[15px] text-white/85 transit
 
 function Stat({ icon, label, children, live = false }: { icon: string; label: string; children: React.ReactNode; live?: boolean }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/[0.07] px-4 py-3 backdrop-blur-sm">
+    <div className="flex w-[calc(50%-0.375rem)] items-center gap-3 rounded-2xl border border-white/15 bg-white/[0.07] px-3 py-3 backdrop-blur-sm sm:px-4 lg:w-56">
       <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/12 text-white">
         <Glyph name={icon} size={20} />
         {live && <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-[#0B2A6F] bg-emerald-400 motion-safe:animate-pulse" aria-hidden />}
       </span>
       <div className="min-w-0">
         <p className="text-xl font-bold leading-tight text-white">{children}</p>
-        <p className="truncate text-xs text-white/65">{label}</p>
+        <p className="text-xs leading-tight text-white/65">{label}</p>
       </div>
     </div>
   );
@@ -56,22 +56,6 @@ export default async function SiteFooter() {
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#4F8BFF] via-[#0052FF] to-[#7C3AED]" aria-hidden />
 
         <div className="relative mx-auto max-w-6xl px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-12 md:pb-8">
-          {(stats.showVisits || stats.showOnline) && (
-            <section aria-label="สถิติการเข้าชม" className="mb-10">
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                {stats.showOnline && <Stat icon="activity" label="กำลังออนไลน์" live><OnlineCount /></Stat>}
-                {stats.showVisits && (
-                  <>
-                    <Stat icon="users" label="ผู้เข้าชมวันนี้">{nf.format(stats.today)}</Stat>
-                    <Stat icon="calendar-check" label="ผู้เข้าชมเดือนนี้">{nf.format(stats.month)}</Stat>
-                    <Stat icon="eye" label="ผู้เข้าชมทั้งหมด">{nf.format(stats.total)}</Stat>
-                  </>
-                )}
-              </div>
-              {stats.showVisits && <p className="mt-3 text-center text-xs text-white/60">นับผู้เข้าชมไม่ซ้ำรายวัน ตั้งแต่ {formatThaiDate(new Date(stats.since), { style: "long" })}</p>}
-            </section>
-          )}
-
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1.2fr_1.2fr]">
             <div>
               <Link href="/" className="inline-flex items-center gap-3" aria-label={`${site.systemName} — หน้าแรก`}>
@@ -141,7 +125,23 @@ export default async function SiteFooter() {
             </div>
           </div>
 
-          <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/15 pt-6 text-sm text-white/65 md:flex-row">
+          {(stats.showVisits || stats.showOnline) && (
+            <section aria-label="สถิติการเข้าชม" className="mt-10">
+              <div className="flex flex-wrap justify-center gap-3">
+                {stats.showOnline && <Stat icon="activity" label="กำลังออนไลน์" live><OnlineCount /></Stat>}
+                {stats.showVisits && (
+                  <>
+                    <Stat icon="users" label="ผู้เข้าชมวันนี้">{nf.format(stats.today)}</Stat>
+                    <Stat icon="calendar-check" label="ผู้เข้าชมเดือนนี้">{nf.format(stats.month)}</Stat>
+                    <Stat icon="eye" label="ผู้เข้าชมทั้งหมด">{nf.format(stats.total)}</Stat>
+                  </>
+                )}
+              </div>
+              {stats.showVisits && <p className="mt-3 text-center text-xs text-white/60">นับผู้เข้าชมไม่ซ้ำรายวัน ตั้งแต่ {formatThaiDate(new Date(stats.since), { style: "long" })}</p>}
+            </section>
+          )}
+
+          <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-white/15 pt-6 text-sm text-white/65 md:flex-row">
             <p className="text-center md:text-left">© {year} {site.systemName}{site.areaName ? ` · ${site.areaName}` : ""}</p>
             <ul className="flex flex-wrap justify-center gap-x-5">
               <li><Link href="/privacy" className="inline-flex min-h-9 items-center hover:text-white">นโยบายความเป็นส่วนตัว</Link></li>
