@@ -17,11 +17,12 @@
     "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "test:dates": "tsx scripts/test-dates.ts",
     "test:drive": "tsx scripts/test-drive.ts",
-    "test": "npm run test:dates && npm run test:drive && npm run test:schools && npm run test:members && npm run test:embed",
+    "test": "npm run test:dates && npm run test:drive && npm run test:schools && npm run test:members && npm run test:embed && npm run test:media",
     "test:schools": "tsx scripts/test-schools.ts",
     "test:members": "tsx scripts/test-members.ts && tsx scripts/test-users-import.ts",
     "test:embed": "tsx scripts/test-embed.ts",
-    "test:db": "tsx --env-file=.env scripts/test-registration-db.ts && tsx --env-file=.env scripts/test-users-import-db.ts"
+    "test:media": "tsx scripts/test-media.ts",
+    "test:db": "tsx --env-file=.env scripts/test-registration-db.ts && tsx --env-file=.env scripts/test-users-import-db.ts && tsx --env-file=.env scripts/test-media-db.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1147.0",

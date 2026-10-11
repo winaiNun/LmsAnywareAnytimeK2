@@ -20,12 +20,14 @@ export default async function DashboardPage() {
   // a school account goes straight to its own page
   if (await db.school.findUnique({ where: { accountId: session.user.id }, select: { id: true } })) redirect("/school");
 
-  const [user, schools, devices, site] = await Promise.all([
+  const [user, schools, devices, site, reviewerCount] = await Promise.all([
     db.user.findUnique({ where: { id: session.user.id } }),
     db.school.findMany({ where: { active: true }, select: { id: true, name: true, district: true, center: true }, orderBy: { name: "asc" } }),
     db.trustedDevice.findMany({ where: { userId: session.user.id }, orderBy: { lastUsedAt: "desc" } }),
     getSiteInfo(),
+    db.areaReviewer.count({ where: { userId: session.user.id } }),
   ]);
+  const isReviewer = reviewerCount > 0;
   if (!user) redirect("/login");
   const isStaff = user.role !== "STUDENT";
 
@@ -43,6 +45,8 @@ export default async function DashboardPage() {
           <Link href="/admin" className="flex min-h-10 items-center rounded bg-brand px-4 font-semibold text-white">ไปหลังบ้าน</Link>
         )}
         {user.role === "TEACHER" && <Link href="/admin/banners" className="flex min-h-10 items-center rounded bg-brand px-4 font-semibold text-white">ไปหลังบ้านผู้สร้าง</Link>}
+        <Link href="/dashboard/media" className="flex min-h-10 items-center rounded border px-4">สื่อของฉัน</Link>
+        {(isReviewer || user.role === "ADMIN") && <Link href="/dashboard/review" className="flex min-h-10 items-center rounded border px-4">ตรวจสื่อ</Link>}
         <Link href="/account/password" className="flex min-h-10 items-center rounded border px-4">เปลี่ยนรหัสผ่าน</Link>
         <Link href="/" className="flex min-h-10 items-center rounded border px-4">หน้าแรก</Link>
         <SignOutButton />

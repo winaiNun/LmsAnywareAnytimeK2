@@ -9,7 +9,7 @@ export default function Avatar({ avatar, name, size = 40, className = "" }: { av
     return (
       <span className={base} style={box}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={driveAvatarSrc(avatar.driveId)} alt={name} referrerPolicy="no-referrer" loading="lazy" draggable={false} className="absolute max-w-none" style={avatarBox(avatar)} />
+        <img src={driveAvatarSrc(avatar.driveId, size)} alt={name} referrerPolicy="no-referrer" loading="lazy" draggable={false} className="absolute max-w-none" style={avatarBox(avatar)} />
       </span>
     );
   }

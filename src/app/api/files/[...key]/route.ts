@@ -7,11 +7,20 @@ const TYPES: Record<string, string> = {
   webp: "image/webp",
   mp4: "video/mp4",
   webm: "video/webm",
+  // media library uploads (only exist while the admin allows server uploads)
+  pdf: "application/pdf",
+  epub: "application/epub+zip",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  zip: "application/zip",
+  mp3: "audio/mpeg",
 };
+const INLINE = new Set(["png", "jpg", "jpeg", "webp", "mp4", "webm", "pdf", "mp3"]);
 
 // Only public site assets are served here. Member-only files (books, lessons)
 // will get their own permission-checked route.
-const PUBLIC_PREFIXES = ["banners/", "site/", "schools/", "avatars/"];
+const PUBLIC_PREFIXES = ["banners/", "site/", "schools/", "avatars/", "media/"];
 
 export async function GET(req: Request, { params }: { params: { key: string[] } }) {
   const key = params.key.join("/");
@@ -33,6 +42,8 @@ export async function GET(req: Request, { params }: { params: { key: string[] } 
     "X-Content-Type-Options": "nosniff",
     "Cache-Control": "public, max-age=3600",
   };
+  const ext = key.split(".").pop()?.toLowerCase() ?? "";
+  if (!INLINE.has(ext)) headers["Content-Disposition"] = `attachment; filename="${key.split("/").pop()}"`; // documents download, never render in our origin
 
   // Browsers need byte ranges to loop/seek <video>.
   const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.get("range") ?? "");

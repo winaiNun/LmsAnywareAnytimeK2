@@ -33,4 +33,5 @@ export function clampCenter(cx: number, cy: number, zoom: number, aspect: number
   return { cx: Math.min(1 - hx, Math.max(hx, cx)), cy: Math.min(1 - hy, Math.max(hy, cy)) };
 }
 
-export const driveAvatarSrc = (id: string) => driveThumbnailUrl(id, 800);
+/** Small avatars ask Drive for a small thumbnail (a page of 20 cards must not pull 20 big images). */
+export const driveAvatarSrc = (id: string, px = 800) => driveThumbnailUrl(id, px <= 48 ? 160 : px <= 128 ? 320 : 800);
