@@ -11,6 +11,7 @@ export default function Pwa() {
   const [deferred, setDeferred] = useState<InstallEvent | null>(null);
   const [ios, setIos] = useState(false);
   const [hidden, setHidden] = useState(true);
+  const [tip, setTip] = useState(false);
 
   useEffect(() => {
     if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
@@ -34,19 +35,28 @@ export default function Pwa() {
   }
 
   if (hidden || (!deferred && !ios)) return null;
+
+  // A small chip in the bottom-left corner (above the phone tab bar), never a big dialog.
   return (
-    <div role="dialog" aria-label="ติดตั้งแอป" className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-md rounded-2xl bg-[#0B2A6F] p-4 text-white shadow-2xl" style={{ marginBottom: "env(safe-area-inset-bottom)" }}>
-      <p className="font-semibold">ติดตั้งแอปไว้บนหน้าจอโทรศัพท์</p>
-      {ios ? (
-        <p className="mt-1 text-sm text-white/85">แตะปุ่ม <span aria-label="แชร์">แชร์ (⬆︎)</span> ใน Safari แล้วเลือก “เพิ่มไปยังหน้าจอโฮม”</p>
-      ) : (
-        <p className="mt-1 text-sm text-white/85">เปิดใช้ได้เร็วเหมือนแอป ไม่ต้องพิมพ์ที่อยู่เว็บ</p>
+    <div className="fixed left-3 z-[60] bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-4" role="region" aria-label="ติดตั้งแอป">
+      {tip && (
+        <p className="mb-2 w-56 rounded-xl bg-[#0B2A6F] p-3 text-xs leading-relaxed text-white shadow-xl">
+          แตะปุ่ม <strong>แชร์ (⬆︎)</strong> ใน Safari แล้วเลือก <strong>“เพิ่มไปยังหน้าจอโฮม”</strong>
+        </p>
       )}
-      <div className="mt-3 flex gap-2">
-        {deferred && (
-          <button onClick={async () => { await deferred.prompt(); await deferred.userChoice; setDeferred(null); dismiss(); }} className="min-h-11 flex-1 rounded-full bg-white font-semibold text-[#0B2A6F]">ติดตั้ง</button>
-        )}
-        <button onClick={dismiss} className="min-h-11 flex-1 rounded-full border border-white/50">ไว้ก่อน</button>
+      <div className="flex items-center rounded-full bg-[#0B2A6F] pl-1 text-white shadow-lg ring-1 ring-white/20">
+        <button
+          type="button"
+          onClick={async () => {
+            if (deferred) { await deferred.prompt(); await deferred.userChoice; setDeferred(null); dismiss(); }
+            else setTip((v) => !v);
+          }}
+          className="flex min-h-10 items-center gap-1.5 rounded-full pl-2.5 pr-2 text-sm font-semibold"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>
+          ติดตั้งแอป
+        </button>
+        <button type="button" onClick={dismiss} aria-label="ปิดข้อความนี้" className="flex h-10 w-9 items-center justify-center rounded-full text-white/70 hover:text-white">×</button>
       </div>
     </div>
   );
