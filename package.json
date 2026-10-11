@@ -14,6 +14,8 @@
     "db:demo:clear": "tsx prisma/demo.ts --clear",
     "db:demo:media": "tsx --env-file=.env prisma/demo-media.ts",
     "db:demo:media:clear": "tsx --env-file=.env prisma/demo-media.ts --clear",
+    "db:demo:courses": "tsx --env-file=.env prisma/demo-courses.ts",
+    "db:demo:courses:clear": "tsx --env-file=.env prisma/demo-courses.ts --clear",
     "db:demo:resources": "tsx --env-file=.env prisma/demo-resources.ts",
     "db:demo:resources:clear": "tsx --env-file=.env prisma/demo-resources.ts --clear",
     "storage:migrate": "tsx scripts/migrate-local-to-s3.ts",

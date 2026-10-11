@@ -15,13 +15,14 @@ export default async function ReviewQueuePage() {
   const admin = actor.role === "ADMIN";
   if (!admin && actor.reviewerAreaIds.length === 0) redirect("/dashboard");
 
-  const [queue, areas] = await Promise.all([
+  const [queue, areas, courseCount] = await Promise.all([
     db.media.findMany({
       where: { status: "PENDING", ...(admin ? {} : { areaId: { in: actor.reviewerAreaIds } }) },
       orderBy: { updatedAt: "asc" },
       select: cardSelect,
     }),
     db.learningArea.findMany({ where: { id: { in: actor.reviewerAreaIds } }, select: { name: true } }),
+    db.course.count({ where: { status: "PENDING", ...(admin ? {} : { areaId: { in: actor.reviewerAreaIds } }) } }),
   ]);
 
   return (
@@ -31,6 +32,10 @@ export default async function ReviewQueuePage() {
         <h1 className="text-2xl font-bold">ตรวจสื่อ</h1>
         <p className="text-sm text-neutral-500">{admin ? "ทุกกลุ่มสาระ" : `คุณดูแลกลุ่มสาระ: ${areas.map((a) => a.name).join(", ")}`} · รอตรวจ {queue.length} ชิ้น (เรียงจากที่รอนานที่สุด)</p>
       </div>
+      <nav aria-label="ประเภทที่ตรวจ" className="flex gap-2">
+        <Link href="/dashboard/review" aria-current="page" className="flex min-h-11 items-center rounded-full border border-brand bg-brand-soft px-5 text-sm font-semibold text-brand">สื่อ{queue.length > 0 ? ` (${queue.length})` : ""}</Link>
+        <Link href="/dashboard/review/courses" className="flex min-h-11 items-center rounded-full border border-neutral-300 bg-white px-5 text-sm">คอร์ส{courseCount > 0 ? ` (${courseCount})` : ""}</Link>
+      </nav>
       {queue.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-neutral-300 bg-white p-10 text-center text-neutral-500">ไม่มีสื่อรออนุมัติ</p>
       ) : (

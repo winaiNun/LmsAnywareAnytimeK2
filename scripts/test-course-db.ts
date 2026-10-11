@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
 import type { CourseActor } from "../src/lib/course/access";
+import { enrollAs, reviewCourseAs, setEnrollOpenAs, unpublishCourseAs } from "../src/lib/course/course-review";
 import { addBlockAs, addLessonAs, createQuizAs, deleteBlockAs, deleteCourseAs, deleteLessonAs, deleteQuestionAs, deleteQuizAs, moveBlockAs, moveLessonAs, moveQuestionAs, readinessOf, saveCourseInfoAs, saveQuestionAs, submitCourseAs, updateBlockAs, updateLessonAs, updateQuizAs, withdrawCourseAs } from "../src/lib/course/course-save";
 
 const db = new PrismaClient();
@@ -187,7 +188,53 @@ async function main() {
     assert.equal(await db.question.count({ where: { quizId: quiz } }), 0);
     ok(await deleteCourseAs(admin, otherCourse.id));
     ok(await deleteCourseAs(admin, adminCourse.id));
-    console.log("course db: 9 groups passed");
+
+    // 10) review: approve / send back, never your own, a note is required to send back
+    const rc = ok(await saveCourseInfoAs(teacher, null, info("zz-course ตรวจ")));
+    const rl = ok(await addLessonAs(teacher, rc.id, "บท")).id;
+    ok(await addBlockAs(teacher, rl, { kind: "TEXT", text: "เนื้อหา" }));
+    ok(await submitCourseAs(teacher, rc.id));
+    const reviewer = A(otherU, "NONE", ["area_math"]);
+    const wrongArea = A(otherU, "NONE", ["area_thai"]);
+    fails(await reviewCourseAs(wrongArea, rc.id, "approve", ""), "ไม่มีสิทธิ์ตรวจ");
+    fails(await reviewCourseAs(A(teacherU, "APPROVED", ["area_math"]), rc.id, "approve", ""), "ของตัวเอง");
+    fails(await reviewCourseAs(reviewer, rc.id, "reject", "สั้น"), "5 ตัวอักษร");
+    ok(await reviewCourseAs(reviewer, rc.id, "reject", "ภาพปกไม่ชัด ช่วยเปลี่ยนด้วย"));
+    let rr = await db.course.findUniqueOrThrow({ where: { id: rc.id } });
+    assert.equal(rr.status, "REJECTED");
+    assert.equal(rr.reviewNote, "ภาพปกไม่ชัด ช่วยเปลี่ยนด้วย");
+    fails(await reviewCourseAs(reviewer, rc.id, "approve", ""), "รออนุมัติ");
+    ok(await submitCourseAs(teacher, rc.id)); // rejected courses can be sent again
+    ok(await reviewCourseAs(reviewer, rc.id, "approve", ""));
+    rr = await db.course.findUniqueOrThrow({ where: { id: rc.id } });
+    assert.equal(rr.status, "PUBLISHED");
+    assert.ok(rr.publishedAt && rr.reviewedAt && rr.reviewedById === otherU.id);
+
+    // 11) enrolment: only public + open courses, twice is harmless, closing stops new learners only
+    fails(await enrollAs(otherU.id, "no_such_course"), "ไม่พบคอร์ส");
+    fails(await enrollAs(otherU.id, c1.id), "ไม่พบคอร์ส"); // c1 was deleted above; a draft is not public either
+    const e1 = ok(await enrollAs(otherU.id, rc.id));
+    assert.equal(e1.already, false);
+    const e2 = ok(await enrollAs(otherU.id, rc.id));
+    assert.equal(e2.already, true);
+    const both = await Promise.all([enrollAs(creatorStudentU.id, rc.id), enrollAs(creatorStudentU.id, rc.id)]);
+    assert.ok(both.every((r) => !("error" in r)), "two clicks at once do not fail");
+    assert.equal(await db.enrollment.count({ where: { courseId: rc.id } }), 2);
+    fails(await setEnrollOpenAs(other, rc.id, false), "ไม่มีสิทธิ์");
+    ok(await setEnrollOpenAs(teacher, rc.id, false));
+    assert.equal((await db.course.findUniqueOrThrow({ where: { id: rc.id } })).status, "PUBLISHED", "closing sign-ups needs no new review");
+    fails(await enrollAs(teacherU.id, rc.id), "ปิดรับลงทะเบียน");
+    ok(await enrollAs(otherU.id, rc.id)); // someone already in can still "join" (nothing changes)
+    ok(await setEnrollOpenAs(admin, rc.id, true));
+
+    // 12) unpublish is admin-only and keeps the learners
+    fails(await unpublishCourseAs(teacher, rc.id), "ไม่มีสิทธิ์");
+    ok(await unpublishCourseAs(admin, rc.id));
+    assert.equal((await db.course.findUniqueOrThrow({ where: { id: rc.id } })).status, "DRAFT");
+    assert.equal(await db.enrollment.count({ where: { courseId: rc.id } }), 2);
+    fails(await unpublishCourseAs(admin, rc.id), "ไม่ได้เผยแพร่");
+    fails(await enrollAs(creatorStudentU.id, rc.id), "ไม่พบคอร์ส");
+    console.log("course db: 12 groups passed");
   } finally {
     await db.course.deleteMany({ where: { OR: [{ title: { startsWith: "zz-course" } }, { createdById: { in: [adminU.id, teacherU.id, otherU.id, creatorStudentU.id] } }] } });
     await db.user.deleteMany({ where: { username: { startsWith: "zz.course." } } });

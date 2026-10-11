@@ -6,6 +6,8 @@
 const VARIANTS = {
   // 1 / 2 / 3 columns, gap 12px
   resources: { gap: "gap-3", item: "w-full sm:w-[calc((100%-0.75rem)/2)] lg:w-[calc((100%-1.5rem)/3)]" },
+  // course cards: same columns as resources, a little more room between them
+  courses: { gap: "gap-4", item: "w-full sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)]" },
   // 2 / 3 / 5 columns, gap 12px
   areas: { gap: "gap-3", item: "w-[calc((100%-0.75rem)/2)] sm:w-[calc((100%-1.5rem)/3)] lg:w-[calc((100%-3rem)/5)]" },
   // 2 / 3 / 4 columns, gap 12px (16px from sm)
