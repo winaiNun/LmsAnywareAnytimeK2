@@ -73,6 +73,7 @@ model User {
   banners     Banner[]     @relation("BannerCreator")
   school      School?      @relation("SchoolAccount") // set when this account manages a school
   mustChangePassword Boolean @default(false) // temporary password issued by an admin/import
+  certificates Certificate[] @relation("UserCertificates")
 }
 
 /// Admin-issued sign-up code. Redeemed atomically (see src/lib/registration.ts) so a code with 1 use left
@@ -347,6 +348,8 @@ model Course {
   lessons     Lesson[]
   quizzes     Quiz[]
   enrollments Enrollment[]
+  certificateDesigns CertificateDesign[]
+  certificates Certificate[] @relation("CourseCertificates")
 
   @@index([status, publishedAt])
   @@index([areaId, status])
@@ -667,4 +670,88 @@ model SitePage {
   title     String
   body      String
   updatedAt DateTime @updatedAt
+}
+
+
+// ---------- Certificates ----------
+enum CertificateStatus {
+  PENDING // finished the course, waiting for the district to give it a number
+  ISSUED
+  REVOKED
+}
+
+/// A running number series ("0001/2569"). One series can serve many courses/designs, so several work groups share one register.
+model CertificateSerial {
+  id          String  @id @default(cuid())
+  name        String
+  pattern     String  @default("{no}/{year}") // {no} = running number, {year} = พ.ศ.
+  padding     Int     @default(4)
+  nextNo      Int     @default(1)
+  resetYearly Boolean @default(true)
+  lastYear    Int? // พ.ศ. of the last number given (drives the yearly reset)
+  createdAt   DateTime @default(now())
+
+  designs      CertificateDesign[]
+  certificates Certificate[]
+}
+
+/// Uploaded by an admin (who confirms the right to use it); the bytes live here so no file storage is needed.
+model CertificateFont {
+  id          String   @id @default(cuid())
+  name        String
+  mime        String
+  size        Int
+  data        Bytes
+  createdById String?
+  createdAt   DateTime @default(now())
+}
+
+/// One certificate layout of a course: the template picture + where each text goes. A course may have several (chosen by score).
+model CertificateDesign {
+  id          String  @id @default(cuid())
+  courseId    String
+  course      Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  name        String
+  position    Int     @default(0)
+  isDefault   Boolean @default(false)
+  minScore    Int? // used for learners whose quiz average reaches this; null = anyone who finishes
+  imageDriveId String?
+  imageW      Int     @default(0)
+  imageH      Int     @default(0)
+  fields      Json    @default("[]")
+  serialId    String? // null = no number needed, issued the moment the course is finished
+  serial      CertificateSerial? @relation(fields: [serialId], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  certificates Certificate[]
+
+  @@index([courseId])
+}
+
+model Certificate {
+  id          String  @id @default(cuid())
+  courseId    String
+  course      Course  @relation("CourseCertificates", fields: [courseId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User    @relation("UserCertificates", fields: [userId], references: [id], onDelete: Cascade)
+  designId    String
+  design      CertificateDesign @relation(fields: [designId], references: [id], onDelete: Restrict)
+  serialId    String?
+  serial      CertificateSerial? @relation(fields: [serialId], references: [id], onDelete: Restrict)
+  number      String?
+  status      CertificateStatus @default(PENDING)
+  verifyCode  String  @unique
+  completedAt DateTime
+  scorePercent Int?
+  nameSnapshot String? // frozen when issued
+  issuedAt    DateTime?
+  issuedById  String?
+  revokedAt   DateTime?
+  revokeNote  String?
+  createdAt   DateTime @default(now())
+
+  @@unique([courseId, userId])
+  @@unique([serialId, number])
+  @@index([courseId, status])
 }

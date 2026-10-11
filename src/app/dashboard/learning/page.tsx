@@ -66,7 +66,7 @@ export default async function LearningPage() {
                         <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-200" role="progressbar" aria-valuenow={c.progress} aria-valuemin={0} aria-valuemax={100} aria-label="ความคืบหน้า"><div className={`h-full rounded-full ${c.completedAt ? "bg-green-600" : "bg-brand"}`} style={{ width: `${c.progress}%` }} /></div>
                         <span className="w-10 text-right text-xs font-medium text-neutral-600">{c.progress}%</span>
                       </div>
-                      {c.completedAt && <p className="inline-flex items-center gap-1 text-xs font-semibold text-green-700"><Glyph name="trophy" size={14} />เรียนจบเมื่อ {formatThaiDate(c.completedAt)}</p>}
+                      {c.completedAt && <p className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-green-700"><span className="inline-flex items-center gap-1"><Glyph name="trophy" size={14} />เรียนจบเมื่อ {formatThaiDate(c.completedAt)}</span><Link href={`/courses/${c.courseId}`} className="text-brand underline">ดูเกียรติบัตร</Link></p>}
                       <div className="flex flex-wrap gap-2 pt-1">
                         {c.lessonId && <Link href={`/courses/${c.courseId}/learn/${c.lessonId}`} className="flex min-h-10 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-white">{c.completedAt ? "ทบทวน" : c.progress > 0 ? "เรียนต่อ" : "เริ่มเรียน"}</Link>}
                         <Link href={`/courses/${c.courseId}`} className="flex min-h-10 items-center rounded-lg border border-neutral-300 px-3 text-sm">หน้าคอร์ส</Link>

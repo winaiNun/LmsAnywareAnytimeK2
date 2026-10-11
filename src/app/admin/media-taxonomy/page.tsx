@@ -42,7 +42,7 @@ export default async function TaxonomyPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">ระดับชั้น</h2>
+        <h2 className="text-lg font-semibold">ระดับชั้น / กลุ่มผู้ใช้ (เช่น ครู ผู้บริหาร)</h2>
         {levels.map((l) => <TaxonomyForm key={l.id} kind="level" item={item(l)} />)}
         <TaxonomyForm kind="level" item={null} />
       </section>

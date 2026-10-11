@@ -80,8 +80,8 @@ export default async function LibraryPage({ searchParams }: { searchParams: SP }
             <option value="">ทุกประเภท</option>
             {types.map((t) => <option key={t.slug} value={t.slug}>{t.name}</option>)}
           </select>
-          <select name="level" defaultValue={searchParams.level ?? ""} aria-label="ระดับชั้น" className={select}>
-            <option value="">ทุกระดับชั้น</option>
+          <select name="level" defaultValue={searchParams.level ?? ""} aria-label="ระดับชั้นหรือกลุ่มผู้ใช้" className={select}>
+            <option value="">ทุกกลุ่มผู้เรียน (นักเรียน ครู ผู้บริหาร)</option>
             {levels.map((l) => <option key={l.slug} value={l.slug}>{l.name}</option>)}
           </select>
           <select name="sort" defaultValue={sort} aria-label="เรียงตาม" className={select}>

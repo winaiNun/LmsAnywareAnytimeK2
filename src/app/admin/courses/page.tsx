@@ -64,7 +64,7 @@ export default async function AdminCoursesPage({ searchParams }: { searchParams:
                     <td className="p-3 text-neutral-600">{c.area.name}</td>
                     <td className="p-3 text-neutral-600">{c.createdBy.name}</td>
                     <td className="p-3 tabular-nums">{c._count.lessons}</td>
-                    <td className="p-3 tabular-nums">{c._count.enrollments}</td>
+                    <td className="p-3 tabular-nums"><Link href={`/dashboard/courses/${c.id}/edit?tab=learners`} className="text-brand hover:underline">{c._count.enrollments}</Link></td>
                     <td className="p-3"><span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${tone}`}>{label}</span></td>
                     <td className="p-3 text-neutral-600">{formatThaiDate(c.updatedAt)}</td>
                   </tr>

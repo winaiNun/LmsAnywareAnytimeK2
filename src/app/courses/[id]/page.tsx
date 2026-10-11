@@ -9,6 +9,7 @@ import { coverOf, getCourseActor } from "@/lib/course/course-server";
 import { db } from "@/lib/db";
 import { plainText } from "@/lib/site-texts";
 import { getSiteTexts } from "@/lib/site-texts-server";
+import LearnerCertificate from "@/components/certificate/learner-certificate";
 import EnrollButton from "./enroll-button";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,7 @@ export default async function CoursePage({ params }: { params: { id: string } })
   });
   if (!course || !canPreviewCourse(actor, { createdById: course.createdBy.id, areaId: course.areaId, status: course.status })) notFound();
   const published = course.status === "PUBLISHED";
-  const enrollment = actor && published ? await db.enrollment.findUnique({ where: { userId_courseId: { userId: actor.id, courseId: course.id } }, select: { id: true } }) : null;
+  const enrollment = actor && published ? await db.enrollment.findUnique({ where: { userId_courseId: { userId: actor.id, courseId: course.id } }, select: { id: true, completedAt: true } }) : null;
   const preview = !published || (!!actor && !enrollment && actor.id === course.createdBy.id);
   const cover = coverOf(course, 1280);
   const first = course.lessons[0];
@@ -69,6 +70,8 @@ export default async function CoursePage({ params }: { params: { id: string } })
             <EnrollButton courseId={course.id} signedIn={!!actor} enrolled={!!enrollment} open={course.enrollOpen && published} continueHref={first ? `/courses/${course.id}/learn/${first.id}` : null} preview={preview} />
           </div>
         </div>
+
+        {actor && enrollment?.completedAt && <LearnerCertificate userId={actor.id} courseId={course.id} />}
 
         <section className="space-y-2 rounded-2xl border border-neutral-200 bg-white p-5">
           <h2 className="font-semibold">เกี่ยวกับคอร์ส</h2>

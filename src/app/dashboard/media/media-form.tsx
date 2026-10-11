@@ -141,7 +141,7 @@ export default function MediaForm({ values, areas, types, levels, allowUpload, i
           </label>
         </div>
         <fieldset className="space-y-2">
-          <legend className="text-sm font-medium">ระดับชั้น (เลือกได้หลายข้อ)</legend>
+          <legend className="text-sm font-medium">ระดับชั้น / กลุ่มผู้ใช้ (เลือกได้หลายข้อ)</legend>
           <div className="flex flex-wrap gap-2">
             {levels.map((l) => {
               const on = levelIds.includes(l.id);

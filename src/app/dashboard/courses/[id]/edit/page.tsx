@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { asLearnerStatus } from "@/lib/course/course-learners";
 import { canEditCourse } from "@/lib/course/access";
 import { readinessOf } from "@/lib/course/course-save";
 import { COURSE_STATUS_LABEL, coverOf, getCourseActor } from "@/lib/course/course-server";
@@ -9,6 +10,8 @@ import { storageIsDurable } from "@/lib/schools";
 import { getSiteInfo } from "@/lib/site";
 import CourseInfoForm from "../../course-info-form";
 import ContentEditor from "./content-editor";
+import CertificateTab from "./certificate-tab";
+import LearnersTab from "./learners-tab";
 import QuizzesTab from "./quizzes-tab";
 import SubmitTab from "./submit-tab";
 
@@ -20,9 +23,11 @@ const TABS = [
   { key: "content", label: "บทเรียน" },
   { key: "quizzes", label: "แบบทดสอบ" },
   { key: "submit", label: "ส่งตรวจ" },
+  { key: "learners", label: "ผู้เรียน" },
+  { key: "certificate", label: "เกียรติบัตร" },
 ] as const;
 
-export default async function EditCoursePage({ params, searchParams }: { params: { id: string }; searchParams: { tab?: string; created?: string } }) {
+export default async function EditCoursePage({ params, searchParams }: { params: { id: string }; searchParams: { tab?: string; created?: string; q?: string; status?: string; page?: string; design?: string } }) {
   const actor = await getCourseActor();
   if (!actor) redirect(`/login?callbackUrl=/dashboard/courses/${params.id}/edit`);
   const course = await db.course.findUnique({
@@ -49,7 +54,7 @@ export default async function EditCoursePage({ params, searchParams }: { params:
         {searchParams.created && <p role="status" className="mt-2 rounded-xl bg-green-50 p-3 text-sm font-medium text-green-800">สร้างคอร์สแล้ว — เพิ่มบทเรียนด้านล่างได้เลย</p>}
       </div>
 
-      <nav aria-label="ขั้นตอนการสร้างคอร์ส" className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav aria-label="ขั้นตอนการสร้างคอร์ส" className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
         {TABS.map((t, i) => (
           <Link key={t.key} href={`${base}?tab=${t.key}`} aria-current={tab === t.key ? "page" : undefined} className={`flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-sm ${tab === t.key ? "border-brand bg-brand-soft font-semibold text-brand" : "border-neutral-300 bg-white"}`}>
             <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${tab === t.key ? "bg-brand text-white" : "bg-neutral-100 text-neutral-600"}`}>{i + 1}</span>{t.label}
@@ -71,6 +76,8 @@ export default async function EditCoursePage({ params, searchParams }: { params:
       )}
       {tab === "content" && <ContentEditor courseId={course.id} lessons={course.lessons.map((l) => ({ id: l.id, title: l.title, sectionTitle: l.section?.title ?? null, blockCount: l._count.blocks, required: l.required, unlockRule: l.unlockRule }))} />}
       {tab === "quizzes" && <QuizzesTab courseId={course.id} quizzes={course.quizzes.map((q) => ({ id: q.id, title: q.title, questionCount: q._count.questions, passPercent: q.passPercent, usedInLessons: q._count.blocks }))} />}
+      {tab === "learners" && <LearnersTab courseId={course.id} q={searchParams.q ?? ""} status={asLearnerStatus(searchParams.status)} page={Math.max(1, Number(searchParams.page) || 1)} />}
+      {tab === "certificate" && <CertificateTab courseId={course.id} isAdmin={admin} designId={searchParams.design} status={searchParams.status} />}
       {tab === "submit" && <SubmitTab courseId={course.id} status={course.status} problems={problems} isAdmin={admin} reviewNote={course.reviewNote} enrollments={course._count.enrollments} />}
     </main>
   );

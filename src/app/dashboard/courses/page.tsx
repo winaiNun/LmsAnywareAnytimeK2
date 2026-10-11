@@ -71,7 +71,7 @@ export default async function MyCoursesPage({ searchParams }: { searchParams: { 
                     <span className={`rounded-full px-2.5 py-0.5 font-medium ${tone}`}>{label}</span>
                     <span>{c.area.name}</span>
                     <span>{c._count.lessons} บท</span>
-                    {c.status === "PUBLISHED" && <span>{c._count.enrollments} ผู้เรียน</span>}
+                    {c.status === "PUBLISHED" && <Link href={`/dashboard/courses/${c.id}/edit?tab=learners`} className="text-brand underline-offset-2 hover:underline">{c._count.enrollments} ผู้เรียน</Link>}
                     <span>แก้ไข {formatThaiDate(c.updatedAt)}</span>
                   </p>
                   {c.status === "REJECTED" && c.reviewNote && <p className="rounded-lg bg-red-50 px-2 py-1 text-xs text-red-700">ส่งกลับ: {c.reviewNote}</p>}
