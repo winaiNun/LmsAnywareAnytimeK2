@@ -22,7 +22,7 @@
     "test:members": "tsx scripts/test-members.ts && tsx scripts/test-users-import.ts",
     "test:embed": "tsx scripts/test-embed.ts",
     "test:media": "tsx scripts/test-media.ts",
-    "test:db": "tsx --env-file=.env scripts/test-registration-db.ts && tsx --env-file=.env scripts/test-users-import-db.ts && tsx --env-file=.env scripts/test-media-db.ts"
+    "test:db": "tsx --env-file=.env scripts/test-registration-db.ts && tsx --env-file=.env scripts/test-users-import-db.ts && tsx --env-file=.env scripts/test-media-db.ts && tsx --env-file=.env scripts/test-media-counters-db.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1147.0",
