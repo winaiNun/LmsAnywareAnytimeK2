@@ -25,7 +25,7 @@ export async function getDashboard(now: Date = new Date()) {
     mediaStatus, mediaTotals, views30, daily, areas, pendingList, topIds,
     schoolTotal, schoolActive, schoolActivated, schoolNoCard, schoolNoLink, districtRows,
     codes, codeUsers30, creatorPending, reviewerAreas, pendingByArea, recent,
-    visitStats, visitDaily,
+    visitStats, visitDaily, courseStatus, enrollTotal, completeTotal,
   ] = await Promise.all([
     db.siteSetting.findUnique({ where: { id: "main" }, select: { requireRegistrationCode: true, allowServerUploads: true } }),
     db.user.count(),
@@ -52,6 +52,9 @@ export async function getDashboard(now: Date = new Date()) {
     db.media.groupBy({ by: ["areaId"], where: { status: "PENDING" }, _count: { _all: true } }),
     db.user.findMany({ orderBy: { createdAt: "desc" }, take: 6, select: { id: true, name: true, memberType: true, createdAt: true, memberSchool: { select: { name: true } }, registrationCode: { select: { label: true } } } }),
     getVisitStats(now), dailyVisitors(14, now),
+    db.course.groupBy({ by: ["status"], _count: { _all: true } }),
+    db.enrollment.count({ where: { course: { status: "PUBLISHED" } } }),
+    db.enrollment.count({ where: { completedAt: { not: null }, course: { status: "PUBLISHED" } } }),
   ]);
 
   // ---- members
@@ -73,6 +76,10 @@ export async function getDashboard(now: Date = new Date()) {
     : [];
   const pendingOldestDays = pendingList[0] ? Math.max(0, Math.floor((now.getTime() - pendingList[0].updatedAt.getTime()) / DAY)) : 0;
 
+  // ---- courses
+  const courseCount = (st: string) => courseStatus.find((r) => r.status === st)?._count._all ?? 0;
+  const coursesPending = courseCount("PENDING");
+
   // ---- sign-up codes
   const valid = codes.filter((c) => codeStatus(c, now) === "ok");
   const expiring = valid.filter((c) => c.expiresAt && c.expiresAt.getTime() - now.getTime() < 7 * DAY);
@@ -82,6 +89,7 @@ export async function getDashboard(now: Date = new Date()) {
   const alerts: Alert[] = [];
   const pending = status("PENDING");
   if (pending > 0) alerts.push({ level: "warn", text: `มีสื่อรออนุมัติ ${pending} ชิ้น${pendingOldestDays > 0 ? ` (ชิ้นที่รอนานสุด ${pendingOldestDays} วัน)` : ""}`, href: "/admin/media?status=PENDING", action: "ตรวจสื่อ" });
+  if (coursesPending > 0) alerts.push({ level: "warn", text: `มีคอร์สรออนุมัติ ${coursesPending} คอร์ส`, href: "/admin/courses?status=PENDING", action: "ตรวจคอร์ส" });
   if (creatorPending > 0) alerts.push({ level: "warn", text: `มีคำขอเป็นผู้สร้างคอร์ส ${creatorPending} รายการรอพิจารณา`, href: "/admin/users?creator=pending", action: "พิจารณา" });
   if ((site?.requireRegistrationCode ?? true) && valid.length === 0) alerts.push({ level: "danger", text: "ไม่มีรหัสสมัครที่ใช้งานได้ — ผู้สมัครใหม่จะสมัครไม่ได้", href: "/admin/registration-codes", action: "สร้างรหัส" });
   if (expiring.length > 0) alerts.push({ level: "info", text: `รหัสสมัคร ${expiring.length} รหัสจะหมดอายุภายใน 7 วัน`, href: "/admin/registration-codes", action: "ดูรหัส" });
@@ -106,6 +114,7 @@ export async function getDashboard(now: Date = new Date()) {
       views: mediaTotals._sum.viewCount ?? 0, likes: mediaTotals._sum.likeCount ?? 0, downloads: mediaTotals._sum.downloadCount ?? 0,
       views30: views30._sum.views ?? 0, dailyViews, areas: areas.map((a) => ({ id: a.id, name: a.name, color: a.color, count: a._count.media })), pendingList, top,
     },
+    courses: { published: courseCount("PUBLISHED"), pending: coursesPending, draft: courseCount("DRAFT"), rejected: courseCount("REJECTED"), learners: enrollTotal, completed: completeTotal },
     schools: { total: schoolTotal, active: schoolActive, activated: schoolActivated, notActivated, withAccount, noCard: schoolNoCard, noLink: schoolNoLink, byDistrict: districtRows.map((d) => ({ district: d.district, count: d._count._all })) },
     codes: { total: codes.length, valid: valid.length, uses: codeUses, joined30: codeUsers30, list: valid.slice(0, 5), expiring: expiring.length },
     visits: { today: visitStats.today, month: visitStats.month, total: visitStats.total, since: visitStats.since, daily: visitDaily },

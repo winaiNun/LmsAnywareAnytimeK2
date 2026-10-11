@@ -113,9 +113,10 @@ export default async function AdminDashboard() {
         )}
       </section>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
         <Stat icon="users" color="#F04438" label="สมาชิกทั้งหมด" value={nf.format(d.members.total)} hint={<>ใหม่ใน 30 วัน <strong className="text-neutral-800">+{nf.format(d.members.new30)}</strong></>} />
         <Stat icon="book-open" color="#17B26A" label="สื่อที่เผยแพร่" value={nf.format(d.media.published)} hint={d.media.pending > 0 ? <>รออนุมัติ <strong className="text-amber-700">{d.media.pending}</strong> · ร่าง {d.media.draft}</> : <>ร่าง {d.media.draft} · ส่งกลับ {d.media.rejected}</>} />
+        <Stat icon="play-circle" color="#7C3AED" label="คอร์สที่เผยแพร่" value={nf.format(d.courses.published)} hint={d.courses.pending > 0 ? <>รออนุมัติ <strong className="text-amber-700">{d.courses.pending}</strong> · ผู้เรียน {nf.format(d.courses.learners)}</> : <>ผู้เรียน {nf.format(d.courses.learners)} · เรียนจบ {nf.format(d.courses.completed)}</>} />
         <Stat icon="eye" color="#F59E0B" label="เปิดดูสื่อ 30 วันล่าสุด" value={nf.format(d.media.views30)} hint={<>รวมทั้งหมด {nf.format(d.media.views)} · ถูกใจ {nf.format(d.media.likes)} · เปิดลิงก์ {nf.format(d.media.downloads)}</>} />
         <Stat icon="app-window" color="#0052FF" label="โรงเรียนที่เข้าใช้บัญชีแล้ว" value={`${nf.format(d.schools.activated)} / ${nf.format(d.schools.withAccount)}`} progress={schoolPct} hint={`จากทำเนียบ ${nf.format(d.schools.total)} โรงเรียน`} />
       </div>

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import type { AvatarData } from "@/lib/avatar";
 import { plainText } from "@/lib/site-texts";
 import Avatar from "./avatar";
@@ -13,53 +12,27 @@ import { Icon, type IconName } from "./icons";
 const LINKS = [
   { href: "/", key: "nav.home" },
   { href: "/library", key: "nav.library" },
-  { href: "/#courses", key: "nav.courses" },
+  { href: "/courses", key: "nav.courses" },
   { href: "/schools", key: "nav.schools" },
   { href: "/about", key: "nav.about" },
 ];
 
 type Props = { user: { name: string; isStaff: boolean; canReview: boolean; canTeach: boolean; typeLabel: string; avatar: AvatarData | null } | null; name: string; areaName?: string; logoUrl: string | null; areas: DrawerArea[]; texts: Record<string, string> };
-type Tab = { href: string; label: string; icon: IconName; id?: string; avatar?: boolean };
-
-/** Which home-page section is on screen, for highlighting the matching bottom tab. */
-function useActiveSection(ids: string[]) {
-  const [active, setActive] = useState<string | null>(null);
-  const key = ids.join(",");
-
-  useEffect(() => {
-    const visible = new Map<string, number>();
-    const targets = ids.map((id) => document.getElementById(id)).filter((el): el is HTMLElement => !!el);
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) visible.set(e.target.id, e.isIntersecting ? e.intersectionRatio : 0);
-        const best = [...visible.entries()].sort((a, b) => b[1] - a[1])[0];
-        setActive(best && best[1] > 0 ? best[0] : null);
-      },
-      { threshold: [0, 0.15, 0.4, 0.7], rootMargin: "-20% 0px -40% 0px" },
-    );
-    targets.forEach((t) => io.observe(t));
-    return () => io.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
-
-  return active;
-}
+type Tab = { href: string; label: string; icon: IconName; avatar?: boolean };
 
 export default function NavbarClient({ user, name, areaName, logoUrl, areas, texts }: Props) {
   const pathname = usePathname();
-  const section = useActiveSection(["courses"]);
 
   const tabs: Tab[] = [
     { href: "/", label: plainText(texts["tab.home"]), icon: "home" },
     { href: "/library", label: plainText(texts["tab.library"]), icon: "library" },
-    { href: "/#courses", label: plainText(texts["tab.courses"]), icon: "course", id: "courses" },
+    { href: "/courses", label: plainText(texts["tab.courses"]), icon: "course" },
     user?.isStaff ? { href: "/admin", label: "จัดการ", icon: "shield" } : { href: "/schools", label: plainText(texts["tab.schools"]), icon: "school" },
     user ? { href: "/dashboard", label: "บัญชี", icon: "userCircle", avatar: true } : { href: "/login", label: "เข้าสู่ระบบ", icon: "login" },
   ];
 
   const isActive = (t: Tab) => {
-    if (t.id) return pathname === "/" && section === t.id;
-    if (t.href === "/") return pathname === "/" && section === null;
+    if (t.href === "/") return pathname === "/";
     return pathname.startsWith(t.href);
   };
 

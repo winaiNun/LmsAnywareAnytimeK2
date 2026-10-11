@@ -55,7 +55,7 @@ const DEFAULTS: Record<SectionKey, Defaults> = {
   areas: { ...base, eyebrow: "กลุ่มสาระ", icon: "book-open", moreHref: "/library", moreDefault: false, kind: "กลุ่มสาระ (เมนู)", title: "เลือกสำรวจตามกลุ่มสาระ", subtitle: "แตะกลุ่มสาระเพื่อดูสื่อทั้งหมด" },
   latest: { ...base, eyebrow: "มาใหม่", icon: "sparkles", moreHref: "/library?sort=latest", kind: "สื่อล่าสุด (สไลด์แนวข้าง)", title: "สื่อล่าสุด" },
   popular: { ...base, eyebrow: "ยอดนิยม", icon: "heart", moreHref: "/library?sort=views", kind: "สื่อที่ถูกดูมากที่สุด (สไลด์แนวข้าง)", title: "ดูมากที่สุด", subtitle: "สื่อที่ถูกเปิดดูมากในช่วง 30 วันที่ผ่านมา" },
-  courses: { ...base, eyebrow: "เรียนรู้", icon: "play-circle", kind: "คอร์สเรียน", title: "คอร์สเรียน" },
+  courses: { ...base, eyebrow: "เรียนรู้", icon: "play-circle", moreHref: "/courses", kind: "คอร์สเรียน", title: "คอร์สเรียน" },
   schools: { ...base, eyebrow: "ทำเนียบ", icon: "users", moreHref: "/schools", moreDefault: false, kind: "ทำเนียบโรงเรียน (Anywhere Anytime)", title: "Anywhere Anytime ของโรงเรียนในเขต", subtitle: "สุ่มโรงเรียนมาให้ชมทุกครั้งที่เข้าเว็บ" },
   resources: { ...base, eyebrow: "แหล่งความรู้", icon: "globe", moreHref: "/resources", kind: "แหล่งสื่อภายนอก (ทำเนียบเว็บ)", title: "แหล่งสื่อภายนอกที่แนะนำ", subtitle: "เว็บไซต์และช่องทางที่คัดมาให้ครูและนักเรียน" },
 };

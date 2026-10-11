@@ -1,4 +1,5 @@
 import Link from "next/link";
+import CourseCard from "@/components/course-card";
 import SiteNavbar from "@/components/site-navbar";
 import BannerCarousel from "@/components/banner-carousel";
 import Glyph, { IconTile } from "@/components/glyph";
@@ -9,6 +10,7 @@ import ResourceCard from "@/components/resource-card";
 import SchoolCard from "@/components/school-card";
 import SiteHero from "@/components/site-hero";
 import { getActiveBanners, getSlideshowConfig, orderForDisplay } from "@/lib/banners";
+import { latestCourses } from "@/lib/course/course-data";
 import { db } from "@/lib/db";
 import { areaCounts, latestMedia, popularMedia } from "@/lib/media-list";
 import SectionHeading from "@/components/section-heading";
@@ -19,9 +21,6 @@ import { resourceImageOf } from "@/lib/resource-image";
 import { getSiteInfo } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
-
-const PALETTE = ["#1E3A8A", "#0F766E", "#9F1239", "#475569", "#7C3AED", "#B45309"];
-const colorOf = (id: string) => PALETTE[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % PALETTE.length];
 
 /** One home-page block: full-width background, centered content, styled heading. */
 function Block({ cfg, anchor, bleed = false, alt = false, children }: { cfg: HomeSectionConfig; anchor?: string; bleed?: boolean; alt?: boolean; children: React.ReactNode }) {
@@ -63,7 +62,7 @@ export default async function HomePage() {
     getHomeSections(),
     getActiveBanners(),
     getSlideshowConfig(),
-    db.course.findMany({ where: { status: "PUBLISHED" }, orderBy: { createdAt: "desc" }, take: 3, include: { _count: { select: { lessons: true, enrollments: true } } } }),
+    latestCourses(6),
     getRandomSchools(), // 12 = 4 columns × 3 rows, different on every visit
     countPublicSchools(),
     areaCounts(),
@@ -107,18 +106,8 @@ export default async function HomePage() {
         {popular.map((c) => <li key={c.id} className={RAIL_ITEM}><MediaCard card={c} compact /></li>)}
       </MediaRail>
     ),
-    courses: (
-      <div className="grid gap-5 md:grid-cols-3">
-        {courses.map((c) => (
-          <div key={c.id} className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
-            <div className="flex h-36 items-end p-4 text-lg font-bold text-white" style={{ backgroundColor: colorOf(c.id) }}>{c.title}</div>
-            <div className="space-y-1 p-4">
-              <p className="font-semibold text-neutral-900">{c.title}</p>
-              <p className="text-sm text-neutral-500">{c._count.lessons} บทเรียน · {c._count.enrollments} ผู้เรียน</p>
-            </div>
-          </div>
-        ))}
-      </div>
+    courses: courses.length > 0 && (
+      <CenterGrid variant="courses" items={courses.map((c) => ({ key: c.id, node: <CourseCard course={c} /> }))} />
     ),
     schools:
       schools.length > 0 && (

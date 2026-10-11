@@ -10,7 +10,7 @@ const hostOf = (u: string) => { try { return new URL(u).hostname.replace(/^www\.
 const QUICK = [
   { href: "/", label: "หน้าแรก" },
   { href: "/library", label: "คลังสื่อการเรียนรู้" },
-  { href: "/#courses", label: "คอร์สเรียน" },
+  { href: "/courses", label: "คอร์สเรียน" },
   { href: "/schools", label: "ทำเนียบโรงเรียน" },
   { href: "/resources", label: "แหล่งสื่อภายนอก" },
   { href: "/about", label: "เกี่ยวกับระบบ" },
