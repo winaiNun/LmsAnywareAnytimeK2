@@ -15,7 +15,7 @@ const LINKS = [
   { href: "/#about", label: "เกี่ยวกับ" },
 ];
 
-type Props = { user: { name: string; isStaff: boolean; avatar: AvatarData | null } | null; name: string; logoUrl: string | null };
+type Props = { user: { name: string; isStaff: boolean; avatar: AvatarData | null } | null; name: string; areaName?: string; logoUrl: string | null };
 type Tab = { href: string; label: string; icon: IconName; id?: string; avatar?: boolean };
 
 /** Which home-page section is on screen, for highlighting the matching bottom tab. */
@@ -42,7 +42,7 @@ function useActiveSection(ids: string[]) {
   return active;
 }
 
-export default function NavbarClient({ user, name, logoUrl }: Props) {
+export default function NavbarClient({ user, name, areaName, logoUrl }: Props) {
   const pathname = usePathname();
   const section = useActiveSection(["courses", "about"]);
 
@@ -73,7 +73,10 @@ export default function NavbarClient({ user, name, logoUrl }: Props) {
                 <Icon name="book" className="h-5 w-5" strokeWidth={2} />
               </span>
             )}
-            <span className="truncate">{name}</span>
+            <span className="flex min-w-0 flex-col leading-tight">
+              <span className="truncate">{name}</span>
+              {areaName && <span className="truncate whitespace-nowrap text-[11px] font-normal text-neutral-500">{areaName}</span>}
+            </span>
           </Link>
 
           <nav aria-label="เมนูหลัก" className="hidden items-center gap-1 md:flex">

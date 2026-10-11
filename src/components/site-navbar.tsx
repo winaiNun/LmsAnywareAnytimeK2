@@ -15,5 +15,5 @@ export default async function SiteNavbar() {
     ? { name: session.user.name ?? "", isStaff: STAFF.includes(session.user.role), avatar: me ? avatarOf(me) : null }
     : null;
 
-  return <NavbarClient user={user} name={site.systemName} logoUrl={site.logoUrl} />;
+  return <NavbarClient user={user} name={site.systemName} areaName={site.areaName} logoUrl={site.logoUrl} />;
 }
