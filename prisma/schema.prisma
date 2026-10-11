@@ -132,7 +132,7 @@ model LearningArea {
   id        String  @id
   slug      String  @unique
   name      String
-  icon      String  @default("📖") // an emoji: renders everywhere, no icon font needed
+  icon      String  @default("book-open") // icon KEY from src/lib/icon-paths.ts (drawn as a line icon)
   color     String  @default("#0052FF")
   sortOrder Int     @default(0)
   active    Boolean @default(true)
@@ -145,7 +145,7 @@ model MediaType {
   id        String  @id
   slug      String  @unique
   name      String
-  icon      String  @default("📄")
+  icon      String  @default("file-text")
   sortOrder Int     @default(0)
   active    Boolean @default(true)
 

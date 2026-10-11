@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import Avatar from "@/components/avatar";
 import { db } from "@/lib/db";
+import { avatarOf } from "@/lib/site";
 import { isAdmin, requireManagerPage } from "@/lib/permissions";
 import UserForm from "../user-form";
 
@@ -18,7 +20,10 @@ export default async function EditUserPage({ params }: { params: { id: string } 
   return (
     <div className="space-y-4">
       <Link href="/admin/users" className="text-sm text-brand">← สมาชิกทั้งหมด</Link>
-      <h1 className="text-2xl font-bold">{u.name}</h1>
+      <div className="flex items-center gap-4">
+        <Avatar avatar={avatarOf(u)} name={u.name} size={64} />
+        <h1 className="text-2xl font-bold">{u.name}</h1>
+      </div>
       <UserForm
         schools={schools}
         user={{

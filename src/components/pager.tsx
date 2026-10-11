@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Glyph from "@/components/glyph";
 
 /** Page numbers to show: always first/last, a window around the current page, "…" for the gaps. */
 export function pageWindow(page: number, pages: number, around = 1): (number | "gap")[] {
@@ -13,7 +14,7 @@ export function pageWindow(page: number, pages: number, around = 1): (number | "
   return out;
 }
 
-const base = "flex h-11 min-w-11 items-center justify-center rounded-lg border px-3 text-sm tabular-nums";
+const base = "flex h-11 min-w-11 items-center justify-center gap-1 rounded-lg border px-3 text-sm tabular-nums";
 
 /** Accessible pagination. `href(page)` builds the link, so filters in the URL are kept. */
 export default function Pager({ page, pages, href, label = "เลือกหน้า" }: { page: number; pages: number; href: (page: number) => string; label?: string }) {
@@ -22,10 +23,10 @@ export default function Pager({ page, pages, href, label = "เลือกห�
     <nav aria-label={label} className="flex flex-wrap items-center justify-center gap-1.5">
       {page > 1 ? (
         <Link href={href(page - 1)} rel="prev" className={`${base} border-neutral-300 bg-white hover:bg-neutral-50`}>
-          ‹ ก่อนหน้า
+          <Glyph name="chevron-left" size={16} /> ก่อนหน้า
         </Link>
       ) : (
-        <span className={`${base} border-neutral-200 text-neutral-300`} aria-disabled>‹ ก่อนหน้า</span>
+        <span className={`${base} border-neutral-200 text-neutral-300`} aria-disabled><Glyph name="chevron-left" size={16} /> ก่อนหน้า</span>
       )}
       {pageWindow(page, pages).map((p, i) =>
         p === "gap" ? (
@@ -38,10 +39,10 @@ export default function Pager({ page, pages, href, label = "เลือกห�
       )}
       {page < pages ? (
         <Link href={href(page + 1)} rel="next" className={`${base} border-neutral-300 bg-white hover:bg-neutral-50`}>
-          ถัดไป ›
+          ถัดไป <Glyph name="chevron-right" size={16} />
         </Link>
       ) : (
-        <span className={`${base} border-neutral-200 text-neutral-300`} aria-disabled>ถัดไป ›</span>
+        <span className={`${base} border-neutral-200 text-neutral-300`} aria-disabled>ถัดไป <Glyph name="chevron-right" size={16} /></span>
       )}
     </nav>
   );

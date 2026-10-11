@@ -57,3 +57,9 @@ body {
   from { width: 0; }
   to { width: 100%; }
 }
+
+/* slim indeterminate bar under live-filter forms while results load */
+@keyframes livebar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}

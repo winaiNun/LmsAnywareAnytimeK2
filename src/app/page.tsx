@@ -1,6 +1,7 @@
 import Link from "next/link";
 import SiteNavbar from "@/components/site-navbar";
 import BannerCarousel from "@/components/banner-carousel";
+import { IconTile } from "@/components/glyph";
 import MediaCard from "@/components/media-card";
 import MediaRail, { RAIL_ITEM } from "@/components/media-rail";
 import SchoolCard from "@/components/school-card";
@@ -65,7 +66,7 @@ export default async function HomePage() {
         {areas.map((a) => (
           <li key={a.id}>
             <Link href={`/library?area=${a.slug}`} className="group flex h-full min-h-[5.5rem] items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:flex-col sm:items-start sm:gap-2 sm:p-4">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-2xl" style={{ backgroundColor: `${a.color}22` }} aria-hidden>{a.icon}</span>
+              <IconTile name={a.icon} color={a.color} size={46} className="transition group-hover:scale-105" />
               <span className="min-w-0">
                 <span className="block text-sm font-semibold leading-snug text-neutral-900">{a.name}</span>
                 <span className="block text-xs text-neutral-500">{a.count.toLocaleString("th-TH")} สื่อ</span>

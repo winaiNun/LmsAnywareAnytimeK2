@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LiveFilter from "@/components/live-filter";
 import type { Prisma } from "@prisma/client";
 import Avatar from "@/components/avatar";
 import { db } from "@/lib/db";
@@ -69,7 +70,7 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
         </Link>
       )}
 
-      <form className="flex flex-wrap gap-2">
+      <LiveFilter className="space-y-4" action="/admin/users" formClassName="flex flex-wrap gap-2" fields={<>
         <input name="q" defaultValue={q} placeholder="ค้นหาชื่อ/อีเมล/ชื่อผู้ใช้" className={`${sel} min-w-[220px] flex-1`} />
         <select name="type" defaultValue={type ?? ""} className={sel}>
           <option value="">ทุกประเภท</option>
@@ -83,8 +84,7 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
           <option value="">ทุกโรงเรียน</option>
           {schools.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
-        <button className="min-h-11 rounded-lg bg-neutral-800 px-5 text-sm font-semibold text-white">ค้นหา</button>
-      </form>
+      </>}>
 
       <div className="overflow-x-auto rounded-xl bg-white p-2 shadow-sm">
         <table className="w-full min-w-[760px] text-left text-sm">
@@ -117,7 +117,8 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
           <span>หน้า {page}/{pages}</span>
           {page < pages && <Link href={qs({ page: String(page + 1) })} className="rounded border px-3 py-2">ถัดไป</Link>}
         </nav>
-      )}
+      )}</LiveFilter>
+
     </div>
   );
 }

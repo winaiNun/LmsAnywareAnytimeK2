@@ -130,13 +130,13 @@ export default function MediaForm({ values, areas, types, levels, allowUpload, i
           <label className={label}><span className="text-sm font-medium">กลุ่มสาระ *</span>
             <select value={areaId} onChange={(e) => setAreaId(e.target.value)} required className={input}>
               <option value="" disabled>— เลือกกลุ่มสาระ —</option>
-              {areas.map((a) => <option key={a.id} value={a.id}>{a.icon} {a.name}</option>)}
+              {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           </label>
           <label className={label}><span className="text-sm font-medium">ประเภทสื่อ</span>
             <select value={typeId} onChange={(e) => setTypeId(e.target.value)} className={input}>
               <option value="">— ไม่ระบุ —</option>
-              {types.map((t) => <option key={t.id} value={t.id}>{t.icon} {t.name}</option>)}
+              {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </label>
         </div>

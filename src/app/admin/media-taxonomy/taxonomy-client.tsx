@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import Glyph from "@/components/glyph";
+import { CHOICE_KEYS } from "@/lib/icon-paths";
 import { addReviewer, deleteTaxonomy, removeReviewer, saveTaxonomy, type TaxState } from "./actions";
 
 const input = "min-h-10 rounded-lg border border-neutral-300 bg-white px-3 text-sm";
@@ -22,7 +24,7 @@ export function TaxonomyForm({ kind, item }: { kind: Kind; item: TaxItem | null 
   const [pending, start] = useTransition();
   return (
     <form action={action} className="flex flex-wrap items-center gap-2 rounded-xl border border-neutral-200 bg-white p-3">
-      {kind !== "level" && <input name="icon" defaultValue={item?.icon ?? (kind === "area" ? "📖" : "📄")} aria-label="ไอคอน (อีโมจิ)" maxLength={8} className={`${input} w-16 text-center text-lg`} />}
+      {kind !== "level" && <IconPicker defaultValue={item?.icon ?? (kind === "area" ? "book-open" : "file-text")} />}
       <input name="name" defaultValue={item?.name ?? ""} placeholder={item ? "" : "ชื่อใหม่"} required aria-label="ชื่อ" maxLength={80} className={`${input} min-w-[180px] flex-1`} />
       {!item && <input name="slug" placeholder="รหัสอังกฤษ เช่น math-fun" required aria-label="รหัสภาษาอังกฤษ" className={`${input} w-44`} />}
       {kind === "area" && <input name="color" type="color" defaultValue={item?.color ?? "#0052FF"} aria-label="สี" className="h-10 w-12 rounded-lg border border-neutral-300 bg-white p-1" />}
@@ -70,5 +72,21 @@ export function ReviewersPanel({ areaId, reviewers }: { areaId: string; reviewer
       {state?.error && <p role="alert" className="text-xs text-red-600">{state.error}</p>}
       {state?.saved && <p role="status" className="text-xs text-green-700">แต่งตั้งแล้ว</p>}
     </div>
+  );
+}
+
+/** Pick one of the line icons: a row of buttons (radio inputs underneath, so it works inside the form). */
+function IconPicker({ defaultValue }: { defaultValue: string }) {
+  const [value, setValue] = useState(defaultValue);
+  return (
+    <fieldset className="flex max-w-full flex-wrap gap-1 rounded-lg border border-neutral-200 p-1">
+      <legend className="sr-only">ไอคอน</legend>
+      {CHOICE_KEYS.map((k) => (
+        <label key={k} title={k} className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-md ${value === k ? "bg-brand text-white" : "text-neutral-600 hover:bg-neutral-100"}`}>
+          <input type="radio" name="icon" value={k} checked={value === k} onChange={() => setValue(k)} className="sr-only" />
+          <Glyph name={k} size={18} />
+        </label>
+      ))}
+    </fieldset>
   );
 }

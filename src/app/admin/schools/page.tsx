@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LiveFilter from "@/components/live-filter";
 import Pager from "@/components/pager";
 import { db } from "@/lib/db";
 import { requireManagerPage } from "@/lib/permissions";
@@ -81,7 +82,7 @@ export default async function AdminSchoolsPage({ searchParams }: { searchParams:
 
       <CardJob missing={missingCards} />
 
-      <form method="get" className="grid gap-3 rounded-xl bg-white p-4 shadow-sm md:grid-cols-12" role="search">
+      <LiveFilter className="space-y-4" action="/admin/schools" omit={{ sort: "name" }} formClassName="grid gap-3 rounded-xl bg-white p-4 shadow-sm md:grid-cols-12" fields={<>
         <label className="md:col-span-4"><span className="mb-1 block text-sm font-medium">ค้นหา</span>
           <input name="q" defaultValue={q} placeholder="ชื่อ รหัส อำเภอ ศูนย์" className="min-h-11 w-full rounded-lg border border-neutral-300 px-3" /></label>
         <label className="md:col-span-2"><span className="mb-1 block text-sm font-medium">อำเภอ</span>
@@ -92,8 +93,8 @@ export default async function AdminSchoolsPage({ searchParams }: { searchParams:
           <select name="status" defaultValue={status} className="min-h-11 w-full rounded-lg border border-neutral-300 bg-white px-2">{STATUS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
         <label className="md:col-span-2"><span className="mb-1 block text-sm font-medium">เรียงตาม</span>
           <select name="sort" defaultValue={sort} className="min-h-11 w-full rounded-lg border border-neutral-300 bg-white px-2">{SCHOOL_SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}</select></label>
-        <div className="flex gap-2 md:col-span-12"><button className="min-h-11 rounded-lg bg-brand px-6 text-sm font-semibold text-white">ค้นหา</button><Link href="/admin/schools" className="flex min-h-11 items-center rounded-lg border border-neutral-300 px-4 text-sm">ล้าง</Link></div>
-      </form>
+        <div className="flex gap-2 md:col-span-12"><Link href="/admin/schools" className="flex min-h-11 items-center rounded-lg border border-neutral-300 px-4 text-sm">ล้าง</Link></div>
+      </>}>
 
       <p className="text-sm text-neutral-600">พบ <strong>{result.total}</strong> โรงเรียน · หน้า {result.page}/{result.pages}</p>
 
@@ -123,7 +124,8 @@ export default async function AdminSchoolsPage({ searchParams }: { searchParams:
         {result.items.length === 0 && <li className="rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center text-neutral-500">ไม่พบโรงเรียน {all.length === 0 && "— เริ่มจากกด “นำเข้าจาก Excel”"}</li>}
       </ul>
 
-      <Pager page={result.page} pages={result.pages} href={href} label="เลือกหน้าของรายการโรงเรียน (หลังบ้าน)" />
+      <Pager page={result.page} pages={result.pages} href={href} label="เลือกหน้าของรายการโรงเรียน (หลังบ้าน)" /></LiveFilter>
+
     </div>
   );
 }

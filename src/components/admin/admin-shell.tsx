@@ -1,5 +1,7 @@
 "use client";
 
+import Avatar from "@/components/avatar";
+import type { AvatarData } from "@/lib/avatar";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -48,7 +50,7 @@ const Icon = ({ name, className = "h-5 w-5" }: { name: string; className?: strin
 
 type Props = {
   site: { systemName: string; logoUrl: string | null };
-  user: { name: string; role: string };
+  user: { name: string; role: string; avatar: AvatarData | null };
   children: React.ReactNode;
 };
 
@@ -127,7 +129,7 @@ export default function AdminShell({ site, user, children }: Props) {
               <p className="font-semibold">{user.name}</p>
               <p className="text-xs text-white/70">{user.role === "ADMIN" ? "ผู้ดูแลระบบ" : user.role === "LIBRARIAN" ? "บรรณารักษ์" : "ผู้สร้างบทเรียน"}</p>
             </div>
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 font-semibold">{user.name.slice(0, 1) || "A"}</span>
+            <Avatar avatar={user.avatar} name={user.name || "A"} size={36} className="ring-2 ring-white/40" />
           </div>
         </header>
         <main className="p-4 sm:p-6">{children}</main>

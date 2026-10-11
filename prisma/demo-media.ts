@@ -9,6 +9,7 @@ import { randomUUID } from "crypto";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import sharp from "sharp";
+import { ICON_PATHS } from "../src/lib/icon-paths";
 import { getStorage } from "../src/lib/storage";
 
 const url = process.env.DATABASE_URL ?? "";
@@ -65,7 +66,7 @@ const OWNERS = [
   { id: "demo_mu_5", name: "เด็กชายธนา ตั้งใจเรียน", first: "ธนา", last: "ตั้งใจเรียน", prefix: "เด็กชาย", type: "STUDENT" as const, avatar: null, initial: "ธ" },
 ];
 
-const posterSvg = (title: string, c1: string, c2: string, icon: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="1280" height="720" fill="url(#g)"/><circle cx="1100" cy="130" r="260" fill="#fff" opacity=".10"/><circle cx="1180" cy="620" r="180" fill="#fff" opacity=".08"/><text x="90" y="330" font-size="180" font-family="${FONT}">${icon}</text><text x="90" y="520" font-size="72" font-weight="700" fill="#fff" font-family="${FONT}">${title.replace(/&/g, "&amp;").slice(0, 26)}</text></svg>`;
+const posterSvg = (title: string, c1: string, c2: string, icon: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="1280" height="720" fill="url(#g)"/><circle cx="1100" cy="130" r="260" fill="#fff" opacity=".10"/><circle cx="1180" cy="620" r="180" fill="#fff" opacity=".08"/><g transform="translate(86 150) scale(7.5)" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity=".92"><path d="${ICON_PATHS[icon] ?? ICON_PATHS["book-open"]}"/></g><text x="90" y="520" font-size="72" font-weight="700" fill="#fff" font-family="${FONT}">${title.replace(/&/g, "&amp;").slice(0, 26)}</text></svg>`;
 const avatarSvg = (c: string, initial: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect width="512" height="512" fill="${c}"/><text x="256" y="340" font-size="250" font-weight="700" fill="#fff" text-anchor="middle" font-family="${FONT}">${initial}</text></svg>`;
 const toWebp = (svg: string, w: number, h: number) => sharp(Buffer.from(svg), { density: 96 }).resize(w, h).webp({ quality: 82 }).toBuffer();
 

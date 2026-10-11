@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import Glyph from "@/components/glyph";
 import { db } from "@/lib/db";
 import { STATUS_LABEL, cardSelect } from "@/lib/media-data";
 import { getActor } from "@/lib/media-server";
@@ -31,15 +32,15 @@ export default async function ReviewQueuePage() {
         <p className="text-sm text-neutral-500">{admin ? "ทุกกลุ่มสาระ" : `คุณดูแลกลุ่มสาระ: ${areas.map((a) => a.name).join(", ")}`} · รอตรวจ {queue.length} ชิ้น (เรียงจากที่รอนานที่สุด)</p>
       </div>
       {queue.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-neutral-300 bg-white p-10 text-center text-neutral-500">ไม่มีสื่อรออนุมัติ 🎉</p>
+        <p className="rounded-2xl border border-dashed border-neutral-300 bg-white p-10 text-center text-neutral-500">ไม่มีสื่อรออนุมัติ</p>
       ) : (
         <ul className="space-y-3">
           {queue.map((m) => (
             <li key={m.id}>
               <Link href={`/dashboard/review/${m.id}`} className="flex items-center justify-between gap-3 rounded-2xl bg-white p-4 shadow-sm hover:ring-2 hover:ring-brand">
                 <span className="min-w-0">
-                  <span className="block truncate font-semibold">{m.title}</span>
-                  <span className="block text-xs text-neutral-500">{m.area.icon} {m.area.name} · {m.createdBy.name} · ส่งเมื่อ {formatThaiDate(m.updatedAt)}{m.createdBy.id === actor.id ? " · ของคุณเอง" : ""}</span>
+                  <span className="flex items-center gap-2 truncate font-semibold"><Glyph name={m.area.icon} size={16} className="shrink-0 text-neutral-500" />{m.title}</span>
+                  <span className="block text-xs text-neutral-500">{m.area.name} · {m.createdBy.name} · ส่งเมื่อ {formatThaiDate(m.updatedAt)}{m.createdBy.id === actor.id ? " · ของคุณเอง" : ""}</span>
                 </span>
                 <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${STATUS_LABEL.PENDING[1]}`}>ตรวจ →</span>
               </Link>

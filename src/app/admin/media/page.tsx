@@ -1,5 +1,7 @@
 import Link from "next/link";
+import LiveFilter from "@/components/live-filter";
 import type { Prisma } from "@prisma/client";
+import Glyph from "@/components/glyph";
 import { db } from "@/lib/db";
 import { STATUS_LABEL, cardSelect } from "@/lib/media-data";
 import { isAdmin, requireManagerPage } from "@/lib/permissions";
@@ -47,7 +49,7 @@ export default async function AdminMediaPage({ searchParams }: { searchParams: S
         <Link href={qs({ status: "PENDING", page: undefined })} className="block rounded-lg bg-amber-50 p-3 text-sm font-medium text-amber-900">มีสื่อรออนุมัติ {count("PENDING")} ชิ้น — คลิกเพื่อดู</Link>
       )}
 
-      <form className="flex flex-wrap gap-2">
+      <LiveFilter className="space-y-4" action="/admin/media" formClassName="flex flex-wrap gap-2" fields={<>
         <input name="q" defaultValue={q} placeholder="ค้นหาชื่อสื่อ/แท็ก/ผู้จัดทำ" className={`${sel} min-w-[200px] flex-1`} />
         <select name="status" defaultValue={searchParams.status ?? ""} className={sel}>
           <option value="">ทุกสถานะ</option>
@@ -57,8 +59,7 @@ export default async function AdminMediaPage({ searchParams }: { searchParams: S
           <option value="">ทุกกลุ่มสาระ</option>
           {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
-        <button className="min-h-11 rounded-lg bg-neutral-800 px-5 text-sm font-semibold text-white">ค้นหา</button>
-      </form>
+      </>}>
 
       <div className="overflow-x-auto rounded-xl bg-white p-2 shadow-sm">
         <table className="w-full min-w-[760px] text-left text-sm">
@@ -68,8 +69,8 @@ export default async function AdminMediaPage({ searchParams }: { searchParams: S
               const [label, tone] = STATUS_LABEL[m.status];
               return (
                 <tr key={m.id} className="border-t border-neutral-100 align-top">
-                  <td className="p-3 font-medium"><Link href={`/admin/media/${m.id}`} className="text-brand hover:underline">{m.pinned ? "📌 " : ""}{m.title}</Link></td>
-                  <td className="p-3 text-neutral-600">{m.area.icon} {m.area.name}</td>
+                  <td className="p-3 font-medium"><Link href={`/admin/media/${m.id}`} className="text-brand hover:underline">{m.pinned && <Glyph name="pin" size={14} className="mr-1 inline-block align-[-2px] text-amber-600" />}{m.title}</Link></td>
+                  <td className="p-3 text-neutral-600"><span className="inline-flex items-center gap-1.5"><Glyph name={m.area.icon} size={15} />{m.area.name}</span></td>
                   <td className="p-3 text-neutral-600">{m.createdBy.name}</td>
                   <td className="p-3"><span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${tone}`}>{label}</span></td>
                   <td className="p-3 tabular-nums text-neutral-600">{m.viewCount} / {m.likeCount}</td>
@@ -88,7 +89,8 @@ export default async function AdminMediaPage({ searchParams }: { searchParams: S
           <span>หน้า {page}/{pages}</span>
           {page < pages && <Link href={qs({ page: String(page + 1) })} className="rounded border px-3 py-2">ถัดไป</Link>}
         </nav>
-      )}
+      )}</LiveFilter>
+
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
+import { CHOICE_KEYS } from "@/lib/icon-paths";
 import { assertRole, isAdmin } from "@/lib/permissions";
 
 export type TaxState = { error?: string; saved?: boolean } | undefined;
@@ -13,8 +14,8 @@ const base = {
   name: z.string().trim().min(2, "กรุณากรอกชื่อ").max(80),
   sortOrder: z.coerce.number().int().min(0).max(999).default(0),
 };
-const areaSchema = z.object({ ...base, icon: z.string().trim().min(1).max(8).default("📖"), color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "สีไม่ถูกต้อง"), slug: z.string().trim().toLowerCase().optional() });
-const typeSchema = z.object({ ...base, icon: z.string().trim().min(1).max(8).default("📄"), slug: z.string().trim().toLowerCase().optional() });
+const areaSchema = z.object({ ...base, icon: z.enum(CHOICE_KEYS, { error: "เลือกไอคอนจากรายการ" }), color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "สีไม่ถูกต้อง"), slug: z.string().trim().toLowerCase().optional() });
+const typeSchema = z.object({ ...base, icon: z.enum(CHOICE_KEYS, { error: "เลือกไอคอนจากรายการ" }), slug: z.string().trim().toLowerCase().optional() });
 const levelSchema = z.object({ ...base, slug: z.string().trim().toLowerCase().optional() });
 
 function refresh() {

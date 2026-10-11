@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import type { AvatarData } from "@/lib/avatar";
+import Avatar from "./avatar";
 import { Icon, type IconName } from "./icons";
 
 const LINKS = [
@@ -13,8 +15,8 @@ const LINKS = [
   { href: "/#about", label: "เกี่ยวกับ" },
 ];
 
-type Props = { user: { name: string; isStaff: boolean } | null; name: string; logoUrl: string | null };
-type Tab = { href: string; label: string; icon: IconName; id?: string };
+type Props = { user: { name: string; isStaff: boolean; avatar: AvatarData | null } | null; name: string; logoUrl: string | null };
+type Tab = { href: string; label: string; icon: IconName; id?: string; avatar?: boolean };
 
 /** Which home-page section is on screen, for highlighting the matching bottom tab. */
 function useActiveSection(ids: string[]) {
@@ -49,7 +51,7 @@ export default function NavbarClient({ user, name, logoUrl }: Props) {
     { href: "/library", label: "สื่อ", icon: "library" },
     { href: "/#courses", label: "คอร์ส", icon: "course", id: "courses" },
     user?.isStaff ? { href: "/admin", label: "จัดการ", icon: "shield" } : { href: "/schools", label: "โรงเรียน", icon: "school" },
-    user ? { href: "/dashboard", label: "บัญชี", icon: "userCircle" } : { href: "/login", label: "เข้าสู่ระบบ", icon: "login" },
+    user ? { href: "/dashboard", label: "บัญชี", icon: "userCircle", avatar: true } : { href: "/login", label: "เข้าสู่ระบบ", icon: "login" },
   ];
 
   const isActive = (t: Tab) => {
@@ -92,8 +94,8 @@ export default function NavbarClient({ user, name, logoUrl }: Props) {
                     จัดการระบบ
                   </Link>
                 )}
-                <Link href="/dashboard" className="flex min-h-10 items-center gap-2 rounded-full bg-brand-soft px-4 text-sm font-semibold text-brand">
-                  <Icon name="userCircle" className="h-5 w-5" />
+                <Link href="/dashboard" className="flex min-h-10 items-center gap-2 rounded-full bg-brand-soft py-1 pl-1 pr-4 text-sm font-semibold text-brand">
+                  <Avatar avatar={user.avatar} name={user.name || "?"} size={32} className="ring-2 ring-white" />
                   <span className="max-w-[10rem] truncate">{user.name || "บัญชีของฉัน"}</span>
                 </Link>
               </>
@@ -123,7 +125,11 @@ export default function NavbarClient({ user, name, logoUrl }: Props) {
                   className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium transition-colors ${active ? "text-brand" : "text-neutral-500 active:bg-neutral-100"}`}
                 >
                   <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${active ? "bg-brand-soft" : ""}`}>
-                    <Icon name={t.icon} className="h-[22px] w-[22px]" strokeWidth={active ? 2 : 1.7} />
+                    {t.avatar && user ? (
+                      <Avatar avatar={user.avatar} name={user.name || "?"} size={26} className={active ? "ring-2 ring-brand" : "ring-1 ring-neutral-300"} />
+                    ) : (
+                      <Icon name={t.icon} className="h-[22px] w-[22px]" strokeWidth={active ? 2 : 1.7} />
+                    )}
                   </span>
                   {t.label}
                 </Link>

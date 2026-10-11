@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Glyph from "@/components/glyph";
 import { sizeLabel } from "@/lib/format-size";
 import type { ViewItem } from "@/lib/media-view"; // type only: the module itself is server-side (storage)
 
@@ -26,16 +27,16 @@ export default function MediaViewer({ item, mediaId }: { item: ViewItem; mediaId
     <div className="flex flex-wrap gap-2">
       {item.openUrl && (
         <a href={item.openUrl} target="_blank" rel="noopener noreferrer" onClick={count} className={btn}>
-          {item.frameSrc ? "เปิดในแท็บใหม่" : "เปิดลิงก์"} <span aria-hidden>↗</span>
+          {item.frameSrc ? "เปิดในแท็บใหม่" : "เปิดลิงก์"} <Glyph name="external-link" size={16} />
         </a>
       )}
       {item.downloadUrl && (
         <a href={item.downloadUrl} target="_blank" rel="noopener noreferrer" onClick={count} className={btn}>
-          ดาวน์โหลด{item.sizeBytes ? ` (${sizeLabel(item.sizeBytes)})` : ""} <span aria-hidden>⬇</span>
+          <Glyph name="download" size={16} />ดาวน์โหลด{item.sizeBytes ? ` (${sizeLabel(item.sizeBytes)})` : ""}
         </a>
       )}
       {item.frameSrc && canFull && (
-        <button type="button" onClick={() => box.current?.requestFullscreen?.().catch(() => {})} className={btn}>เต็มจอ <span aria-hidden>⛶</span></button>
+        <button type="button" onClick={() => box.current?.requestFullscreen?.().catch(() => {})} className={btn}><Glyph name="maximize" size={16} />เต็มจอ</button>
       )}
     </div>
   );

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import Glyph from "@/components/glyph";
+import LiveFilter from "@/components/live-filter";
 import { MediaGrid } from "@/components/media-card";
 import Pager from "@/components/pager";
 import SiteNavbar from "@/components/site-navbar";
@@ -37,7 +39,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: SP }
       <SiteNavbar />
       <main className="mx-auto max-w-6xl space-y-5 px-4 pb-28 pt-24 md:pb-16">
         <header className="space-y-1">
-          <h1 className="text-2xl font-bold sm:text-3xl">{current ? `${current.icon} ${current.name}` : "คลังสื่อการเรียนรู้"}</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">{current ? current.name : "คลังสื่อการเรียนรู้"}</h1>
           <p className="text-sm text-neutral-500">{result.total.toLocaleString("th-TH")} รายการ{searchParams.q ? ` ที่ตรงกับ “${searchParams.q}”` : ""} · คลิกเพื่อเปิดใช้งานหรือดาวน์โหลดได้ทันที ไม่ต้องเข้าสู่ระบบ</p>
         </header>
 
@@ -50,7 +52,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: SP }
               return (
                 <li key={a.id}>
                   <Link href={href({ area: a.slug, page: undefined })} aria-current={on ? "page" : undefined} className={`${chip} ${on ? "border-transparent text-white" : "border-neutral-300 bg-white"}`} style={on ? { backgroundColor: a.color } : undefined}>
-                    <span aria-hidden>{a.icon}</span>{a.name}<span className={`text-xs ${on ? "text-white/80" : "text-neutral-400"}`}>{a.count}</span>
+                    <Glyph name={a.icon} size={16} />{a.name}<span className={`text-xs ${on ? "text-white/80" : "text-neutral-400"}`}>{a.count}</span>
                   </Link>
                 </li>
               );
@@ -58,13 +60,18 @@ export default async function LibraryPage({ searchParams }: { searchParams: SP }
           </ul>
         </nav>
 
-        <form action="/library" className="grid gap-2 rounded-2xl bg-white p-3 shadow-sm sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_auto]">
+        <LiveFilter
+          action="/library"
+          omit={{ sort: "latest" }}
+          className="space-y-5"
+          formClassName="grid gap-2 rounded-2xl bg-white p-3 shadow-sm sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr]"
+          fields={<>
           {searchParams.area && <input type="hidden" name="area" value={searchParams.area} />}
           {searchParams.by && <input type="hidden" name="by" value={searchParams.by} />}
           <input name="q" type="search" defaultValue={searchParams.q ?? ""} placeholder="ค้นหาชื่อสื่อ แท็ก หรือผู้จัดทำ" aria-label="ค้นหาสื่อ" enterKeyHint="search" className={`${select} sm:col-span-2 lg:col-span-1`} />
           <select name="type" defaultValue={searchParams.type ?? ""} aria-label="ประเภทสื่อ" className={select}>
             <option value="">ทุกประเภท</option>
-            {types.map((t) => <option key={t.slug} value={t.slug}>{t.icon} {t.name}</option>)}
+            {types.map((t) => <option key={t.slug} value={t.slug}>{t.name}</option>)}
           </select>
           <select name="level" defaultValue={searchParams.level ?? ""} aria-label="ระดับชั้น" className={select}>
             <option value="">ทุกระดับชั้น</option>
@@ -73,9 +80,8 @@ export default async function LibraryPage({ searchParams }: { searchParams: SP }
           <select name="sort" defaultValue={sort} aria-label="เรียงตาม" className={select}>
             {SORTS.map((s) => <option key={s} value={s}>เรียง: {SORT_LABEL[s]}</option>)}
           </select>
-          <button className="min-h-11 rounded-xl bg-brand px-6 font-semibold text-white hover:bg-brand-dark sm:col-span-2 lg:col-span-1">ค้นหา</button>
-        </form>
-
+        </>}
+        >
         {filtered && <p className="text-sm"><Link href="/library" className="text-brand underline">ล้างตัวกรองทั้งหมด</Link></p>}
 
         {result.items.length === 0 ? (
@@ -89,6 +95,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: SP }
             <Pager page={result.page} pages={result.pages} href={(p) => href({ page: p > 1 ? String(p) : undefined })} label={`เลือกหน้า (หน้าละ ${PER_PAGE} รายการ)`} />
           </>
         )}
+        </LiveFilter>
       </main>
     </>
   );

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Avatar from "@/components/avatar";
+import Glyph from "@/components/glyph";
 import type { MediaCardData } from "@/lib/media-data";
 
 const nf = new Intl.NumberFormat("th-TH", { notation: "compact", maximumFractionDigits: 1 });
@@ -17,10 +18,14 @@ export default function MediaCard({ card, compact = false, href }: { card: Media
           // eslint-disable-next-line @next/next/no-img-element
           <img src={card.coverUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" style={{ objectPosition: `${card.coverFx * 100}% ${card.coverFy * 100}%` }} />
         ) : (
-          <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white/25 to-black/20 text-5xl drop-shadow" aria-hidden>{card.area.icon}</span>
+          <span className="relative flex h-full w-full items-center justify-center bg-gradient-to-br from-white/25 to-black/25 text-white" aria-hidden>
+            <span className="absolute -right-6 -top-8 h-32 w-32 rounded-full bg-white/10" />
+            <span className="absolute -bottom-10 -left-6 h-28 w-28 rounded-full bg-black/10" />
+            <Glyph name={card.area.icon} size={52} strokeWidth={1.3} />
+          </span>
         )}
-        <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2.5 py-0.5 text-[11px] font-medium text-white backdrop-blur">{card.badge}</span>
-        {card.pinned && <span className="absolute right-2 top-2 rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-semibold text-neutral-900" aria-label="ปักหมุด">📌</span>}
+        <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2.5 py-0.5 text-[11px] font-medium tracking-wide text-white backdrop-blur">{card.badge}</span>
+        {card.pinned && <span className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-amber-400 text-neutral-900" role="img" aria-label="ปักหมุด"><Glyph name="pin" size={14} strokeWidth={2} /></span>}
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-3">
@@ -35,8 +40,8 @@ export default function MediaCard({ card, compact = false, href }: { card: Media
             <span className="truncate font-medium text-neutral-700">{card.owner.name}</span>
           </span>
           <span className="flex shrink-0 items-center gap-2.5 tabular-nums" aria-label={`เปิดดู ${card.views} ครั้ง ถูกใจ ${card.likes}`}>
-            <span>👁 {nf.format(card.views)}</span>
-            <span>♥ {nf.format(card.likes)}</span>
+            <span className="flex items-center gap-1"><Glyph name="eye" size={14} />{nf.format(card.views)}</span>
+            <span className="flex items-center gap-1"><Glyph name="heart" size={14} />{nf.format(card.likes)}</span>
           </span>
         </div>
       </div>

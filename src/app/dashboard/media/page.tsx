@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import Glyph from "@/components/glyph";
 import { db } from "@/lib/db";
 import { STATUS_LABEL, cardSelect, coverUrlOf } from "@/lib/media-data";
 import { getActor } from "@/lib/media-server";
@@ -60,7 +61,7 @@ export default async function MyMediaPage({ searchParams }: { searchParams: { sa
                   {cover
                     // eslint-disable-next-line @next/next/no-img-element
                     ? <img src={cover} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" style={{ objectPosition: `${m.coverFx * 100}% ${m.coverFy * 100}%` }} />
-                    : <span className="flex h-full items-center justify-center text-3xl">{m.area.icon}</span>}
+                    : <span className="flex h-full items-center justify-center text-white"><Glyph name={m.area.icon} size={30} strokeWidth={1.4} /></span>}
                 </div>
                 <div className="min-w-0 flex-1 space-y-1">
                   <p className="line-clamp-2 font-semibold leading-snug">{m.title}</p>
@@ -68,7 +69,7 @@ export default async function MyMediaPage({ searchParams }: { searchParams: { sa
                     <span className={`rounded-full px-2.5 py-0.5 font-medium ${tone}`}>{label}</span>
                     <span>{m.area.name}</span>
                     <span>แก้ไข {formatThaiDate(m.updatedAt)}</span>
-                    {m.status === "PUBLISHED" && <span>👁 {m.viewCount} · ♥ {m.likeCount}</span>}
+                    {m.status === "PUBLISHED" && <span className="inline-flex items-center gap-2"><span className="inline-flex items-center gap-1"><Glyph name="eye" size={13} />{m.viewCount}</span><span className="inline-flex items-center gap-1"><Glyph name="heart" size={13} />{m.likeCount}</span></span>}
                   </p>
                   {m.status === "REJECTED" && m.reviewNote && <p className="rounded-lg bg-red-50 px-2 py-1 text-xs text-red-700">ส่งกลับ: {m.reviewNote}</p>}
                   <div className="flex flex-wrap gap-2 pt-1">

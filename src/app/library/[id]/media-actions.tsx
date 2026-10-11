@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
+import Glyph from "@/components/glyph";
 import { setMediaLike } from "../actions";
 
 const SIX_HOURS = 6 * 3600 * 1000;
@@ -50,7 +51,7 @@ export function LikeButton({ mediaId, initialLiked, initialCount, enabled }: { m
         aria-label={liked ? "เลิกถูกใจ" : "ถูกใจสื่อนี้"}
         className={`inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition active:scale-95 ${liked ? "border-rose-300 bg-rose-50 text-rose-600" : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"}`}
       >
-        <span aria-hidden className="text-lg leading-none">{liked ? "♥" : "♡"}</span>
+        <Glyph name="heart" size={20} filled={liked} />
         ถูกใจ <span className="tabular-nums">{count.toLocaleString("th-TH")}</span>
       </button>
       {msg && <span role="alert" className="mt-1 text-xs text-red-600">{msg}</span>}
@@ -71,7 +72,7 @@ export function ShareButton({ title }: { title: string }) {
   }
   return (
     <button type="button" onClick={share} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-700 hover:bg-neutral-50">
-      <span aria-hidden>↗</span>{done ? "คัดลอกลิงก์แล้ว" : "แชร์"}
+      <Glyph name={done ? "check" : "share"} size={18} />{done ? "คัดลอกลิงก์แล้ว" : "แชร์"}
     </button>
   );
 }
