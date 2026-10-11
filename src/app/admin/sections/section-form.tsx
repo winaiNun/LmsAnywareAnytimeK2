@@ -49,6 +49,7 @@ export default function SectionForm({ section }: { section: HomeSectionConfig })
   const [eyebrow, setEyebrow] = useState(section.eyebrow);
   const [hideEyebrow, setHideEyebrow] = useState(false);
   const [accent, setAccent] = useState(section.accentColor);
+  const [showMore, setShowMore] = useState(section.showMore);
   const [mode, setMode] = useState(section.bgMode);
   const [c1, setC1] = useState(section.bgColor ?? "#EAF0FF");
   const [c2, setC2] = useState(section.bgColor2 ?? "#FFFFFF");
@@ -76,7 +77,7 @@ export default function SectionForm({ section }: { section: HomeSectionConfig })
               align={align}
               size={size}
               titleColor={color}
-              moreHref={section.moreHref}
+              moreHref={showMore && section.hasMore ? "#" : null}
               icon={section.icon}
               onDark={bg.tone === "light"}
             />
@@ -138,6 +139,15 @@ export default function SectionForm({ section }: { section: HomeSectionConfig })
           </>
         )}
         {hStyle === "plain" && <input type="hidden" name="accentColor" value={accent} />}
+        {section.hasMore && hStyle !== "plain" && (
+          <label className="flex min-h-11 items-start gap-3 text-sm">
+            <input type="checkbox" name="showMore" checked={showMore} onChange={(e) => setShowMore(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0" />
+            <span>
+              <strong>แสดงปุ่ม “ดูทั้งหมด” ที่หัวข้อ</strong>
+              <span className="block text-neutral-500">พาไปหน้ารวมของเซกชันนี้ ปิดได้ถ้าเนื้อหาด้านล่างมีทางไปหน้ารวมอยู่แล้ว (เช่น เมนูกลุ่มสาระแสดงครบทุกกลุ่ม หรือปุ่มท้ายรายการ)</span>
+            </span>
+          </label>
+        )}
       </fieldset>
 
       <fieldset className="space-y-4 rounded-lg border border-neutral-200 p-4">

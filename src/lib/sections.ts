@@ -26,11 +26,13 @@ export type HomeSectionConfig = {
   headingStyle: (typeof HEADING_STYLES)[number];
   eyebrow: string; // "" = no label
   accentColor: string;
-  moreHref: string | null; // the "see all" link in the heading
+  moreHref: string | null; // where the "see all" button points (null = this block has none); already null when switched off
+  hasMore: boolean; // does this block have a "see all" target at all (shows the switch in the admin)
+  showMore: boolean; // is the button switched on
   icon: string; // used by the icon heading style
 };
 
-type Defaults = Omit<HomeSectionConfig, "key" | "sortOrder" | "headingStyle" | "accentColor">;
+type Defaults = Omit<HomeSectionConfig, "key" | "sortOrder" | "headingStyle" | "accentColor" | "hasMore" | "showMore"> & { moreDefault?: boolean };
 const base: Omit<Defaults, "kind" | "title"> = {
   subtitle: "",
   visible: true,
@@ -50,11 +52,11 @@ const base: Omit<Defaults, "kind" | "title"> = {
 
 const DEFAULTS: Record<SectionKey, Defaults> = {
   recommended: { ...base, eyebrow: "แนะนำ", icon: "sparkles", kind: "สไลด์แนะนำคอร์ส/สื่อ", title: "แนะนำสำหรับคุณ" },
-  areas: { ...base, eyebrow: "กลุ่มสาระ", icon: "book-open", moreHref: "/library", kind: "กลุ่มสาระ (เมนู)", title: "เลือกสำรวจตามกลุ่มสาระ", subtitle: "แตะกลุ่มสาระเพื่อดูสื่อทั้งหมด" },
+  areas: { ...base, eyebrow: "กลุ่มสาระ", icon: "book-open", moreHref: "/library", moreDefault: false, kind: "กลุ่มสาระ (เมนู)", title: "เลือกสำรวจตามกลุ่มสาระ", subtitle: "แตะกลุ่มสาระเพื่อดูสื่อทั้งหมด" },
   latest: { ...base, eyebrow: "มาใหม่", icon: "sparkles", moreHref: "/library?sort=latest", kind: "สื่อล่าสุด (สไลด์แนวข้าง)", title: "สื่อล่าสุด" },
   popular: { ...base, eyebrow: "ยอดนิยม", icon: "heart", moreHref: "/library?sort=views", kind: "สื่อที่ถูกดูมากที่สุด (สไลด์แนวข้าง)", title: "ดูมากที่สุด", subtitle: "สื่อที่ถูกเปิดดูมากในช่วง 30 วันที่ผ่านมา" },
   courses: { ...base, eyebrow: "เรียนรู้", icon: "play-circle", kind: "คอร์สเรียน", title: "คอร์สเรียน" },
-  schools: { ...base, eyebrow: "ทำเนียบ", icon: "users", moreHref: "/schools", kind: "ทำเนียบโรงเรียน (Anywhere Anytime)", title: "Anywhere Anytime ของโรงเรียนในเขต", subtitle: "สุ่มโรงเรียนมาให้ชมทุกครั้งที่เข้าเว็บ" },
+  schools: { ...base, eyebrow: "ทำเนียบ", icon: "users", moreHref: "/schools", moreDefault: false, kind: "ทำเนียบโรงเรียน (Anywhere Anytime)", title: "Anywhere Anytime ของโรงเรียนในเขต", subtitle: "สุ่มโรงเรียนมาให้ชมทุกครั้งที่เข้าเว็บ" },
 };
 
 const isOneOf = <T extends readonly string[]>(list: T, v: string): v is T[number] => (list as readonly string[]).includes(v);
@@ -66,7 +68,11 @@ export async function getHomeSections(): Promise<HomeSectionConfig[]> {
   return SECTION_KEYS.map((key, i) => {
     const d = DEFAULTS[key];
     const r = rows.get(key);
-    if (!r) return { ...d, key, sortOrder: i, headingStyle: "accent" as const, accentColor: BRAND_ACCENT };
+    const more = (on: boolean | null | undefined) => {
+      const show = on ?? d.moreDefault ?? true;
+      return { hasMore: d.moreHref !== null, showMore: show, moreHref: show ? d.moreHref : null };
+    };
+    if (!r) return { ...d, key, sortOrder: i, headingStyle: "accent" as const, accentColor: BRAND_ACCENT, ...more(null) };
 
     // Rows saved before background modes existed only had a colour: treat that as "solid".
     const mode = isOneOf(BG_MODES, r.bgMode) ? r.bgMode : "none";
@@ -89,8 +95,8 @@ export async function getHomeSections(): Promise<HomeSectionConfig[]> {
       headingStyle: isOneOf(HEADING_STYLES, r.headingStyle) ? r.headingStyle : "accent",
       eyebrow: r.eyebrow ?? d.eyebrow,
       accentColor: r.accentColor ?? BRAND_ACCENT,
-      moreHref: d.moreHref,
       icon: d.icon,
+      ...more(r.showMore),
     };
   }).sort((a, b) => a.sortOrder - b.sortOrder || SECTION_KEYS.indexOf(a.key) - SECTION_KEYS.indexOf(b.key));
 }

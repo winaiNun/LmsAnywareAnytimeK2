@@ -91,6 +91,8 @@ export async function saveSection(key: string, _prev: SectionState, formData: Fo
     // null = the default label of this block, "" = no label at all
     eyebrow: formData.get("hideEyebrow") === "on" ? "" : d.eyebrow || null,
     accentColor: d.accentColor,
+    // only blocks that have a "see all" target carry the switch; the others keep null
+    showMore: current.hasMore ? formData.get("showMore") === "on" : null,
     visible: formData.get("visible") === "on",
     sortOrder: current.sortOrder,
   };

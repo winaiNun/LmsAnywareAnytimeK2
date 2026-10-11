@@ -373,6 +373,7 @@ model HomeSection {
   headingStyle String @default("accent") // plain | accent | icon | center
   eyebrow      String? // small label above the title: null = the default for this block, "" = none
   accentColor  String? // colour of the label / accent line (null = the brand blue)
+  showMore     Boolean? // the "see all" button in the heading: null = the default for this block
   updatedAt  DateTime @updatedAt
 }
 
