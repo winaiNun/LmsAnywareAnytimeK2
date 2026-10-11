@@ -370,6 +370,9 @@ model HomeSection {
   bgDirection String  @default("to right")
   bgImageKey  String? // site/section-<uuid>.webp
   bgOverlay   Int     @default(0) // 0-80, dark layer over a background image
+  headingStyle String @default("accent") // plain | accent | icon | center
+  eyebrow      String? // small label above the title: null = the default for this block, "" = none
+  accentColor  String? // colour of the label / accent line (null = the brand blue)
   updatedAt  DateTime @updatedAt
 }
 

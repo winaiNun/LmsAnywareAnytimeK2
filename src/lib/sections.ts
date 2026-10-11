@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { ALIGNS, BG_MODES, DIRECTION_VALUES, SIZES } from "@/lib/section-styles";
+import { ALIGNS, BG_MODES, BRAND_ACCENT, DIRECTION_VALUES, HEADING_STYLES, SIZES } from "@/lib/section-styles";
 import { fileUrl } from "@/lib/site";
 
 export { ALIGNS, SIZES, BG_MODES, HEADING_ALIGN, HEADING_SIZE } from "@/lib/section-styles";
@@ -23,9 +23,14 @@ export type HomeSectionConfig = {
   bgDirection: string;
   bgImageUrl: string | null;
   bgOverlay: number;
+  headingStyle: (typeof HEADING_STYLES)[number];
+  eyebrow: string; // "" = no label
+  accentColor: string;
+  moreHref: string | null; // the "see all" link in the heading
+  icon: string; // used by the icon heading style
 };
 
-type Defaults = Omit<HomeSectionConfig, "key" | "sortOrder">;
+type Defaults = Omit<HomeSectionConfig, "key" | "sortOrder" | "headingStyle" | "accentColor">;
 const base: Omit<Defaults, "kind" | "title"> = {
   subtitle: "",
   visible: true,
@@ -38,15 +43,18 @@ const base: Omit<Defaults, "kind" | "title"> = {
   bgDirection: "to right",
   bgImageUrl: null,
   bgOverlay: 0,
+  eyebrow: "",
+  moreHref: null,
+  icon: "book-open",
 };
 
 const DEFAULTS: Record<SectionKey, Defaults> = {
-  recommended: { ...base, kind: "สไลด์แนะนำคอร์ส/สื่อ", title: "แนะนำสำหรับคุณ" },
-  areas: { ...base, kind: "กลุ่มสาระ (เมนู)", title: "เลือกสำรวจตามกลุ่มสาระ", subtitle: "แตะกลุ่มสาระเพื่อดูสื่อทั้งหมด" },
-  latest: { ...base, kind: "สื่อล่าสุด (สไลด์แนวข้าง)", title: "สื่อล่าสุด" },
-  popular: { ...base, kind: "สื่อที่ถูกดูมากที่สุด (สไลด์แนวข้าง)", title: "ดูมากที่สุด", subtitle: "สื่อที่ถูกเปิดดูมากในช่วง 30 วันที่ผ่านมา" },
-  courses: { ...base, kind: "คอร์สเรียน", title: "คอร์สเรียน" },
-  schools: { ...base, kind: "ทำเนียบโรงเรียน (Anywhere Anytime)", title: "Anywhere Anytime ของโรงเรียนในเขต", subtitle: "สุ่มโรงเรียนมาให้ชมทุกครั้งที่เข้าเว็บ" },
+  recommended: { ...base, eyebrow: "แนะนำ", icon: "sparkles", kind: "สไลด์แนะนำคอร์ส/สื่อ", title: "แนะนำสำหรับคุณ" },
+  areas: { ...base, eyebrow: "กลุ่มสาระ", icon: "book-open", moreHref: "/library", kind: "กลุ่มสาระ (เมนู)", title: "เลือกสำรวจตามกลุ่มสาระ", subtitle: "แตะกลุ่มสาระเพื่อดูสื่อทั้งหมด" },
+  latest: { ...base, eyebrow: "มาใหม่", icon: "sparkles", moreHref: "/library?sort=latest", kind: "สื่อล่าสุด (สไลด์แนวข้าง)", title: "สื่อล่าสุด" },
+  popular: { ...base, eyebrow: "ยอดนิยม", icon: "heart", moreHref: "/library?sort=views", kind: "สื่อที่ถูกดูมากที่สุด (สไลด์แนวข้าง)", title: "ดูมากที่สุด", subtitle: "สื่อที่ถูกเปิดดูมากในช่วง 30 วันที่ผ่านมา" },
+  courses: { ...base, eyebrow: "เรียนรู้", icon: "play-circle", kind: "คอร์สเรียน", title: "คอร์สเรียน" },
+  schools: { ...base, eyebrow: "ทำเนียบ", icon: "users", moreHref: "/schools", kind: "ทำเนียบโรงเรียน (Anywhere Anytime)", title: "Anywhere Anytime ของโรงเรียนในเขต", subtitle: "สุ่มโรงเรียนมาให้ชมทุกครั้งที่เข้าเว็บ" },
 };
 
 const isOneOf = <T extends readonly string[]>(list: T, v: string): v is T[number] => (list as readonly string[]).includes(v);
@@ -58,7 +66,7 @@ export async function getHomeSections(): Promise<HomeSectionConfig[]> {
   return SECTION_KEYS.map((key, i) => {
     const d = DEFAULTS[key];
     const r = rows.get(key);
-    if (!r) return { ...d, key, sortOrder: i };
+    if (!r) return { ...d, key, sortOrder: i, headingStyle: "accent" as const, accentColor: BRAND_ACCENT };
 
     // Rows saved before background modes existed only had a colour: treat that as "solid".
     const mode = isOneOf(BG_MODES, r.bgMode) ? r.bgMode : "none";
@@ -78,6 +86,11 @@ export async function getHomeSections(): Promise<HomeSectionConfig[]> {
       bgDirection: isOneOf(DIRECTION_VALUES, r.bgDirection) ? r.bgDirection : "to right",
       bgImageUrl: fileUrl(r.bgImageKey),
       bgOverlay: r.bgOverlay,
+      headingStyle: isOneOf(HEADING_STYLES, r.headingStyle) ? r.headingStyle : "accent",
+      eyebrow: r.eyebrow ?? d.eyebrow,
+      accentColor: r.accentColor ?? BRAND_ACCENT,
+      moreHref: d.moreHref,
+      icon: d.icon,
     };
   }).sort((a, b) => a.sortOrder - b.sortOrder || SECTION_KEYS.indexOf(a.key) - SECTION_KEYS.indexOf(b.key));
 }

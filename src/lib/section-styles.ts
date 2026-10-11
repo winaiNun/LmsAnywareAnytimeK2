@@ -4,6 +4,9 @@ import type { CSSProperties } from "react";
 export const ALIGNS = ["left", "center", "right"] as const;
 export const SIZES = ["sm", "md", "lg"] as const;
 export const BG_MODES = ["none", "solid", "gradient", "image"] as const;
+export const HEADING_STYLES = ["accent", "icon", "center", "plain"] as const;
+export const HEADING_STYLE_LABEL: Record<(typeof HEADING_STYLES)[number], string> = { accent: "ป้าย + เส้นเน้นสี", icon: "ไอคอนด้านข้าง", center: "กลางหน้า + เส้นคู่", plain: "เรียบ (ข้อความอย่างเดียว)" };
+export const BRAND_ACCENT = "#0052FF";
 
 export const DIRECTIONS = [
   { value: "to right", label: "→ ซ้ายไปขวา" },

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import ColorPicker from "@/components/admin/color-picker";
 import CropImageField from "@/components/admin/crop-image-field";
-import { DIRECTIONS, HEADING_ALIGN, HEADING_SIZE, sectionBackground, type BG_MODES } from "@/lib/section-styles";
+import SectionHeading from "@/components/section-heading";
+import { DIRECTIONS, HEADING_STYLES, HEADING_STYLE_LABEL, sectionBackground, type BG_MODES } from "@/lib/section-styles";
 import type { HomeSectionConfig } from "@/lib/sections";
 import { saveSection, type SectionState } from "./actions";
 
@@ -44,6 +45,10 @@ export default function SectionForm({ section }: { section: HomeSectionConfig })
   const [align, setAlign] = useState(section.align);
   const [size, setSize] = useState(section.titleSize);
   const [color, setColor] = useState(section.titleColor);
+  const [hStyle, setHStyle] = useState(section.headingStyle);
+  const [eyebrow, setEyebrow] = useState(section.eyebrow);
+  const [hideEyebrow, setHideEyebrow] = useState(false);
+  const [accent, setAccent] = useState(section.accentColor);
   const [mode, setMode] = useState(section.bgMode);
   const [c1, setC1] = useState(section.bgColor ?? "#EAF0FF");
   const [c2, setC2] = useState(section.bgColor2 ?? "#FFFFFF");
@@ -61,9 +66,20 @@ export default function SectionForm({ section }: { section: HomeSectionConfig })
       <div role="group" aria-label="ตัวอย่าง" className="relative overflow-hidden rounded-lg border border-neutral-200 bg-[#F9F9F9]" style={bg.style}>
         {bg.overlay > 0 && <div className="absolute inset-0 bg-black" style={{ opacity: bg.overlay / 100 }} />}
         <div className={`relative px-4 py-8 ${bg.tone === "light" ? "text-white" : "text-neutral-900"}`}>
-          <div className={HEADING_ALIGN[align]}>
-            <p className={`font-bold ${HEADING_SIZE[size]}`} style={{ color }}>{title || "—"}</p>
-            {subtitle && <p className="mt-1 opacity-80">{subtitle}</p>}
+          <div className="pointer-events-none">
+            <SectionHeading
+              style={hStyle}
+              title={title || "—"}
+              subtitle={subtitle}
+              eyebrow={hideEyebrow ? "" : eyebrow}
+              accent={accent}
+              align={align}
+              size={size}
+              titleColor={color}
+              moreHref={section.moreHref}
+              icon={section.icon}
+              onDark={bg.tone === "light"}
+            />
           </div>
         </div>
       </div>
@@ -99,6 +115,30 @@ export default function SectionForm({ section }: { section: HomeSectionConfig })
       </div>
 
       <ColorPicker label="สีข้อความ" name="titleColor" value={color} onChange={setColor} />
+
+      <fieldset className="space-y-4 rounded-lg border border-neutral-200 p-4">
+        <legend className="px-1 text-sm font-semibold">รูปแบบหัวข้อ</legend>
+        <div className="flex flex-wrap gap-2">
+          {HEADING_STYLES.map((h) => (
+            <Choice key={h} name="headingStyle" value={h} checked={hStyle === h} onChange={() => setHStyle(h)}>{HEADING_STYLE_LABEL[h]}</Choice>
+          ))}
+        </div>
+        {hStyle !== "plain" && (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block space-y-1">
+                <span className="text-sm font-medium">ป้ายเล็กเหนือหัวข้อ (เว้นว่าง = ใช้ข้อความมาตรฐานของเซกชัน)</span>
+                <input name="eyebrow" maxLength={24} value={eyebrow} onChange={(e) => setEyebrow(e.target.value)} disabled={hideEyebrow} className={input} />
+              </label>
+              <label className="flex min-h-11 items-center gap-2 self-end text-sm">
+                <input type="checkbox" name="hideEyebrow" checked={hideEyebrow} onChange={(e) => setHideEyebrow(e.target.checked)} className="h-4 w-4" /> ไม่แสดงป้ายเล็ก
+              </label>
+            </div>
+            <ColorPicker label="สีเน้น (ป้าย เส้นใต้หัวข้อ ปุ่ม “ดูทั้งหมด”)" name="accentColor" value={accent} onChange={setAccent} />
+          </>
+        )}
+        {hStyle === "plain" && <input type="hidden" name="accentColor" value={accent} />}
+      </fieldset>
 
       <fieldset className="space-y-4 rounded-lg border border-neutral-200 p-4">
         <legend className="px-1 text-sm font-semibold">พื้นหลังเซกชัน</legend>

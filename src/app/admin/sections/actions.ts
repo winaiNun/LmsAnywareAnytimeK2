@@ -7,7 +7,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { processBackground } from "@/lib/image";
-import { ALIGNS, BG_MODES, DIRECTION_VALUES, SIZES } from "@/lib/section-styles";
+import { ALIGNS, BG_MODES, DIRECTION_VALUES, HEADING_STYLES, SIZES } from "@/lib/section-styles";
 import { SECTION_KEYS, getHomeSections } from "@/lib/sections";
 import { getStorage } from "@/lib/storage";
 
@@ -32,6 +32,9 @@ const schema = z.object({
   bgColor2: hex.optional(),
   bgDirection: z.enum(DIRECTION_VALUES as [string, ...string[]]).default("to right"),
   bgOverlay: z.coerce.number().int().min(0).max(80).default(0),
+  headingStyle: z.enum(HEADING_STYLES).default("accent"),
+  eyebrow: z.string().trim().max(24, "ป้ายเล็กยาวไม่เกิน 24 ตัวอักษร").default(""),
+  accentColor: hex.default("#0052FF"),
 });
 
 export type SectionState = { error?: string; saved?: boolean } | undefined;
@@ -84,6 +87,10 @@ export async function saveSection(key: string, _prev: SectionState, formData: Fo
     bgDirection: d.bgDirection,
     bgImageKey,
     bgOverlay: d.bgOverlay,
+    headingStyle: d.headingStyle,
+    // null = the default label of this block, "" = no label at all
+    eyebrow: formData.get("hideEyebrow") === "on" ? "" : d.eyebrow || null,
+    accentColor: d.accentColor,
     visible: formData.get("visible") === "on",
     sortOrder: current.sortOrder,
   };
