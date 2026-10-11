@@ -4,7 +4,9 @@ import { z } from "zod";
 import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { emailField, profileData, profileSchema, usernameField } from "@/lib/members";
-import { clientIp, rateLimited } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/rate-limit";
+import { rateLimitedDb } from "@/lib/rate-limit-db";
+import { verifyTurnstile } from "@/lib/turnstile";
 import { codeStatus, normalizeCode, redeemCode } from "@/lib/registration";
 import { getSiteInfo } from "@/lib/site";
 
@@ -20,11 +22,12 @@ const schema = z
 const BAD_CODE = "รหัสสมัครไม่ถูกต้อง หมดอายุ หรือถูกใช้ครบแล้ว"; // one message for every failure: no hints for guessers
 
 export async function POST(req: Request) {
-  if (rateLimited(`register:${clientIp(req)}`, 10, 15 * 60 * 1000)) {
+  if (await rateLimitedDb(`register:${clientIp(req)}`, 10, 15 * 60 * 1000)) {
     return NextResponse.json({ error: "ลองสมัครบ่อยเกินไป กรุณารอสักครู่" }, { status: 429 });
   }
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== "object") return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
+  if (!(await verifyTurnstile(body.turnstile, clientIp(req)))) return NextResponse.json({ error: "ตรวจสอบบอตไม่ผ่าน กรุณาลองใหม่อีกครั้ง" }, { status: 400 });
 
   // 1) The code first: it decides the member type and (if set) the school; the browser cannot override them.
   const site = await getSiteInfo();
@@ -32,7 +35,7 @@ export async function POST(req: Request) {
   if (site.requireRegistrationCode && !code) return NextResponse.json({ error: "กรุณากรอกรหัสสมัคร" }, { status: 400 });
   let rc = null;
   if (code) {
-    if (rateLimited(`code:${clientIp(req)}`, 15, 15 * 60 * 1000)) return NextResponse.json({ error: "ลองรหัสบ่อยเกินไป กรุณารอสักครู่" }, { status: 429 });
+    if (await rateLimitedDb(`code:${clientIp(req)}`, 15, 15 * 60 * 1000)) return NextResponse.json({ error: "ลองรหัสบ่อยเกินไป กรุณารอสักครู่" }, { status: 429 });
     rc = await db.registrationCode.findUnique({ where: { code } });
     if (!rc || codeStatus(rc) !== "ok") return NextResponse.json({ error: BAD_CODE }, { status: 400 });
   }

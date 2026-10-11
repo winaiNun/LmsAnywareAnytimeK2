@@ -4,6 +4,7 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRef, useState } from "react";
 import { Icon, Spinner, type IconName } from "@/components/icons";
+import Turnstile, { turnstileOn } from "@/components/turnstile";
 import SchoolPicker, { type SchoolOption } from "@/components/school-picker";
 import { MEMBER_TYPES, MEMBER_TYPE_LABEL, PREFIXES, needsSchool, type MemberTypeKey } from "@/lib/members";
 import { checkRegistrationCode } from "./actions";
@@ -31,6 +32,10 @@ export default function RegisterForm({ requireCode, systemName, areaName, logoUr
   const [type, setType] = useState<MemberTypeKey>("STUDENT");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // bot check: one token for the code step, one for the final submit (each works once)
+  const [tok, setTok] = useState({ code: "", submit: "" });
+  const [fresh, setFresh] = useState({ code: 0, submit: 0 });
+  const needCodeCheck = requireCode && step === 0;
   const panels = useRef<(HTMLDivElement | null)[]>([]);
 
   /** Native validation of just the visible step (other steps stay mounted but hidden to keep their values). */
@@ -54,9 +59,11 @@ export default function RegisterForm({ requireCode, systemName, areaName, logoUr
 
   async function verifyCode() {
     if (!stepValid(0)) return;
+    if (turnstileOn && !tok.code) return setError("กรุณารอการตรวจสอบบอตสักครู่ แล้วกดอีกครั้ง");
     setError("");
     setBusy(true);
-    const r = await checkRegistrationCode(codeText);
+    const r = await checkRegistrationCode(codeText, tok.code);
+    setFresh((f) => ({ ...f, code: f.code + 1 }));
     setBusy(false);
     if (!r.ok) return setError(r.error);
     setVerified({ label: r.label, school: r.school });
@@ -70,13 +77,15 @@ export default function RegisterForm({ requireCode, systemName, areaName, logoUr
     if (step === 0 && requireCode) return verifyCode();
     if (step < 2) return go(step + 1);
     if (!stepValid(2)) return;
+    if (turnstileOn && !tok.submit) return setError("กรุณารอการตรวจสอบบอตสักครู่ แล้วกดอีกครั้ง");
     const f = new FormData(e.currentTarget);
     if (!f.get("email") && !f.get("username")) return setError("กรุณากรอกอีเมลหรือชื่อผู้ใช้อย่างน้อยหนึ่งอย่าง");
     if (f.get("password") !== f.get("confirm")) return setError("รหัสผ่านทั้งสองช่องไม่ตรงกัน");
     setError("");
     setBusy(true);
-    const body = { ...Object.fromEntries(f), memberType: type, code: requireCode ? codeText : undefined, consent: f.get("consent") === "on" };
+    const body = { ...Object.fromEntries(f), memberType: type, code: requireCode ? codeText : undefined, consent: f.get("consent") === "on", turnstile: tok.submit };
     const res = await fetch("/api/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    setFresh((x) => ({ ...x, submit: x.submit + 1 }));
     if (!res.ok) {
       setError((await res.json().catch(() => ({}))).error ?? "สมัครสมาชิกไม่สำเร็จ");
       return setBusy(false);
@@ -212,6 +221,9 @@ export default function RegisterForm({ requireCode, systemName, areaName, logoUr
               <span>ยินยอมให้เก็บและใช้ข้อมูลเพื่อการเรียนรู้ การออกเกียรติบัตร และรายงานสถิติของเครือข่าย (ไม่เก็บเลขบัตรประชาชนและที่อยู่)</span>
             </label>
           </div>
+
+          {needCodeCheck && <div className="mt-5"><Turnstile onToken={(t) => setTok((x) => ({ ...x, code: t }))} resetKey={fresh.code} /></div>}
+          {step === 2 && <div className="mt-5"><Turnstile onToken={(t) => setTok((x) => ({ ...x, submit: t }))} resetKey={fresh.submit} /></div>}
 
           {error && <p role="alert" className="mt-5 rounded-xl bg-white/95 px-3 py-2 text-sm font-medium text-red-600">{error}</p>}
 

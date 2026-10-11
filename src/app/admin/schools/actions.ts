@@ -328,6 +328,7 @@ export async function issueSchoolPassword(id: string): Promise<{ ok: true; email
   const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
   if (s.accountId) {
     await db.user.update({ where: { id: s.accountId }, data: { passwordHash, mustChangePassword: true, active: true } });
+    await db.trustedDevice.deleteMany({ where: { userId: s.accountId } }); // a reset also signs the old phones out of PIN login
   } else {
     const clash = await db.user.findUnique({ where: { email: s.email } });
     if (clash) return { ok: false, error: "อีเมลนี้มีผู้ใช้อื่นใช้อยู่แล้ว" };

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getSession, signIn } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { Icon, Spinner, type IconName } from "@/components/icons";
+import Turnstile, { turnstileOn } from "@/components/turnstile";
 import PinPad from "@/components/pin-pad";
 import { forgetDevice, readDevice, usePhone, type StoredDevice } from "@/lib/use-phone";
 
@@ -42,6 +43,8 @@ export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop,
   const [usePassword, setUsePassword] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [pin, setPin] = useState("");
+  const [bot, setBot] = useState(""); // Turnstile token (password sign-in only; PIN is capped per phone already)
+  const [botKey, setBotKey] = useState(0);
   const [saved, setSaved] = useState(""); // last identifier used on this device
   // PIN sign-in exists only on a phone that was set up (device token on it); everywhere else it is the normal form.
   const method: "pin" | "password" = phone && device && !usePassword ? "pin" : "password";
@@ -59,6 +62,7 @@ export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop,
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
+    if (method === "password" && turnstileOn && !bot) return setError("กรุณารอการตรวจสอบบอตสักครู่ แล้วกดอีกครั้ง");
     setBusy(true);
     const form = new FormData(e.currentTarget);
     const email = String(form.get("email") ?? "").trim();
@@ -67,9 +71,10 @@ export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop,
     const result =
       method === "pin"
         ? await signIn("pin", { token: device?.token, pin, redirect: false })
-        : await signIn("credentials", { email, password: String(form.get("password")), remember, redirect: false });
+        : await signIn("credentials", { email, password: String(form.get("password")), remember, turnstile: bot, redirect: false });
     if (result?.error) {
       setBusy(false);
+      setBotKey((k) => k + 1); // the token was used up
       if (method === "pin") {
         setPin("");
         setError("PIN ไม่ถูกต้อง หรือเครื่องนี้ถูกยกเลิกแล้ว (ใส่ผิด 5 ครั้งเครื่องจะถูกยกเลิก) — ใช้รหัสผ่านเข้าสู่ระบบได้");
@@ -155,6 +160,8 @@ export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop,
             </label>
           )}
 
+          {method === "password" && <Turnstile onToken={setBot} resetKey={botKey} />}
+
           {error && (
             <p role="alert" className="rounded bg-white/95 px-3 py-2 text-sm font-medium text-red-600">
               {error}
@@ -182,7 +189,8 @@ export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop,
           )}
         </form>
 
-        <Link href="/register" className="mx-auto mt-5 flex min-h-11 w-fit items-center gap-2 text-sm text-white underline underline-offset-4">
+        <p className="mx-auto mt-4 max-w-[19rem] text-center text-xs leading-relaxed text-white/80">ลืมรหัสผ่าน? ติดต่อผู้ดูแลระบบหรือครูผู้ดูแลของโรงเรียนเพื่อขอรหัสผ่านใหม่</p>
+        <Link href="/register" className="mx-auto mt-3 flex min-h-11 w-fit items-center gap-2 text-sm text-white underline underline-offset-4">
           <Icon name="userPlus" className="h-4 w-4" />
           ยังไม่มีบัญชี? สมัครสมาชิก
         </Link>

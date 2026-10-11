@@ -49,6 +49,11 @@
 | `S3_FORCE_PATH_STYLE` | `true` |
 | `S3_PUBLIC_URL` | Public URL ของ bucket (ไม่ต้องมี `/` ท้าย) |
 
+### ด่านกันบอต (Cloudflare Turnstile) — แนะนำให้เปิดก่อนเปิดให้คนสมัครจริง
+1. dash.cloudflare.com → **Turnstile** → Add widget → ใส่โดเมนของเว็บ (เช่น `xxx.vercel.app` และโดเมนจริงถ้ามี) → โหมด Managed
+2. เพิ่ม env บน Vercel: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (คีย์สาธารณะ) และ `TURNSTILE_SECRET_KEY` (คีย์ลับ — ใส่เองใน Vercel ห้ามส่งในแชต) แล้ว Redeploy (ค่า `NEXT_PUBLIC_` ถูกฝังตอน build)
+3. ถ้าไม่ตั้งสองค่านี้ ระบบจะไม่ตรวจบอต (ใช้ได้ปกติในเครื่อง) · ตัวนับการเดารหัสผ่าน/รหัสสมัครอยู่ในฐานข้อมูล (ตาราง `RateLimitHit`) ทำงานเสมอ ไม่ต้องตั้งค่า: รหัสผ่านผิด 8 ครั้ง/15 นาทีต่อบัญชี (40 ต่อ IP) จะถูกล็อกชั่วคราว
+
 ## 4) Deploy
 1. push โค้ดขึ้น GitHub (ห้าม commit `.env`; โฟลเดอร์ `storage/` อยู่ใน `.gitignore` แล้ว)
 2. Vercel → Add New Project → เลือก repo → Framework: Next.js (ตรวจเจออัตโนมัติ)

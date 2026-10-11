@@ -415,3 +415,13 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([createdAt])
 }
+
+/// One row per counted attempt (sign-in failure, code guess, sign-up): the limiter counts rows in a time window,
+/// so the limit holds across serverless instances. Old rows are swept now and then.
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}

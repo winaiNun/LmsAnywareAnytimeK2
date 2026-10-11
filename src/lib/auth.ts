@@ -5,6 +5,13 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { PIN_MAX_FAILS, hashToken, pinAllowed } from "@/lib/pin";
+import { clearHits, limitReached, recordHit } from "@/lib/rate-limit-db";
+import { verifyTurnstile } from "@/lib/turnstile";
+
+// Wrong-password guesses are counted in the database (so it holds on serverless): per account and per address.
+const FAIL_WINDOW = 15 * 60 * 1000;
+const FAILS_PER_ACCOUNT = 8;
+const FAILS_PER_IP = 40;
 
 const credentialsSchema = z.object({
   email: z.string().trim().min(3).max(120), // e-mail or username
@@ -25,17 +32,27 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email or username", type: "text" },
         password: { label: "Password", type: "password" },
         remember: { label: "Remember", type: "text" },
+        turnstile: { label: "Bot check", type: "text" },
       },
-      async authorize(raw) {
+      async authorize(raw, req) {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
 
+        const fwd = req?.headers?.["x-forwarded-for"];
+        const ip = (Array.isArray(fwd) ? fwd[0] : fwd)?.split(",")[0].trim() || "local";
         const id = parsed.data.email.toLowerCase();
-        const user = await db.user.findUnique({ where: id.includes("@") ? { email: id } : { username: id } });
-        if (!user || !user.active) return null;
+        const idKey = `login-id:${id}`;
+        const ipKey = `login-ip:${ip}`;
+        if ((await limitReached(idKey, FAILS_PER_ACCOUNT, FAIL_WINDOW)) || (await limitReached(ipKey, FAILS_PER_IP, FAIL_WINDOW))) return null; // too many wrong tries: same "wrong" answer, no hint
+        if (!(await verifyTurnstile(raw?.turnstile, ip))) return null;
 
-        const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
-        if (!ok) return null;
+        const user = await db.user.findUnique({ where: id.includes("@") ? { email: id } : { username: id } });
+        const ok = !!user && user.active && (await bcrypt.compare(parsed.data.password, user.passwordHash));
+        if (!ok || !user) {
+          await Promise.all([recordHit(idKey), recordHit(ipKey)]);
+          return null;
+        }
+        await clearHits(idKey);
 
         return { id: user.id, email: user.email ?? undefined, name: user.name, role: user.role, remember: raw?.remember === "true", mustChange: user.mustChangePassword };
       },
