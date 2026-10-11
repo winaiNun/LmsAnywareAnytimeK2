@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { canCreateCourse, canEditCourse, canEnroll, canLearn, canPreviewCourse, canReviewCourse, courseReadiness, courseStatusAfterSave, type CourseActor } from "../src/lib/course/access";
 import { courseProgress, doneLessonIds, isLessonDone, isLessonUnlocked, needsConfirm, nextLesson, type LearnerFacts, type LessonFacts } from "../src/lib/course/rules";
+import { cleanBlock, parseVideoLink, youtubeStart, youtubeVideoId } from "../src/lib/course/blocks";
 import { applyWatchReport, watchedPercent } from "../src/lib/course/watch";
 import { gradeQuestion, gradeQuiz, type QuestionRow } from "../src/lib/course/quiz/grade";
 import { normaliseText, parseNumber } from "../src/lib/course/quiz/normalise";
@@ -370,6 +371,38 @@ t("parseQuestion: broken questions are refused with a Thai reason", () => {
     if (!r.ok) assert.ok(r.error.includes(hint), `${type}: "${r.error}" should mention "${hint}"`);
   }
   assert.deepEqual(clozePlaceholders("ก {{1}} ข {{ 2 }} ค {{x_y}}"), ["1", "2", "x_y"]);
+});
+
+// ---------------------------------------------------------------- lesson blocks
+t("YouTube links: id, start time, only single videos", () => {
+  for (const u of ["https://www.youtube.com/watch?v=dQw4w9WgXcQ", "https://youtu.be/dQw4w9WgXcQ", "https://m.youtube.com/watch?v=dQw4w9WgXcQ&feature=share"]) {
+    const r = parseVideoLink(u);
+    assert.ok(r.ok, u);
+    if (r.ok) assert.equal(r.videoId, "dQw4w9WgXcQ");
+  }
+  assert.equal(youtubeVideoId("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=90s"), "dQw4w9WgXcQ");
+  assert.equal(youtubeStart("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=90s"), 90);
+  assert.equal(youtubeStart("https://www.youtube.com/watch?v=dQw4w9WgXcQ"), 0);
+  for (const bad of ["https://www.youtube.com/playlist?list=PLabc123456789", "https://vimeo.com/1", "https://evilyoutube.com/watch?v=dQw4w9WgXcQ", "not a link", "https://www.youtube.com/watch?v=short"]) assert.equal(parseVideoLink(bad).ok, false, bad);
+  assert.equal(youtubeVideoId(null), null);
+  assert.equal(youtubeVideoId("https://www.youtube.com.evil.com/watch?v=dQw4w9WgXcQ"), null);
+});
+
+t("block input is cleaned per kind", () => {
+  const v = cleanBlock({ kind: "VIDEO", url: "youtu.be/dQw4w9WgXcQ", label: "  คลิป  ", required: true, minPercent: 80 });
+  assert.ok(v.ok && v.block.url === "https://www.youtube.com/watch?v=dQw4w9WgXcQ" && v.block.label === "คลิป" && v.block.minPercent === 80);
+  assert.equal(cleanBlock({ kind: "VIDEO", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", minPercent: 9 }).ok, false);
+  assert.equal(cleanBlock({ kind: "VIDEO", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", minPercent: 90.5 }).ok, false);
+  assert.ok(cleanBlock({ kind: "LINK", url: "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view" }).ok);
+  for (const bad of ["javascript:alert(1)", "http://example.com", "https://localhost/x", "ftp://x.org", ""]) assert.equal(cleanBlock({ kind: "LINK", url: bad }).ok, false, bad);
+  assert.equal(cleanBlock({ kind: "TEXT", text: "  " }).ok, false);
+  assert.equal(cleanBlock({ kind: "TEXT", text: "ก".repeat(20001) }).ok, false);
+  assert.ok(cleanBlock({ kind: "TEXT", text: "สวัสดี" }).ok);
+  assert.equal(cleanBlock({ kind: "MEDIA" }).ok, false);
+  assert.equal(cleanBlock({ kind: "QUIZ" }).ok, false);
+  const q = cleanBlock({ kind: "QUIZ", quizId: "z1", required: true });
+  assert.ok(q.ok && q.block.quizId === "z1" && q.block.required);
+  assert.equal(cleanBlock({ kind: "NOPE" as never }).ok, false);
 });
 
 console.log(`course logic: ${passed} groups passed`);
