@@ -4,6 +4,7 @@ import BannerCarousel from "@/components/banner-carousel";
 import Glyph, { IconTile } from "@/components/glyph";
 import MediaCard from "@/components/media-card";
 import MediaRail, { RAIL_ITEM } from "@/components/media-rail";
+import CenterGrid from "@/components/center-grid";
 import ResourceCard from "@/components/resource-card";
 import SchoolCard from "@/components/school-card";
 import SiteHero from "@/components/site-hero";
@@ -14,6 +15,7 @@ import SectionHeading from "@/components/section-heading";
 import { sectionBackground } from "@/lib/section-styles";
 import { getHomeSections, type HomeSectionConfig } from "@/lib/sections";
 import { countPublicSchools, getRandomSchools } from "@/lib/schools";
+import { resourceImageOf } from "@/lib/resource-image";
 import { getSiteInfo } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -73,9 +75,11 @@ export default async function HomePage() {
   const content: Record<string, React.ReactNode> = {
     recommended: banners.length > 0 && <BannerCarousel banners={orderForDisplay(banners, slideshow.shuffle)} config={slideshow} />,
     areas: (
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {areas.map((a) => (
-          <li key={a.id}>
+      <CenterGrid
+        variant="areas"
+        items={areas.map((a) => ({
+          key: a.id,
+          node: (
             <Link
               href={`/library?area=${a.slug}`}
               style={{ "--c": a.color } as React.CSSProperties}
@@ -89,9 +93,9 @@ export default async function HomePage() {
               </span>
               <Glyph name="chevron-right" size={16} strokeWidth={2.2} className="absolute bottom-3 right-3 hidden -translate-x-1 opacity-0 transition duration-200 group-hover:translate-x-0 group-hover:opacity-100 sm:block" />
             </Link>
-          </li>
-        ))}
-      </ul>
+          ),
+        }))}
+      />
     ),
     latest: latest.length > 0 && (
       <MediaRail label="สื่อล่าสุด" moreHref="/library?sort=latest">
@@ -119,13 +123,7 @@ export default async function HomePage() {
     schools:
       schools.length > 0 && (
         <div className="space-y-6">
-          <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {schools.map((s) => (
-              <li key={s.id}>
-                <SchoolCard school={s} />
-              </li>
-            ))}
-          </ul>
+          <CenterGrid variant="schools" items={schools.map((sc) => ({ key: sc.id, node: <SchoolCard school={sc} /> }))} />
           <div className="flex justify-center">
             <Link href="/schools" className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-brand px-7 font-semibold text-white shadow-sm hover:bg-brand-dark">
               ดูข้อมูลทั้งหมด ({schoolTotal.toLocaleString("th-TH")} โรงเรียน)
@@ -135,9 +133,7 @@ export default async function HomePage() {
         </div>
       ),
     resources: resources.length > 0 && (
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {resources.map((r) => <li key={r.id}><ResourceCard r={r} /></li>)}
-      </ul>
+      <CenterGrid variant="resources" items={resources.map((r) => ({ key: r.id, node: <ResourceCard r={{ ...r, image: resourceImageOf(r) }} /> }))} />
     ),
   };
   const anchors: Record<string, string> = { areas: "areas", latest: "latest", popular: "popular", courses: "courses", schools: "schools", resources: "resources" };

@@ -12,6 +12,7 @@ export type AvatarData = {
 
 export const AVATAR_OUT = 512; // uploaded avatars are stored as 512x512 WebP
 export const MAX_ZOOM = 4;
+export const ICON_OUT = 256; // uploaded icons of outside sources: 256x256 WebP (shown at 52 px)
 
 /**
  * Where the image sits inside a square viewport, as CSS percentages of that square.

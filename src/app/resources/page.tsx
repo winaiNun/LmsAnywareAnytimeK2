@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Breadcrumb from "@/components/breadcrumb";
+import CenterGrid from "@/components/center-grid";
 import LiveFilter from "@/components/live-filter";
 import ResourceCard from "@/components/resource-card";
 import SiteNavbar from "@/components/site-navbar";
 import { db } from "@/lib/db";
+import { resourceImageOf } from "@/lib/resource-image";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "แหล่งสื่อภายนอก", description: "รวมเว็บไซต์และช่องทางแหล่งสื่อการเรียนรู้ที่แนะนำ" };
@@ -49,9 +51,7 @@ export default async function ResourcesPage({ searchParams }: { searchParams: { 
               <p className="text-lg font-semibold">{all.length === 0 ? "ยังไม่มีแหล่งสื่อ" : "ไม่พบรายการที่ตรงกับที่ค้นหา"}</p>
             </div>
           ) : (
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {rows.map((r) => <li key={r.id}><ResourceCard r={r} /></li>)}
-            </ul>
+            <CenterGrid variant="resources" items={rows.map((r) => ({ key: r.id, node: <ResourceCard r={{ ...r, image: resourceImageOf(r) }} /> }))} />
           )}
         </LiveFilter>
       </main>

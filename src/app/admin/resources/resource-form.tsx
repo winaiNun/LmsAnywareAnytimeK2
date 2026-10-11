@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import ColorPicker from "@/components/admin/color-picker";
 import Glyph, { IconTile } from "@/components/glyph";
+import type { AvatarData } from "@/lib/avatar";
 import { CHOICE_KEYS } from "@/lib/icon-paths";
+import IconField from "./icon-field";
 import { saveResource, type ResourceFormState } from "./actions";
 
 export type ResourceValues = { id?: string; name: string; url: string; description: string; groupName: string; icon: string; color: string; active: boolean };
@@ -18,15 +21,24 @@ function Submit({ children }: { children: React.ReactNode }) {
 }
 
 /** Add (no id) or edit one outside media source. */
-export default function ResourceForm({ values, groups }: { values: ResourceValues; groups: string[] }) {
+export default function ResourceForm({ values, groups, image, allowUpload }: { values: ResourceValues; groups: string[]; image: AvatarData | null; allowUpload: boolean }) {
+  const router = useRouter();
+  const [nonce, setNonce] = useState(0);
   const isNew = !values.id;
   const [state, action] = useFormState<ResourceFormState, FormData>(saveResource.bind(null, values.id ?? null), undefined);
   const [icon, setIcon] = useState(values.icon);
   const [color, setColor] = useState(values.color);
   const [name, setName] = useState(values.name);
 
+  // after a save: show the new picture / list, and give "add" a clean form again
+  useEffect(() => {
+    if (!state?.saved) return;
+    router.refresh();
+    if (!values.id) setNonce((n) => n + 1);
+  }, [state, router, values.id]);
+
   return (
-    <form action={action} key={values.id ?? "new"} className="space-y-4 rounded-2xl bg-white p-5 shadow-sm">
+    <form action={action} key={`${values.id ?? "new"}-${nonce}`} className="space-y-4 rounded-2xl bg-white p-5 shadow-sm">
       <h2 className="font-semibold">{isNew ? "เพิ่มแหล่งสื่อภายนอก" : "แก้ไขแหล่งสื่อ"}</h2>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block space-y-1"><span className="text-sm font-medium">ชื่อ *</span><input name="name" required maxLength={80} value={name} onChange={(e) => setName(e.target.value)} placeholder="เช่น ThaiMOOC" className={input} /></label>
@@ -48,9 +60,10 @@ export default function ResourceForm({ values, groups }: { values: ResourceValue
         </div>
       </fieldset>
       <ColorPicker label="สี" name="color" value={color} onChange={setColor} />
+      <IconField current={image} allowUpload={allowUpload} icon={icon} color={color} />
 
       <div className="flex items-center gap-3 rounded-xl bg-neutral-50 p-3 text-sm">
-        <IconTile name={icon} color={color} size={44} />
+        <IconTile name={icon} color={color} size={44} /><span className="text-xs text-neutral-500">ถ้ามีรูปไอคอนของตัวเอง จะแสดงรูปแทนไอคอนนี้</span>
         <span className="font-medium">{name || "ตัวอย่างการ์ด"}</span>
       </div>
 

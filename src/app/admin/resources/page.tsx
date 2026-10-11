@@ -1,6 +1,9 @@
-import Glyph, { IconTile } from "@/components/glyph";
+import Glyph from "@/components/glyph";
 import { db } from "@/lib/db";
 import { requireManagerPage } from "@/lib/permissions";
+import { resourceImageOf } from "@/lib/resource-image";
+import { getSiteInfo } from "@/lib/site";
+import ResourceIcon from "@/components/resource-icon";
 import ResourceForm from "./resource-form";
 import RowActions from "./row-actions";
 
@@ -17,7 +20,7 @@ const hostOf = (u: string) => {
 
 export default async function ResourcesAdminPage({ searchParams }: { searchParams: { edit?: string } }) {
   await requireManagerPage();
-  const rows = await db.resourceLink.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] });
+  const [rows, site] = await Promise.all([db.resourceLink.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }), getSiteInfo()]);
   const groups = Array.from(new Set(rows.map((r) => r.groupName)));
   const editing = searchParams.edit ? rows.find((r) => r.id === searchParams.edit) : undefined;
 
@@ -35,6 +38,8 @@ export default async function ResourcesAdminPage({ searchParams }: { searchParam
             : { name: "", url: "", description: "", groupName: "ทั่วไป", icon: "globe", color: "#0052FF", active: true }
         }
         groups={groups}
+        image={editing ? resourceImageOf(editing) : null}
+        allowUpload={site.allowServerUploads}
       />
 
       <div className="overflow-x-auto rounded-2xl bg-white p-2 shadow-sm">
@@ -45,7 +50,7 @@ export default async function ResourcesAdminPage({ searchParams }: { searchParam
           <tbody>
             {rows.map((r, i) => (
               <tr key={r.id} className="border-t border-neutral-100 align-middle">
-                <td className="w-14 p-3"><IconTile name={r.icon} color={r.color} size={40} /></td>
+                <td className="w-14 p-3"><ResourceIcon image={resourceImageOf(r)} icon={r.icon} color={r.color} size={40} /></td>
                 <td className="p-3">
                   <p className="font-medium">{r.name}</p>
                   <a href={r.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-brand hover:underline">{hostOf(r.url)}<Glyph name="external-link" size={12} /></a>

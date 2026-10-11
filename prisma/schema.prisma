@@ -461,6 +461,13 @@ model ResourceLink {
   groupName   String   @default("ทั่วไป")
   icon        String   @default("globe")
   color       String   @default("#0052FF")
+  // optional own picture instead of the line icon: an uploaded square (iconKey) or a Drive picture with a stored crop window
+  iconKey     String?
+  iconDriveId String?
+  iconCx      Float    @default(0.5)
+  iconCy      Float    @default(0.5)
+  iconZoom    Float    @default(1)
+  iconAspect  Float    @default(1)
   sortOrder   Int      @default(0)
   active      Boolean  @default(true)
   clickCount  Int      @default(0)
