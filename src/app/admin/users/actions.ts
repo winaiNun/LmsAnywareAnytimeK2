@@ -111,11 +111,11 @@ export async function deleteUser(id: string): Promise<{ error?: string }> {
   if (id === actor.id) return { error: "ลบบัญชีของตัวเองไม่ได้" };
   const u = await db.user.findUnique({
     where: { id },
-    select: { role: true, name: true, school: { select: { id: true } }, _count: { select: { loans: true, enrollments: true, banners: true } } },
+    select: { role: true, name: true, school: { select: { id: true } }, _count: { select: { mediaCreated: true, enrollments: true, banners: true } } },
   });
   if (!u) return { error: "ไม่พบผู้ใช้" };
   if (u.school) return { error: "นี่คือบัญชีของโรงเรียน — จัดการที่เมนูโรงเรียน" };
-  if (u._count.loans || u._count.enrollments || u._count.banners) return { error: "บัญชีนี้มีประวัติการยืม/เรียน/สไลด์ ลบไม่ได้ — ให้ปิดการใช้งานแทน" };
+  if (u._count.mediaCreated || u._count.enrollments || u._count.banners) return { error: "บัญชีนี้มีสื่อ/ประวัติการเรียน/สไลด์ ลบไม่ได้ — ให้ปิดการใช้งานแทน" };
   const err = await lastAdminGuard(id, u.role === "ADMIN");
   if (err) return { error: err };
 

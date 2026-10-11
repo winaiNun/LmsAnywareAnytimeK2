@@ -38,22 +38,22 @@ export default async function AdminDashboard() {
   const months = lastMonthsBangkok(6, now);
   const sixMonthsAgo = months[0].start;
 
-  const [users, newUsers, books, copies, courses, publishedCourses, activeLoans, overdueLoans, returnedLoans, enrollments, recentUsers, latestLoans, memberDates, courseStats] =
+  const [users, newUsers, mediaPublished, mediaPending, courses, publishedCourses, enrollments, recentUsers, memberDates, courseStats, totals, areas, topMedia, pendingMedia] =
     await Promise.all([
       db.user.count(),
       db.user.count({ where: { createdAt: { gte: since30 } } }),
-      db.book.count(),
-      db.bookCopy.count(),
+      db.media.count({ where: { status: "PUBLISHED" } }),
+      db.media.count({ where: { status: "PENDING" } }),
       db.course.count(),
       db.course.count({ where: { published: true } }),
-      db.loan.count({ where: { returnedAt: null } }),
-      db.loan.count({ where: { returnedAt: null, dueAt: { lt: now } } }),
-      db.loan.count({ where: { returnedAt: { not: null } } }),
       db.enrollment.count(),
       db.user.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
-      db.loan.findMany({ orderBy: { borrowedAt: "desc" }, take: 6, include: { user: true, copy: { include: { book: true } } } }),
       db.user.findMany({ where: { createdAt: { gte: sixMonthsAgo } }, select: { createdAt: true } }),
       db.enrollment.groupBy({ by: ["courseId"], _count: { _all: true }, _avg: { progress: true }, orderBy: { _count: { courseId: "desc" } }, take: 5 }),
+      db.media.aggregate({ where: { status: "PUBLISHED" }, _sum: { viewCount: true, likeCount: true, downloadCount: true } }),
+      db.learningArea.findMany({ orderBy: { sortOrder: "asc" }, select: { id: true, name: true, color: true, _count: { select: { media: { where: { status: "PUBLISHED" } } } } } }),
+      db.media.findMany({ where: { status: "PUBLISHED" }, orderBy: { viewCount: "desc" }, take: 5, select: { id: true, title: true, viewCount: true, likeCount: true } }),
+      db.media.findMany({ where: { status: "PENDING" }, orderBy: { updatedAt: "asc" }, take: 5, select: { id: true, title: true, updatedAt: true, createdBy: { select: { name: true } } } }),
     ]);
 
   const courseTitles = new Map((await db.course.findMany({ where: { id: { in: courseStats.map((c) => c.courseId) } } })).map((c) => [c.id, c.title]));
@@ -62,21 +62,22 @@ export default async function AdminDashboard() {
     label: THAI_MONTHS_SHORT[m.month - 1],
     value: memberDates.filter((u) => u.createdAt >= m.start && u.createdAt < m.end).length,
   }));
-
-  const onTime = activeLoans - overdueLoans;
+  const views = totals._sum.viewCount ?? 0;
+  const likes = totals._sum.likeCount ?? 0;
+  const downloads = totals._sum.downloadCount ?? 0;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">แดชบอร์ด</h1>
-        <p className="text-sm text-neutral-500">ภาพรวมระบบห้องสมุดและการเรียนรู้</p>
+        <p className="text-sm text-neutral-500">ภาพรวมคลังสื่อและการเรียนรู้</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="สมาชิกทั้งหมด" value={users} hint={`ใหม่ใน 30 วัน +${newUsers}`} from="#FF5A1F" to="#F04438" icon="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
-        <StatCard label="สื่อการเรียนรู้" value={books} hint={`${nf.format(copies)} เล่ม/ชุด`} from="#2DD4A0" to="#17B26A" icon="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM8 7h7" />
+        <StatCard label="สื่อที่เผยแพร่" value={mediaPublished} hint={mediaPending > 0 ? `รออนุมัติ ${mediaPending} ชิ้น` : "ไม่มีรายการรออนุมัติ"} from="#2DD4A0" to="#17B26A" icon="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM8 7h7" />
+        <StatCard label="ยอดเปิดดูสื่อ" value={views} hint={`ถูกใจ ${nf.format(likes)} · ดาวน์โหลด/เปิดลิงก์ ${nf.format(downloads)}`} from="#FBBF24" to="#F59E0B" icon="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
         <StatCard label="คอร์สเรียน" value={courses} hint={`เปิดแล้ว ${publishedCourses} คอร์ส`} from="#FF5C8A" to="#F43F5E" icon="M5 3l14 9-14 9z" />
-        <StatCard label="กำลังยืมอยู่" value={activeLoans} hint={`เกินกำหนด ${overdueLoans} รายการ`} from="#FBBF24" to="#F59E0B" icon="M3 5h18v14H3zM3 10h18" />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
@@ -85,46 +86,56 @@ export default async function AdminDashboard() {
             <BarChart data={monthly} />
           </Card>
         </div>
-        <Card title="สถานะการยืมหนังสือ">
+        <Card title="สื่อแยกตามกลุ่มสาระ">
           <Donut
-            centerValue={String(activeLoans + returnedLoans)}
-            centerLabel="รายการทั้งหมด"
-            segments={[
-              { label: "กำลังยืม", value: onTime, color: "#0052FF" },
-              { label: "เกินกำหนด", value: overdueLoans, color: "#F04438" },
-              { label: "คืนแล้ว", value: returnedLoans, color: "#17B26A" },
-            ]}
+            centerValue={String(mediaPublished)}
+            centerLabel="สื่อที่เผยแพร่"
+            segments={areas.filter((a) => a._count.media > 0).map((a) => ({ label: a.name, value: a._count.media, color: a.color }))}
           />
         </Card>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">
-          <Card title="การยืมล่าสุด" action={<Link href="/admin/books" className="text-sm text-brand">ดูสื่อทั้งหมด</Link>}>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[520px] text-left text-sm">
-                <thead className="text-neutral-500">
-                  <tr><th className="pb-2 font-medium">สื่อ/หนังสือ</th><th className="pb-2 font-medium">ผู้ยืม</th><th className="pb-2 font-medium">วันที่ยืม</th><th className="pb-2 font-medium">สถานะ</th></tr>
-                </thead>
-                <tbody>
-                  {latestLoans.map((l) => {
-                    const overdue = !l.returnedAt && l.dueAt < now;
-                    const [label, cls] = l.returnedAt ? ["คืนแล้ว", "bg-green-50 text-green-700"] : overdue ? ["เกินกำหนด", "bg-red-50 text-red-600"] : ["กำลังยืม", "bg-blue-50 text-brand"];
-                    return (
-                      <tr key={l.id} className="border-t border-neutral-100">
-                        <td className="py-3 font-medium">{l.copy.book.title}</td>
-                        <td className="py-3 text-neutral-600">{l.user.name}</td>
-                        <td className="py-3 text-neutral-600">{dt(l.borrowedAt)}</td>
-                        <td className="py-3"><span className={`rounded-full px-3 py-1 text-xs font-medium ${cls}`}>{label}</span></td>
+          <Card title="สื่อที่ถูกเปิดดูมากที่สุด" action={<Link href="/admin/media" className="text-sm text-brand">จัดการสื่อ</Link>}>
+            {topMedia.length === 0 ? (
+              <p className="text-sm text-neutral-500">ยังไม่มีสื่อที่เผยแพร่</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[420px] text-left text-sm">
+                  <thead className="text-neutral-500"><tr><th className="pb-2 font-medium">สื่อ</th><th className="pb-2 font-medium">เปิดดู</th><th className="pb-2 font-medium">ถูกใจ</th></tr></thead>
+                  <tbody>
+                    {topMedia.map((m) => (
+                      <tr key={m.id} className="border-t border-neutral-100">
+                        <td className="py-3 font-medium"><Link href={`/library/${m.id}`} className="hover:text-brand">{m.title}</Link></td>
+                        <td className="py-3 tabular-nums text-neutral-600">{nf.format(m.viewCount)}</td>
+                        <td className="py-3 tabular-nums text-neutral-600">{nf.format(m.likeCount)}</td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Card>
         </div>
 
+        <Card title="รออนุมัติ" action={<Link href="/admin/media?status=PENDING" className="text-sm text-brand">ดูทั้งหมด</Link>}>
+          {pendingMedia.length === 0 ? (
+            <p className="text-sm text-neutral-500">ไม่มีสื่อรออนุมัติ</p>
+          ) : (
+            <ul className="space-y-3 text-sm">
+              {pendingMedia.map((m) => (
+                <li key={m.id}>
+                  <Link href={`/admin/media/${m.id}`} className="block font-medium hover:text-brand">{m.title}</Link>
+                  <span className="text-xs text-neutral-500">{m.createdBy.name} · ส่งเมื่อ {dt(m.updatedAt)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-3">
         <Card title="คอร์สยอดนิยม" action={<Link href="/admin/courses" className="text-sm text-brand">ทั้งหมด</Link>}>
           <ul className="space-y-4">
             {courseStats.map((c) => {
@@ -144,14 +155,7 @@ export default async function AdminDashboard() {
             })}
           </ul>
         </Card>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
         <Card title="การลงทะเบียนเรียนทั้งหมด"><p className="text-3xl font-bold">{nf.format(enrollments)}</p><p className="text-sm text-neutral-500">ครั้ง ในทุกคอร์ส</p></Card>
-        <Card title="อัตราคืนตรงเวลา">
-          <p className="text-3xl font-bold">{activeLoans + returnedLoans ? Math.round(((returnedLoans + onTime) / (activeLoans + returnedLoans)) * 100) : 0}%</p>
-          <p className="text-sm text-neutral-500">ไม่นับรายการเกินกำหนด</p>
-        </Card>
         <Card title="สมาชิกล่าสุด">
           <ul className="space-y-2 text-sm">
             {recentUsers.map((u) => (

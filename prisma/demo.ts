@@ -20,15 +20,9 @@ const pick = <T,>(a: T[]) => a[Math.floor(rnd() * a.length)];
 const daysAgo = (n: number) => new Date(Date.now() - n * 86400000);
 
 async function clear() {
-  await db.loan.deleteMany({ where: { OR: [{ id: { startsWith: "demo_" } }, { user: { id: { startsWith: "demo_" } } }] } });
   await db.enrollment.deleteMany({ where: { id: { startsWith: "demo_" } } });
   await db.lesson.deleteMany({ where: { id: { startsWith: "demo_" } } });
   await db.course.deleteMany({ where: { id: { startsWith: "demo_" } } });
-  await db.bookCopy.deleteMany({ where: { id: { startsWith: "demo_" } } });
-  await db.bookAuthor.deleteMany({ where: { bookId: { startsWith: "demo_" } } });
-  await db.book.deleteMany({ where: { id: { startsWith: "demo_" } } });
-  await db.author.deleteMany({ where: { id: { startsWith: "demo_" } } });
-  await db.category.deleteMany({ where: { id: { startsWith: "demo_" } } });
   await db.banner.deleteMany({ where: { id: { startsWith: "demo_" } } });
   await db.user.deleteMany({ where: { id: { startsWith: "demo_" } } });
   await db.siteSetting.deleteMany({ where: { logoKey: { startsWith: "site/demo-" } } });
@@ -116,49 +110,7 @@ async function main() {
     };
   });
   await db.user.createMany({ data: users });
-
-  // ---- library ----
-  const cats = ["นิยาย", "วิทยาศาสตร์", "ประวัติศาสตร์", "ธุรกิจ", "ภาษา"].map((name, i) => ({ id: `demo_cat_${i + 1}`, name: `${name} (ตัวอย่าง)` }));
-  await db.category.createMany({ data: cats });
-  const authors = ["ก. ตัวอย่าง", "ข. ตัวอย่าง", "ค. ตัวอย่าง", "ง. ตัวอย่าง", "จ. ตัวอย่าง", "ฉ. ตัวอย่าง"].map((name, i) => ({ id: `demo_author_${i + 1}`, name }));
-  await db.author.createMany({ data: authors });
-
-  const titles = ["ประวัติศาสตร์ไทยสมัยใหม่", "พื้นฐานวิทยาศาสตร์ข้อมูล", "เรื่องสั้นแห่งฤดูฝน", "การบริหารโครงการยุคใหม่", "ภาษาอังกฤษเพื่ออาชีพ", "ชีวิตและธรรมชาติ", "การเงินส่วนบุคคล", "บทกวีใต้แสงจันทร์", "เทคนิคการสอนสมัยใหม่", "คณิตศาสตร์รอบตัว", "ดาราศาสตร์สำหรับเยาวชน", "ศิลปะการนำเสนอ"];
-  const books = Array.from({ length: 24 }, (_, i) => ({
-    id: `demo_book_${i + 1}`,
-    title: `${titles[i % titles.length]}${i >= titles.length ? " เล่ม 2" : ""}`,
-    isbn: `DEMO-${String(i + 1).padStart(4, "0")}`,
-    description: "ข้อมูลตัวอย่างสำหรับแสดงผล",
-    categoryId: pick(cats).id,
-    createdAt: daysAgo(Math.floor(rnd() * 120)),
-  }));
-  await db.book.createMany({ data: books });
-  await db.bookAuthor.createMany({ data: books.map((b) => ({ bookId: b.id, authorId: pick(authors).id })) });
-
-  const copies = books.flatMap((b, i) =>
-    Array.from({ length: 1 + Math.floor(rnd() * 3) }, (_, j) => ({ id: `demo_copy_${i + 1}_${j + 1}`, bookId: b.id, barcode: `DEMO-${i + 1}-${j + 1}` })),
-  );
-  await db.bookCopy.createMany({ data: copies });
-
-  // loans: returned (past), active, overdue
   const students = users.filter((u) => u.role === "STUDENT");
-  const loans = copies.slice(0, 40).map((c, i) => {
-    const borrowed = daysAgo(1 + Math.floor(rnd() * 150));
-    const due = new Date(borrowed.getTime() + 14 * 86400000);
-    const state = i < 14 ? "active" : i < 20 ? "overdue" : "returned";
-    const borrowedAt = state === "overdue" ? daysAgo(20 + Math.floor(rnd() * 20)) : state === "active" ? daysAgo(Math.floor(rnd() * 12)) : borrowed;
-    const dueAt = new Date(borrowedAt.getTime() + 14 * 86400000);
-    return {
-      id: `demo_loan_${i + 1}`,
-      copyId: c.id,
-      userId: pick(students).id,
-      borrowedAt,
-      dueAt: state === "returned" ? due : dueAt,
-      returnedAt: state === "returned" ? new Date(Math.min(Date.now(), due.getTime() - Math.floor(rnd() * 6) * 86400000)) : null,
-    };
-  });
-  // one active loan per copy is enough for a demo
-  await db.loan.createMany({ data: loans });
 
   // ---- LMS ----
   const courseDefs = [
@@ -181,7 +133,7 @@ async function main() {
   }
   await db.enrollment.createMany({ data: enrollments });
 
-  console.log(`Demo data created: ${users.length} users, ${books.length} books, ${loans.length} loans, ${courseDefs.length} courses, ${enrollments.length} enrollments.`);
+  console.log(`Demo data created: ${users.length} users, ${courseDefs.length} courses, ${enrollments.length} enrollments.`);
   console.log("Demo members: member1@demo.local ... (password Demo12345!)");
 }
 

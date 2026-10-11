@@ -23,7 +23,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: "เนื้อหา",
     items: [
-      { href: "/admin/books", label: "คลังสื่อการเรียนรู้", icon: "book" },
+      { href: "/admin/media", label: "คลังสื่อการเรียนรู้", icon: "book" },
       { href: "/admin/courses", label: "คอร์สเรียน", icon: "course" },
       { href: "/admin/sections", label: "เซกชันหน้าแรก", icon: "layout" },
       { href: "/admin/schools", label: "โรงเรียน", icon: "school" },

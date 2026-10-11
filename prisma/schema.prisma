@@ -47,6 +47,9 @@ model User {
   creatorStatus CreatorStatus @default(NONE)
   creatorReason String?
   devices       TrustedDevice[]
+  mediaCreated  Media[]         @relation("MediaCreator")
+  mediaLikes    MediaLike[]
+  reviewerAreas AreaReviewer[]
   registrationCodeId String? // the sign-up code this member used (for the per-code member list)
   registrationCode   RegistrationCode? @relation("CodeUsers", fields: [registrationCodeId], references: [id], onDelete: SetNull)
   // profile picture: either an uploaded, already-cropped square (avatarKey) or a public Google Drive file
@@ -63,7 +66,6 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  loans       Loan[]
   enrollments Enrollment[]
   banners     Banner[]     @relation("BannerCreator")
   school      School?      @relation("SchoolAccount") // set when this account manages a school
@@ -106,74 +108,160 @@ model TrustedDevice {
   @@index([userId])
 }
 
-// ---------- Library ----------
-model Author {
-  id    String @id @default(cuid())
-  name  String
-  books BookAuthor[]
+// ---------- Media library (คลังสื่อ) ----------
+enum MediaStatus {
+  DRAFT
+  PENDING // waiting for a reviewer
+  PUBLISHED
+  REJECTED
 }
 
-model Category {
-  id    String @id @default(cuid())
-  name  String @unique
-  books Book[]
+enum MediaItemKind {
+  YOUTUBE
+  DRIVE_FILE // a public Google Drive file (PDF, image, video, office file)
+  GOOGLE_DOC // Docs / Slides / Sheets / Forms
+  APPS_SCRIPT
+  HTML // pasted HTML application, served sandboxed
+  EMBED // a provider on the allow-list (Canva, Wordwall, ...)
+  LINK // any other https page: opened in a new tab, never framed
+  UPLOAD // a file in our storage (only while the admin allows uploads)
 }
 
-model Book {
-  id          String   @id @default(cuid())
+/// The 8 learning areas + extras. Editable by an admin.
+model LearningArea {
+  id        String  @id
+  slug      String  @unique
+  name      String
+  icon      String  @default("📖") // an emoji: renders everywhere, no icon font needed
+  color     String  @default("#0052FF")
+  sortOrder Int     @default(0)
+  active    Boolean @default(true)
+
+  media     Media[]
+  reviewers AreaReviewer[]
+}
+
+model MediaType {
+  id        String  @id
+  slug      String  @unique
+  name      String
+  icon      String  @default("📄")
+  sortOrder Int     @default(0)
+  active    Boolean @default(true)
+
+  media Media[]
+}
+
+model EducationLevel {
+  id        String  @id
+  slug      String  @unique
+  name      String
+  sortOrder Int     @default(0)
+  active    Boolean @default(true)
+
+  media MediaLevel[]
+}
+
+model Media {
+  id          String      @id @default(cuid())
   title       String
-  isbn        String?  @unique
-  description String?
-  coverKey    String? // storage key
-  categoryId  String?
-  category    Category? @relation(fields: [categoryId], references: [id])
-  createdAt   DateTime @default(now())
+  description String      @default("")
+  authorName  String? // free-text credit when an admin posts on someone else's behalf
+  areaId      String
+  area        LearningArea @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  typeId      String?
+  type        MediaType?  @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  levels      MediaLevel[]
+  tags        String[]
+  // cover: an uploaded 16:9 WebP, or a public Drive file shown through its thumbnail (focus point = where to crop)
+  coverKey     String?
+  coverDriveId String?
+  coverFx      Float   @default(0.5)
+  coverFy      Float   @default(0.5)
 
-  authors BookAuthor[]
-  files   BookFile[]
-  copies  BookCopy[]
+  status       MediaStatus @default(DRAFT)
+  reviewNote   String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  publishedAt  DateTime?
+  pinned       Boolean     @default(false)
 
-  @@index([title])
+  createdById String
+  createdBy   User   @relation("MediaCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  viewCount     Int @default(0)
+  likeCount     Int @default(0)
+  downloadCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items MediaItem[]
+  likes MediaLike[]
+  views MediaViewDaily[]
+
+  @@index([status, publishedAt])
+  @@index([areaId, status])
+  @@index([createdById])
+  @@index([status, viewCount])
 }
 
-model BookAuthor {
-  bookId   String
-  authorId String
-  book     Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  author   Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
+model MediaLevel {
+  mediaId String
+  levelId String
+  media   Media          @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  level   EducationLevel @relation(fields: [levelId], references: [id], onDelete: Cascade)
 
-  @@id([bookId, authorId])
+  @@id([mediaId, levelId])
 }
 
-model BookFile {
-  id         String @id @default(cuid())
-  bookId     String
-  book       Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  storageKey String // fileId หรือ path ขึ้นกับ STORAGE_DRIVER
-  driver     String
-  mimeType   String
-  sizeBytes  Int
+/// One thing to open/download. The first item (by sortOrder) is shown in the viewer, the rest are listed as attachments.
+model MediaItem {
+  id         String        @id @default(cuid())
+  mediaId    String
+  media      Media         @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  kind       MediaItemKind
+  label      String        @default("")
+  url        String? // normalised link (YOUTUBE, DRIVE_FILE, GOOGLE_DOC, APPS_SCRIPT, EMBED, LINK)
+  storageKey String? // UPLOAD
+  mimeType   String?
+  sizeBytes  Int?
+  html       String? // HTML (<= 500 KB)
+  sortOrder  Int           @default(0)
+
+  @@index([mediaId, sortOrder])
 }
 
-model BookCopy {
-  id       String @id @default(cuid())
-  bookId   String
-  book     Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  barcode  String @unique
-  loans    Loan[]
+model MediaLike {
+  userId    String
+  mediaId   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media     Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@id([userId, mediaId])
+  @@index([mediaId])
 }
 
-model Loan {
-  id         String    @id @default(cuid())
-  copyId     String
-  userId     String
-  copy       BookCopy  @relation(fields: [copyId], references: [id])
-  user       User      @relation(fields: [userId], references: [id])
-  borrowedAt DateTime  @default(now())
-  dueAt      DateTime
-  returnedAt DateTime?
+/// Views per day: lets "most viewed in the last 30 days" differ from "most viewed ever".
+model MediaViewDaily {
+  mediaId String
+  day     DateTime @db.Date
+  views   Int      @default(0)
+  media   Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  @@id([mediaId, day])
+  @@index([day])
+}
+
+/// Members the admin appointed to approve media of one learning area.
+model AreaReviewer {
+  userId String
+  areaId String
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area   LearningArea @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  @@id([userId, areaId])
 }
 
 // ---------- LMS ----------

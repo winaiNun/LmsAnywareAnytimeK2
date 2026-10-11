@@ -42,13 +42,11 @@ function Block({ cfg, anchor, bleed = false, children }: { cfg: HomeSectionConfi
 }
 
 export default async function HomePage() {
-  const [site, sections, banners, slideshow, categories, books, courses, schools, schoolTotal] = await Promise.all([
+  const [site, sections, banners, slideshow, courses, schools, schoolTotal] = await Promise.all([
     getSiteInfo(),
     getHomeSections(),
     getActiveBanners(),
     getSlideshowConfig(),
-    db.category.findMany({ include: { _count: { select: { books: true } } }, orderBy: { name: "asc" }, take: 4 }),
-    db.book.findMany({ orderBy: { createdAt: "desc" }, take: 5, include: { authors: { include: { author: true } } } }),
     db.course.findMany({ where: { published: true }, orderBy: { createdAt: "desc" }, take: 3, include: { _count: { select: { lessons: true, enrollments: true } } } }),
     getRandomSchools(), // 12 = 4 columns × 3 rows, different on every visit
     countPublicSchools(),
@@ -56,28 +54,6 @@ export default async function HomePage() {
 
   const content: Record<string, React.ReactNode> = {
     recommended: banners.length > 0 && <BannerCarousel banners={orderForDisplay(banners, slideshow.shuffle)} config={slideshow} />,
-    categories: (
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {categories.map((c) => (
-          <div key={c.id} className="rounded-2xl border border-neutral-200 bg-white p-5">
-            <div className="mb-3 h-10 w-10 rounded-full" style={{ backgroundColor: colorOf(c.id), opacity: 0.18 }} />
-            <p className="text-lg font-semibold text-neutral-900">{c.name}</p>
-            <p className="text-sm text-neutral-500">{c._count.books} รายการ</p>
-          </div>
-        ))}
-      </div>
-    ),
-    media: (
-      <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
-        {books.map((b) => (
-          <div key={b.id} className="space-y-2">
-            <div className="flex aspect-[3/4] items-end rounded-xl p-3 text-sm font-bold leading-snug text-white" style={{ backgroundColor: colorOf(b.id) }}>{b.title}</div>
-            <p className="font-semibold leading-snug">{b.title}</p>
-            <p className="text-sm opacity-70">{b.authors.map((a) => a.author.name).join(", ") || "—"}</p>
-          </div>
-        ))}
-      </div>
-    ),
     courses: (
       <div className="grid gap-5 md:grid-cols-3">
         {courses.map((c) => (
