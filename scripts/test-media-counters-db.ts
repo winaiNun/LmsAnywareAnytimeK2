@@ -63,7 +63,7 @@ async function main() {
       { mediaId: c.id, day: bangkokDay(new Date(Date.now() - 45 * 86400000)), views: 9999 }, // too old for the 30-day window
     ] });
     await db.mediaViewDaily.create({ data: { mediaId: draft.id, day: bangkokDay(), views: 100000 } }); // drafts are excluded
-    const top = await topViewedIds(10);
+    const top = await topViewedIds(1000); // a wide limit: other (demo) media in the database must not push these out
     const mine = top.filter((id) => [a.id, b.id, c.id, draft.id].includes(id));
     assert.deepEqual(mine, [b.id, a.id], "b (500 recent) before a (50 today); c is outside the window; the draft is excluded");
 
