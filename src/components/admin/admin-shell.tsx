@@ -21,6 +21,7 @@ const ICONS: Record<string, string> = {
   menu: "M4 7h16M4 12h16M4 17h16",
   close: "M6 6l12 12M18 6 6 18",
   link: "M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7",
+  award: "M12 14.5a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM8.5 13.7 7 22l5-3 5 3-1.5-8.3",
   page: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5",
 };
 
@@ -32,6 +33,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/media", label: "คลังสื่อการเรียนรู้", icon: "book" },
       { href: "/admin/courses", label: "คอร์สเรียน", icon: "course" },
+      { href: "/admin/certificates", label: "เกียรติบัตร", icon: "award" },
       { href: "/admin/sections", label: "เซกชันหน้าแรก", icon: "layout" },
       { href: "/admin/schools", label: "โรงเรียน", icon: "school" },
       { href: "/admin/resources", label: "แหล่งสื่อภายนอก", icon: "link" },

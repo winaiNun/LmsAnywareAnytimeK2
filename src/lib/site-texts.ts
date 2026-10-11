@@ -17,6 +17,9 @@ export const TEXT_DEFS: TextDef[] = [
   { key: "nav.courses", group: "menu", label: "เมนู: คอร์สเรียน", def: "คอร์สเรียน", max: 30 },
   { key: "nav.schools", group: "menu", label: "เมนู: โรงเรียน", def: "โรงเรียน", max: 30 },
   { key: "nav.about", group: "menu", label: "เมนู: เกี่ยวกับ", def: "เกี่ยวกับ", max: 30 },
+  { key: "account.admin", group: "menu", label: "ปุ่มหน้าบัญชี: เข้าส่วนจัดการ (แอดมิน/บรรณารักษ์)", def: "จัดการระบบ", max: 30 },
+  { key: "account.certs", group: "menu", label: "ปุ่มหน้าบัญชี: เกียรติบัตรของฉัน", def: "เกียรติบัตรของฉัน", max: 30 },
+  { key: "account.creator", group: "menu", label: "ปุ่มหน้าบัญชี: เข้าส่วนจัดการของครู/ผู้สร้าง", def: "จัดการสื่อและแบนเนอร์", max: 30 },
 
   { key: "tab.home", group: "tabs", label: "แท็บล่างมือถือ: หน้าแรก", def: "หน้าแรก", max: 10 },
   { key: "tab.library", group: "tabs", label: "แท็บล่างมือถือ: สื่อ", def: "สื่อ", max: 10 },
@@ -35,6 +38,11 @@ export const TEXT_DEFS: TextDef[] = [
   { key: "learning.subtitle", group: "pages", label: "หน้าคอร์สที่ฉันเรียน: คำอธิบาย", def: "เรียนต่อจากที่ค้างไว้ และดูความคืบหน้าของคุณ", max: 200, long: true },
   { key: "mycourses.title", group: "pages", label: "หน้าคอร์สของผู้สอน: หัวข้อ", def: "คอร์สของฉัน (ผู้สอน)", max: 80 },
   { key: "mycourses.subtitle", group: "pages", label: "หน้าคอร์สของผู้สอน: คำอธิบาย", def: "สร้างและจัดการคอร์สของคุณ", max: 200, long: true },
+  { key: "certs.title", group: "pages", label: "หน้าเกียรติบัตรของฉัน: หัวข้อ", def: "เกียรติบัตรของฉัน", max: 80 },
+  { key: "certs.subtitle", group: "pages", label: "หน้าเกียรติบัตรของฉัน: คำอธิบาย", def: "เกียรติบัตรจากคอร์สที่คุณเรียนจบ ดาวน์โหลดได้หลังหน่วยงานออกเลขที่เกียรติบัตรแล้ว", max: 200, long: true },
+  { key: "cert.pending.label", group: "pages", label: "เกียรติบัตร: ป้ายสถานะ “รอออกเลข”", def: "รอออกเลขที่เกียรติบัตร", max: 40 },
+  { key: "cert.pending.note", group: "pages", label: "เกียรติบัตร: ข้อความตอนยังดาวน์โหลดไม่ได้", def: "คุณเรียนจบหลักสูตรนี้แล้ว เกียรติบัตรจะดาวน์โหลดได้เมื่อหน่วยงานออกเลขที่เกียรติบัตรเรียบร้อย", max: 200, long: true },
+  { key: "cert.issued.note", group: "pages", label: "เกียรติบัตร: ข้อความตอนดาวน์โหลดได้", def: "เกียรติบัตรของคุณพร้อมแล้ว พิมพ์หรือบันทึกเป็น PDF ได้", max: 200, long: true },
 ];
 
 export type SiteTexts = Record<string, string>;

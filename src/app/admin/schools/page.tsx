@@ -124,7 +124,7 @@ export default async function AdminSchoolsPage({ searchParams }: { searchParams:
         {result.items.length === 0 && <li className="rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center text-neutral-500">ไม่พบโรงเรียน {all.length === 0 && "— เริ่มจากกด “นำเข้าจาก Excel”"}</li>}
       </ul>
 
-      <Pager page={result.page} pages={result.pages} href={href} label="เลือกหน้าของรายการโรงเรียน (หลังบ้าน)" /></LiveFilter>
+      <Pager page={result.page} pages={result.pages} href={href} label="เลือกหน้าของรายการโรงเรียน (ส่วนจัดการ)" /></LiveFilter>
 
     </div>
   );
