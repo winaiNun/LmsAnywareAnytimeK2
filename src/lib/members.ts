@@ -12,6 +12,18 @@ export const MEMBER_TYPE_LABEL: Record<MemberTypeKey, string> = {
 
 export const PREFIXES = ["เด็กชาย", "เด็กหญิง", "นาย", "นางสาว", "นาง", "ดร.", "ผศ.", "รศ.", "ศ."];
 
+/**
+ * The full name as shown anywhere a real name appears (and as printed on certificates): the title is written attached
+ * to the first name, with one space between first name and surname: "นายวินัย หนุนกระโทก", "ดร.สมศรี ใจดี".
+ * Always build names with this, never by joining the parts with spaces.
+ */
+export function composePersonName(prefix: string | null | undefined, first: string | null | undefined, last: string | null | undefined): string {
+  const f = (first ?? "").replace(/\s+/g, " ").trim();
+  const l = (last ?? "").replace(/\s+/g, " ").trim();
+  const p = (prefix ?? "").replace(/\s+/g, "");
+  return [`${p}${f}`, l].filter(Boolean).join(" ");
+}
+
 /** Teachers and students belong to a school from the directory; the others name an agency. */
 export const needsSchool = (t: MemberTypeKey) => t === "STUDENT" || t === "TEACHER";
 
@@ -48,7 +60,7 @@ export function profileData(p: Profile) {
     prefix: p.prefix ?? null,
     firstName: p.firstName,
     lastName: p.lastName,
-    name: [p.prefix, p.firstName, p.lastName].filter(Boolean).join(" "),
+    name: composePersonName(p.prefix, p.firstName, p.lastName),
     phone: p.phone ?? null,
     schoolId: school ? p.schoolId ?? null : null,
     organization: school ? null : p.organization ?? null,

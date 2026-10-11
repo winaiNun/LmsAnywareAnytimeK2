@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { avatarBox, clampCenter } from "../src/lib/avatar";
 import { CODE_LENGTH, codeStatus, formatCode, generateCode, normalizeCode } from "../src/lib/registration";
 import { pinAllowed, pinProblem } from "../src/lib/pin";
-import { profileData, profileSchema, usernameField } from "../src/lib/members";
+import { composePersonName, profileData, profileSchema, usernameField } from "../src/lib/members";
 
 let passed = 0;
 const t = (name: string, fn: () => void) => { try { fn(); passed++; } catch (e) { console.error(`✗ ${name}\n  ${(e as Error).message}`); process.exitCode = 1; } };
@@ -28,7 +28,7 @@ t("names are required, phone is checked", () => {
 t("profileData clears fields a type does not use", () => {
   const p = profileSchema.parse({ ...base, memberType: "STUDENT", prefix: "เด็กชาย", schoolId: "s1", gradeLevel: "ป.5", organization: "x", position: "y" });
   const d = profileData(p);
-  assert.equal(d.name, "เด็กชาย สมชาย ใจดี");
+  assert.equal(d.name, "เด็กชายสมชาย ใจดี");
   assert.equal(d.schoolId, "s1");
   assert.equal(d.organization, null);
   assert.equal(d.position, null);
@@ -37,6 +37,19 @@ t("profileData clears fields a type does not use", () => {
   assert.equal(s.schoolId, null);
   assert.equal(s.gradeLevel, null);
 });
+t("names: the title is attached to the first name (certificate rule)", () => {
+  assert.equal(composePersonName("นาย", "วินัย", "หนุนกระโทก"), "นายวินัย หนุนกระโทก");
+  assert.equal(composePersonName("นางสาว", "สมศรี", "รักเรียน"), "นางสาวสมศรี รักเรียน");
+  assert.equal(composePersonName("ดร.", "สมชาย", "ใจดี"), "ดร.สมชาย ใจดี");
+  assert.equal(composePersonName("ผศ.", "วิภา", "ใจดี"), "ผศ.วิภา ใจดี");
+  assert.equal(composePersonName(null, "สมชาย", "ใจดี"), "สมชาย ใจดี");
+  assert.equal(composePersonName("", "สมชาย", "ใจดี"), "สมชาย ใจดี");
+  assert.equal(composePersonName("นาย ", "  วินัย ", " หนุนกระโทก  "), "นายวินัย หนุนกระโทก", "stray spaces are cleaned");
+  assert.equal(composePersonName("นาย", "วินัย", ""), "นายวินัย");
+  const p = profileData(profileSchema.parse({ memberType: "TEACHER", prefix: "นาง", firstName: "วิภา", lastName: "ใจดี", schoolId: "s1" }));
+  assert.equal(p.name, "นางวิภา ใจดี");
+});
+
 t("usernames", () => {
   assert.equal(usernameField.safeParse("Student01").data, "student01");
   assert.equal(usernameField.safeParse("ab").success, false);

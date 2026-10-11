@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Spinner } from "@/components/icons";
-import { MEMBER_TYPE_LABEL } from "@/lib/members";
+import { MEMBER_TYPE_LABEL, composePersonName } from "@/lib/members";
 import { commitUserChunk, finishUserImport, previewUserImport, type CommitOutcome, type PreviewResult, type PreviewRow } from "./actions";
 
 const CHUNK = 20;
@@ -121,7 +121,7 @@ export default function ImportClient() {
                     <td className="p-2.5 text-neutral-400">{r.line}</td>
                     <td className="p-2.5"><span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${ACTION_LABEL[r.action][1]}`}>{ACTION_LABEL[r.action][0]}</span></td>
                     <td className="p-2.5 text-neutral-700">{r.username ?? "—"}{r.email && <span className="block text-xs text-neutral-500">{r.email}</span>}</td>
-                    <td className="p-2.5 font-medium">{[r.prefix, r.firstName, r.lastName].filter(Boolean).join(" ")}</td>
+                    <td className="p-2.5 font-medium">{composePersonName(r.prefix, r.firstName, r.lastName)}</td>
                     <td className="p-2.5">{r.memberType ? MEMBER_TYPE_LABEL[r.memberType] : "—"}</td>
                     <td className="p-2.5 text-neutral-600">{r.schoolName ?? r.organization ?? (r.schoolLabel || "—")}{(r.gradeLevel ?? r.position) && <span className="block text-xs text-neutral-500">{r.gradeLevel ?? r.position}</span>}</td>
                     <td className="p-2.5 text-xs">
