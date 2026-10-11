@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { parseBody, type Inline } from "@/lib/site-pages";
+import { parseBody, type Inline } from "@/lib/page-markup";
 
 function Inlines({ parts }: { parts: Inline[] }) {
   return (

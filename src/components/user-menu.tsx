@@ -8,7 +8,7 @@ import type { AvatarData } from "@/lib/avatar";
 import Avatar from "./avatar";
 import Glyph from "./glyph";
 
-export type MenuUser = { name: string; typeLabel: string; isStaff: boolean; canReview: boolean; avatar: AvatarData | null };
+export type MenuUser = { name: string; typeLabel: string; isStaff: boolean; canReview: boolean; canTeach?: boolean; avatar: AvatarData | null };
 
 const item = "flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium text-neutral-800 outline-none hover:bg-neutral-100 focus-visible:bg-neutral-100";
 
@@ -71,6 +71,7 @@ export default function UserMenu({ user, context = "site" }: { user: MenuUser; c
           <div className="my-1 h-px bg-neutral-100" role="separator" />
           <Link role="menuitem" href="/dashboard" className={item}><Glyph name="users" size={18} className="text-neutral-500" />บัญชีของฉัน</Link>
           <Link role="menuitem" href="/dashboard/media" className={item}><Glyph name="file-text" size={18} className="text-neutral-500" />สื่อของฉัน</Link>
+          {user.canTeach && <Link role="menuitem" href="/dashboard/courses" className={item}><Glyph name="play-circle" size={18} className="text-neutral-500" />คอร์สของฉัน (ผู้สอน)</Link>}
           {user.canReview && <Link role="menuitem" href="/dashboard/review" className={item}><Glyph name="clipboard-check" size={18} className="text-neutral-500" />ตรวจสื่อ</Link>}
           {admin
             ? <Link role="menuitem" href="/" className={item}><Glyph name="home" size={18} className="text-neutral-500" />ดูหน้าเว็บไซต์</Link>

@@ -5,6 +5,7 @@ import { courseProgress, doneLessonIds, isLessonDone, isLessonUnlocked, needsCon
 import { cleanBlock, parseVideoLink, youtubeStart, youtubeVideoId } from "../src/lib/course/blocks";
 import { applyWatchReport, watchedPercent } from "../src/lib/course/watch";
 import { gradeQuestion, gradeQuiz, type QuestionRow } from "../src/lib/course/quiz/grade";
+import { emptyState, stateFromQuestion, stateToQuestion, syncBlanks, type EditorState } from "../src/lib/course/quiz/editor-model";
 import { normaliseText, parseNumber } from "../src/lib/course/quiz/normalise";
 import { presentQuestion, presentQuiz, seededRandom } from "../src/lib/course/quiz/present";
 import { clozePlaceholders, parseQuestion } from "../src/lib/course/quiz/schemas";
@@ -403,6 +404,53 @@ t("block input is cleaned per kind", () => {
   const q = cleanBlock({ kind: "QUIZ", quizId: "z1", required: true });
   assert.ok(q.ok && q.block.quizId === "z1" && q.block.required);
   assert.equal(cleanBlock({ kind: "NOPE" as never }).ok, false);
+});
+
+// ---------------------------------------------------------------- editor model
+t("editor model: every type converts to valid JSON and back", () => {
+  const filled: EditorState[] = [
+    { type: "SINGLE", choices: [{ id: "c1", text: "ก" }, { id: "c2", text: "ข" }, { id: "c3", text: "ค" }], correct: "c2" },
+    { type: "MULTI", choices: [{ id: "c1", text: "ก" }, { id: "c2", text: "ข" }, { id: "c3", text: "ค" }], correct: ["c1", "c3"], scoring: "partial" },
+    { type: "TRUEFALSE", value: false },
+    { type: "SHORT", accepted: "กรุงเทพ\nกรุงเทพมหานคร\n", ignoreSpaces: true, caseSensitive: false, placeholder: "พิมพ์ชื่อ" },
+    { type: "NUMBER", value: "1,250.5", tolerance: "0.5", unit: "บาท" },
+    { type: "MATCH", rows: [{ id: "a", left: "ก", right: "1" }, { id: "b", left: "ข", right: "2" }], distractors: "ตัวลวง 1\nตัวลวง 2" },
+    { type: "ORDER", items: [{ id: "x", text: "หนึ่ง" }, { id: "y", text: "สอง" }, { id: "z", text: "สาม" }] },
+    { type: "CATEGORIZE", categories: [{ id: "k1", text: "สัตว์" }, { id: "k2", text: "พืช" }], items: [{ id: "i1", text: "แมว", categoryId: "k1" }, { id: "i2", text: "มะม่วง", categoryId: "k2" }, { id: "i3", text: "ช้าง", categoryId: "k1" }] },
+    syncBlanks({ type: "CLOZE", text: "เมืองหลวงคือ {{1}} อยู่ภาค {{2}}", blanks: [] }),
+  ];
+  for (const st of filled) {
+    let state: EditorState = st;
+    if (state.type === "CLOZE") {
+      state = { ...state, blanks: [{ id: "1", mode: "type", accepted: "กรุงเทพ", options: "", correct: 0 }, { id: "2", mode: "choose", accepted: "", options: "เหนือ\nกลาง\nใต้", correct: 1 }] };
+    }
+    const q = stateToQuestion(state);
+    const parsed = parseQuestion(state.type, q.config, q.answerKey);
+    assert.equal(parsed.ok, true, `${state.type}: ${parsed.ok ? "" : parsed.error}`);
+    // reopening the saved question gives an editor state that saves to the same JSON
+    const back = stateFromQuestion(state.type, q.config, q.answerKey);
+    assert.deepEqual(stateToQuestion(back), q, `${state.type} round trip`);
+  }
+  // the converted MATCH keeps the right pairing and the distractors
+  const m = stateToQuestion(filled[5]);
+  assert.equal(m.config.right.length, 4);
+  assert.deepEqual(m.answerKey.pairs, { l1: "r1", l2: "r2" });
+  // a number with a thousands comma
+  assert.equal(stateToQuestion(filled[4]).answerKey.value, 1250.5);
+});
+
+t("editor model: empty forms convert but do not pass validation; blanks follow the marks", () => {
+  for (const type of ["SINGLE", "MULTI", "TRUEFALSE", "SHORT", "NUMBER", "MATCH", "ORDER", "CATEGORIZE", "CLOZE"] as const) {
+    const q = stateToQuestion(emptyState(type));
+    assert.equal(parseQuestion(type, q.config, q.answerKey).ok, false, `${type} empty must not be valid`);
+  }
+  let c = syncBlanks({ type: "CLOZE", text: "{{1}} กับ {{2}}", blanks: [] });
+  assert.deepEqual(c.blanks.map((b) => b.id), ["1", "2"]);
+  c = { ...c, blanks: c.blanks.map((b) => (b.id === "2" ? { ...b, accepted: "คำตอบ" } : b)) };
+  c = syncBlanks({ ...c, text: "{{2}} และ {{3}}" });
+  assert.deepEqual(c.blanks.map((b) => b.id), ["2", "3"]);
+  assert.equal(c.blanks[0].accepted, "คำตอบ", "an existing blank keeps what was typed");
+  assert.deepEqual(syncBlanks({ ...c, text: "ไม่มีช่อง" }).blanks, []);
 });
 
 console.log(`course logic: ${passed} groups passed`);

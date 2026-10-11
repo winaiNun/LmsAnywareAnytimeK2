@@ -29,6 +29,12 @@ export const TEXT_DEFS: TextDef[] = [
   { key: "schools.subtitle", group: "pages", label: "หน้าทำเนียบโรงเรียน: คำอธิบาย", def: "เว็บไซต์การเรียนรู้ Anywhere Anytime ของทุกโรงเรียนในเขต กดที่การ์ดเพื่อเปิดเว็บไซต์ของโรงเรียน", max: 200, long: true },
   { key: "resources.title", group: "pages", label: "หน้าแหล่งสื่อภายนอก: หัวข้อ", def: "แหล่งสื่อภายนอก", max: 80 },
   { key: "resources.subtitle", group: "pages", label: "หน้าแหล่งสื่อภายนอก: คำอธิบาย", def: "เว็บไซต์และช่องทางที่ผู้ดูแลคัดมาให้ เปิดในแท็บใหม่ ระบบไม่รับผิดชอบเนื้อหาของเว็บภายนอก", max: 200, long: true },
+  { key: "courses.title", group: "pages", label: "หน้าคอร์สเรียน: หัวข้อ", def: "คอร์สเรียน", max: 80 },
+  { key: "courses.subtitle", group: "pages", label: "หน้าคอร์สเรียน: คำอธิบาย", def: "เรียนออนไลน์ได้ทุกที่ ทุกเวลา ผ่านวิดีโอ สื่อ และแบบฝึกหัด", max: 200, long: true },
+  { key: "learning.title", group: "pages", label: "หน้าคอร์สที่ฉันเรียน: หัวข้อ", def: "คอร์สที่ฉันเรียน", max: 80 },
+  { key: "learning.subtitle", group: "pages", label: "หน้าคอร์สที่ฉันเรียน: คำอธิบาย", def: "เรียนต่อจากที่ค้างไว้ และดูความคืบหน้าของคุณ", max: 200, long: true },
+  { key: "mycourses.title", group: "pages", label: "หน้าคอร์สของผู้สอน: หัวข้อ", def: "คอร์สของฉัน (ผู้สอน)", max: 80 },
+  { key: "mycourses.subtitle", group: "pages", label: "หน้าคอร์สของผู้สอน: คำอธิบาย", def: "สร้างและจัดการคอร์สของคุณ", max: 200, long: true },
 ];
 
 export type SiteTexts = Record<string, string>;

@@ -10,7 +10,7 @@ import Avatar from "./avatar";
 import Glyph, { IconTile } from "./glyph";
 
 export type DrawerArea = { slug: string; name: string; icon: string; color: string };
-export type DrawerUser = { name: string; isStaff: boolean; canReview: boolean; avatar: AvatarData | null };
+export type DrawerUser = { name: string; isStaff: boolean; canReview: boolean; canTeach?: boolean; avatar: AvatarData | null };
 
 const row = "flex min-h-12 items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-neutral-800 active:bg-neutral-100";
 
@@ -119,6 +119,7 @@ export default function NavDrawer({ user, areas, aboutLabel = "เกี่ย�
 
             <section aria-label="เมนูอื่น" className="space-y-0.5 border-t border-neutral-100 pt-3">
               {user && <Link href="/dashboard/media" className={row}><Glyph name="file-text" size={20} className="text-neutral-500" />สื่อของฉัน</Link>}
+              {user?.canTeach && <Link href="/dashboard/courses" className={row}><Glyph name="play-circle" size={20} className="text-neutral-500" />คอร์สของฉัน (ผู้สอน)</Link>}
               {user?.canReview && <Link href="/dashboard/review" className={row}><Glyph name="clipboard-check" size={20} className="text-neutral-500" />ตรวจสื่อ</Link>}
               {user?.isStaff && <Link href="/admin" className={row}><Glyph name="wrench" size={20} className="text-neutral-500" />จัดการระบบ</Link>}
               <Link href="/about" className={row}><Glyph name="help-circle" size={20} className="text-neutral-500" />{aboutLabel}</Link>

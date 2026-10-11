@@ -18,7 +18,7 @@ const LINKS = [
   { href: "/about", key: "nav.about" },
 ];
 
-type Props = { user: { name: string; isStaff: boolean; canReview: boolean; typeLabel: string; avatar: AvatarData | null } | null; name: string; areaName?: string; logoUrl: string | null; areas: DrawerArea[]; texts: Record<string, string> };
+type Props = { user: { name: string; isStaff: boolean; canReview: boolean; canTeach: boolean; typeLabel: string; avatar: AvatarData | null } | null; name: string; areaName?: string; logoUrl: string | null; areas: DrawerArea[]; texts: Record<string, string> };
 type Tab = { href: string; label: string; icon: IconName; id?: string; avatar?: boolean };
 
 /** Which home-page section is on screen, for highlighting the matching bottom tab. */
