@@ -1,13 +1,11 @@
 /**
- * Site-wide visitor counter and "online now" (server only). Nothing personal is stored:
- * visitors are counted once per browser per Bangkok day (a cookie decides, see /api/visit), "online" is a set of
- * random tab ids with a last-seen time.
+ * Site-wide visitor counter (server only). Nothing personal is stored: visitors are counted once per browser per
+ * Bangkok day (a cookie decides, see /api/visit) and only the day's total goes up.
  */
 import { db } from "@/lib/db";
 import { bangkokDay } from "@/lib/media-counters";
 import { bangkokParts } from "@/lib/thai-date";
 
-export const ONLINE_WINDOW_MS = 5 * 60 * 1000;
 const DAY = 86400000;
 
 /** Crawlers, uptime monitors and command-line fetchers are not visitors. */
@@ -19,17 +17,7 @@ export async function recordVisit(now: Date = new Date()): Promise<void> {
     ON CONFLICT ("day") DO UPDATE SET "visitors" = "SiteVisitDaily"."visitors" + 1`;
 }
 
-/** Marks a tab as online right now (and now and then sweeps rows older than a day). */
-export async function heartbeat(sid: string, now: Date = new Date()): Promise<void> {
-  await db.$executeRaw`INSERT INTO "OnlinePing" ("sid", "seenAt") VALUES (${sid}, ${now}) ON CONFLICT ("sid") DO UPDATE SET "seenAt" = ${now}`;
-  if (Math.random() < 0.02) await db.onlinePing.deleteMany({ where: { seenAt: { lt: new Date(now.getTime() - DAY) } } }).catch(() => {});
-}
-
-export async function onlineNow(now: Date = new Date()): Promise<number> {
-  return db.onlinePing.count({ where: { seenAt: { gte: new Date(now.getTime() - ONLINE_WINDOW_MS) } } });
-}
-
-export type VisitStats = { today: number; month: number; total: number; since: string; showVisits: boolean; showOnline: boolean };
+export type VisitStats = { today: number; month: number; total: number; since: string; showVisits: boolean };
 
 /** Today / this month / all time (= starting number + every counted day) and the date counting started. */
 export async function getVisitStats(now: Date = new Date()): Promise<VisitStats> {
@@ -37,7 +25,7 @@ export async function getVisitStats(now: Date = new Date()): Promise<VisitStats>
   const p = bangkokParts(now);
   const monthStart = new Date(Date.UTC(p.year, p.month - 1, 1));
   const [site, t, m, all] = await Promise.all([
-    db.siteSetting.findUnique({ where: { id: "main" }, select: { counterSince: true, counterBase: true, showVisits: true, showOnline: true } }),
+    db.siteSetting.findUnique({ where: { id: "main" }, select: { counterSince: true, counterBase: true, showVisits: true } }),
     db.siteVisitDaily.findUnique({ where: { day: today } }),
     db.siteVisitDaily.aggregate({ where: { day: { gte: monthStart } }, _sum: { visitors: true } }),
     db.siteVisitDaily.aggregate({ _sum: { visitors: true } }),
@@ -48,7 +36,6 @@ export async function getVisitStats(now: Date = new Date()): Promise<VisitStats>
     total: (site?.counterBase ?? 0) + (all._sum.visitors ?? 0),
     since: (site?.counterSince ?? now).toISOString(),
     showVisits: site?.showVisits ?? true,
-    showOnline: site?.showOnline ?? true,
   };
 }
 

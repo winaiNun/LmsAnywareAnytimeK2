@@ -122,8 +122,8 @@ export default async function AdminDashboard() {
 
       <div className="grid gap-4 xl:grid-cols-3">
         <Card title="ผู้เข้าชมเว็บไซต์ 14 วันล่าสุด" className="xl:col-span-2" action={more("/admin/pages", "ตั้งค่าตัวนับ")}>
-          <div className="mb-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-            {[["ออนไลน์ตอนนี้", d.visits.online], ["วันนี้", d.visits.today], ["เดือนนี้", d.visits.month], ["ทั้งหมด", d.visits.total]].map(([l, v]) => (
+          <div className="mb-4 grid grid-cols-3 gap-3 text-sm">
+            {[["วันนี้", d.visits.today], ["เดือนนี้", d.visits.month], ["ทั้งหมด", d.visits.total]].map(([l, v]) => (
               <div key={l as string} className="rounded-xl bg-neutral-50 px-3 py-2"><p className="text-xs text-neutral-500">{l}</p><p className="text-xl font-bold tabular-nums">{nf.format(v as number)}</p></div>
             ))}
           </div>

@@ -26,7 +26,7 @@ export default async function PagesAdmin() {
           contactAddress: site?.contactAddress ?? "", contactPhone: site?.contactPhone ?? "", contactEmail: site?.contactEmail ?? "",
           facebookUrl: site?.facebookUrl ?? "", youtubeUrl: site?.youtubeUrl ?? "", lineUrl: site?.lineUrl ?? "",
           counterBase: site?.counterBase ?? 0, counterSince: (site?.counterSince ?? new Date()).toISOString(),
-          showVisits: site?.showVisits ?? true, showOnline: site?.showOnline ?? true,
+          showVisits: site?.showVisits ?? true,
         }}
       />
       <PageEditor pages={pages} />

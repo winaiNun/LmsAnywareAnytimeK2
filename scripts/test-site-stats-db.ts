@@ -2,18 +2,16 @@
 import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
 import { bangkokDay } from "../src/lib/media-counters";
-import { dailyVisitors, getVisitStats, heartbeat, onlineNow, recordVisit } from "../src/lib/site-stats";
+import { dailyVisitors, getVisitStats, recordVisit } from "../src/lib/site-stats";
 
 const db = new PrismaClient();
 
 async function main() {
   const visits = await db.siteVisitDaily.findMany();
-  const pings = await db.onlinePing.findMany();
   const site = await db.siteSetting.findUnique({ where: { id: "main" } });
   try {
     await db.siteVisitDaily.deleteMany();
-    await db.onlinePing.deleteMany();
-    await db.siteSetting.upsert({ where: { id: "main" }, update: { counterBase: 100, counterSince: new Date("2026-01-05T00:00:00Z"), showVisits: true, showOnline: true }, create: { id: "main", counterBase: 100 } });
+    await db.siteSetting.upsert({ where: { id: "main" }, update: { counterBase: 100, counterSince: new Date("2026-01-05T00:00:00Z"), showVisits: true }, create: { id: "main", counterBase: 100 } });
 
     // 1) Bangkok calendar day: 16:59 UTC is still the 11th, 17:00 UTC is already the 12th
     const a = new Date("2026-10-11T16:59:00Z");
@@ -44,23 +42,11 @@ async function main() {
     assert.equal(series[13].value, 31);
     assert.equal(series[12].value, 1);
 
-    // 5) online now = tabs seen in the last 5 minutes; one tab is one row however often it reports
-    const now = new Date("2026-10-11T10:00:00Z");
-    await heartbeat("tab-a", new Date(now.getTime() - 60_000));
-    await heartbeat("tab-a", new Date(now.getTime() - 30_000));
-    await heartbeat("tab-b", new Date(now.getTime() - 4 * 60_000));
-    await heartbeat("tab-c", new Date(now.getTime() - 6 * 60_000));
-    assert.equal(await onlineNow(now), 2);
-    assert.equal(await onlineNow(new Date(now.getTime() + 2 * 60_000)), 1);
-    assert.equal(await onlineNow(new Date(now.getTime() + 10 * 60_000)), 0);
-
-    console.log("site stats db: 5 groups passed");
+    console.log("site stats db: 4 groups passed");
   } finally {
     await db.siteVisitDaily.deleteMany();
-    await db.onlinePing.deleteMany();
     if (visits.length) await db.siteVisitDaily.createMany({ data: visits });
-    if (pings.length) await db.onlinePing.createMany({ data: pings });
-    if (site) await db.siteSetting.update({ where: { id: "main" }, data: { counterBase: site.counterBase, counterSince: site.counterSince, showVisits: site.showVisits, showOnline: site.showOnline } });
+    if (site) await db.siteSetting.update({ where: { id: "main" }, data: { counterBase: site.counterBase, counterSince: site.counterSince, showVisits: site.showVisits } });
     else await db.siteSetting.deleteMany({ where: { id: "main" } });
     await db.$disconnect();
   }

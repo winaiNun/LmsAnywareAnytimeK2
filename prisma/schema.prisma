@@ -361,7 +361,6 @@ model SiteSetting {
   counterSince   DateTime @default(now()) // "counting since" date shown in the footer (editable)
   counterBase    Int      @default(0) // starting number (e.g. carried over from an older site)
   showVisits     Boolean  @default(true)
-  showOnline     Boolean  @default(true)
   updatedAt      DateTime @updatedAt
 }
 
@@ -442,14 +441,6 @@ model RateLimitHit {
 model SiteVisitDaily {
   day      DateTime @id @db.Date
   visitors Int      @default(0)
-}
-
-/// "Online now": one row per open tab (random id kept in sessionStorage), refreshed by a heartbeat; rows older than a day are swept.
-model OnlinePing {
-  sid    String   @id
-  seenAt DateTime @default(now())
-
-  @@index([seenAt])
 }
 
 /// Directory of outside media sources (other websites / channels) managed by the admin.

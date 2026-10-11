@@ -39,7 +39,7 @@ export async function saveFooterSettings(_prev: PagesFormState, f: FormData): Pr
   const p = footerSchema.safeParse(Object.fromEntries(f));
   if (!p.success) return { error: p.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" };
   const { counterSince, ...rest } = p.data;
-  const data = { ...rest, ...(counterSince ? { counterSince } : {}), showVisits: f.get("showVisits") === "on", showOnline: f.get("showOnline") === "on" };
+  const data = { ...rest, ...(counterSince ? { counterSince } : {}), showVisits: f.get("showVisits") === "on" };
   await db.siteSetting.upsert({ where: { id: "main" }, update: data, create: { id: "main", ...data } });
   await audit({ actorId: actor.id, action: "site.footer-settings", entity: "SiteSetting", entityId: "main" });
   revalidateTag("footer");

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import FooterGate from "@/components/footer-gate";
 import Glyph from "@/components/glyph";
-import OnlineCount from "@/components/online-count";
 import { getFooterData } from "@/lib/footer-data";
 import { formatThaiDate, bangkokParts } from "@/lib/thai-date";
 
@@ -21,12 +20,11 @@ const QUICK = [
 const heading = "mb-4 text-sm font-semibold uppercase tracking-wider text-white/60";
 const link = "inline-flex min-h-9 items-center text-[15px] text-white/85 transition hover:text-white hover:underline hover:underline-offset-4";
 
-function Stat({ icon, label, children, live = false }: { icon: string; label: string; children: React.ReactNode; live?: boolean }) {
+function Stat({ icon, label, children }: { icon: string; label: string; children: React.ReactNode }) {
   return (
     <div className="flex w-[calc(50%-0.375rem)] items-center gap-3 rounded-2xl border border-white/15 bg-white/[0.07] px-3 py-3 backdrop-blur-sm sm:px-4 lg:w-56">
-      <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/12 text-white">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/12 text-white">
         <Glyph name={icon} size={20} />
-        {live && <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-[#0B2A6F] bg-emerald-400 motion-safe:animate-pulse" aria-hidden />}
       </span>
       <div className="min-w-0">
         <p className="text-xl font-bold leading-tight text-white">{children}</p>
@@ -125,19 +123,14 @@ export default async function SiteFooter() {
             </div>
           </div>
 
-          {(stats.showVisits || stats.showOnline) && (
+          {stats.showVisits && (
             <section aria-label="สถิติการเข้าชม" className="mt-10">
               <div className="flex flex-wrap justify-center gap-3">
-                {stats.showOnline && <Stat icon="activity" label="กำลังออนไลน์" live><OnlineCount /></Stat>}
-                {stats.showVisits && (
-                  <>
-                    <Stat icon="users" label="ผู้เข้าชมวันนี้">{nf.format(stats.today)}</Stat>
-                    <Stat icon="calendar-check" label="ผู้เข้าชมเดือนนี้">{nf.format(stats.month)}</Stat>
-                    <Stat icon="eye" label="ผู้เข้าชมทั้งหมด">{nf.format(stats.total)}</Stat>
-                  </>
-                )}
+                <Stat icon="users" label="ผู้เข้าชมวันนี้">{nf.format(stats.today)}</Stat>
+                <Stat icon="calendar-check" label="ผู้เข้าชมเดือนนี้">{nf.format(stats.month)}</Stat>
+                <Stat icon="eye" label="ผู้เข้าชมทั้งหมด">{nf.format(stats.total)}</Stat>
               </div>
-              {stats.showVisits && <p className="mt-3 text-center text-xs text-white/60">นับผู้เข้าชมไม่ซ้ำรายวัน ตั้งแต่ {formatThaiDate(new Date(stats.since), { style: "long" })}</p>}
+              <p className="mt-3 text-center text-xs text-white/60">นับผู้เข้าชมไม่ซ้ำรายวัน ตั้งแต่ {formatThaiDate(new Date(stats.since), { style: "long" })}</p>
             </section>
           )}
 
@@ -150,6 +143,11 @@ export default async function SiteFooter() {
               <li><Link href="/login" className="inline-flex min-h-9 items-center hover:text-white">เข้าสู่ระบบ</Link></li>
             </ul>
           </div>
+
+          {/* designer's credit: hard-coded on purpose, faint, centred, not shown on phones */}
+          <p className="mt-5 hidden text-center text-[11px] leading-relaxed text-white/35 md:block">
+            พัฒนาและออกแบบระบบ : ศน.วินัย หนุนกระโทก ศึกษานิเทศก์ชำนาญการพิเศษ
+          </p>
         </div>
       </footer>
     </FooterGate>

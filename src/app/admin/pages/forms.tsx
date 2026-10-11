@@ -14,7 +14,7 @@ function Submit({ children }: { children: React.ReactNode }) {
 
 export type FooterValues = {
   contactAddress: string; contactPhone: string; contactEmail: string; facebookUrl: string; youtubeUrl: string; lineUrl: string;
-  counterBase: number; counterSince: string; showVisits: boolean; showOnline: boolean;
+  counterBase: number; counterSince: string; showVisits: boolean;
 };
 
 export function FooterSettingsForm({ v }: { v: FooterValues }) {
@@ -41,7 +41,6 @@ export function FooterSettingsForm({ v }: { v: FooterValues }) {
           <label className="block space-y-1"><span className="text-sm font-medium">ตัวเลขตั้งต้นของยอดรวม</span><input name="counterBase" inputMode="numeric" defaultValue={v.counterBase} className={input} /><span className="block text-xs text-neutral-500">ใส่ถ้าต้องการยกยอดจากเว็บเก่า (ปกติ 0)</span></label>
         </div>
         <label className="flex min-h-11 items-start gap-2"><input type="checkbox" name="showVisits" defaultChecked={v.showVisits} className="mt-1 h-4 w-4" /><span>นับและแสดงจำนวนผู้เข้าชม (วันนี้ / เดือนนี้ / ทั้งหมด)<span className="block text-xs text-neutral-500">นับผู้เข้าชมไม่ซ้ำรายวันด้วยคุกกี้ ไม่เก็บข้อมูลที่ระบุตัวตนได้</span></span></label>
-        <label className="flex min-h-11 items-start gap-2"><input type="checkbox" name="showOnline" defaultChecked={v.showOnline} className="mt-1 h-4 w-4" /><span>แสดงจำนวนผู้ที่กำลังออนไลน์<span className="block text-xs text-neutral-500">เบราว์เซอร์ที่เปิดหน้าเว็บอยู่จะส่งสัญญาณทุก ~90 วินาที — ทำให้ฐานข้อมูลทำงานบ่อยขึ้น ปิดได้ถ้าต้องการประหยัดโควตา</span></span></label>
       </div>
 
       {state?.error && <p role="alert" className="text-sm text-red-600">{state.error}</p>}
