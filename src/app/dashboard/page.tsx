@@ -46,6 +46,7 @@ export default async function DashboardPage() {
         )}
         {user.role === "TEACHER" && <Link href="/admin/banners" className="flex min-h-10 items-center rounded bg-brand px-4 font-semibold text-white">ไปหลังบ้านผู้สร้าง</Link>}
         <Link href="/dashboard/media" className="flex min-h-10 items-center rounded border px-4">สื่อของฉัน</Link>
+        <Link href="/dashboard/learning" className="flex min-h-10 items-center rounded border px-4">คอร์สที่ฉันเรียน</Link>
         {(["ADMIN", "TEACHER"].includes(user.role) || user.creatorStatus === "APPROVED") && <Link href="/dashboard/courses" className="flex min-h-10 items-center rounded border px-4">คอร์สของฉัน (ผู้สอน)</Link>}
         {(isReviewer || user.role === "ADMIN") && <Link href="/dashboard/review" className="flex min-h-10 items-center rounded border px-4">ตรวจสื่อ</Link>}
         <Link href="/account/password" className="flex min-h-10 items-center rounded border px-4">เปลี่ยนรหัสผ่าน</Link>

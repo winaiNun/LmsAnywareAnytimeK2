@@ -30,7 +30,7 @@
     "test:media": "tsx scripts/test-media.ts",
     "test:site": "tsx scripts/test-site-pages.ts",
     "test:course": "tsx scripts/test-course.ts",
-    "test:db": "tsx --env-file=.env scripts/test-course-db.ts && tsx --env-file=.env scripts/test-site-stats-db.ts && tsx --env-file=.env scripts/test-rate-limit-db.ts && tsx --env-file=.env scripts/test-registration-db.ts && tsx --env-file=.env scripts/test-users-import-db.ts && tsx --env-file=.env scripts/test-media-db.ts && tsx --env-file=.env scripts/test-media-counters-db.ts"
+    "test:db": "tsx --env-file=.env scripts/test-course-db.ts && tsx --env-file=.env scripts/test-course-learn-db.ts && tsx --env-file=.env scripts/test-site-stats-db.ts && tsx --env-file=.env scripts/test-rate-limit-db.ts && tsx --env-file=.env scripts/test-registration-db.ts && tsx --env-file=.env scripts/test-users-import-db.ts && tsx --env-file=.env scripts/test-media-db.ts && tsx --env-file=.env scripts/test-media-counters-db.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1147.0",

@@ -71,6 +71,7 @@ export default function UserMenu({ user, context = "site" }: { user: MenuUser; c
           <div className="my-1 h-px bg-neutral-100" role="separator" />
           <Link role="menuitem" href="/dashboard" className={item}><Glyph name="users" size={18} className="text-neutral-500" />บัญชีของฉัน</Link>
           <Link role="menuitem" href="/dashboard/media" className={item}><Glyph name="file-text" size={18} className="text-neutral-500" />สื่อของฉัน</Link>
+          <Link role="menuitem" href="/dashboard/learning" className={item}><Glyph name="book-open" size={18} className="text-neutral-500" />คอร์สที่ฉันเรียน</Link>
           {user.canTeach && <Link role="menuitem" href="/dashboard/courses" className={item}><Glyph name="play-circle" size={18} className="text-neutral-500" />คอร์สของฉัน (ผู้สอน)</Link>}
           {user.canReview && <Link role="menuitem" href="/dashboard/review" className={item}><Glyph name="clipboard-check" size={18} className="text-neutral-500" />ตรวจสื่อ</Link>}
           {admin

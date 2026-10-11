@@ -119,6 +119,7 @@ export default function NavDrawer({ user, areas, aboutLabel = "เกี่ย�
 
             <section aria-label="เมนูอื่น" className="space-y-0.5 border-t border-neutral-100 pt-3">
               {user && <Link href="/dashboard/media" className={row}><Glyph name="file-text" size={20} className="text-neutral-500" />สื่อของฉัน</Link>}
+              {user && <Link href="/dashboard/learning" className={row}><Glyph name="book-open" size={20} className="text-neutral-500" />คอร์สที่ฉันเรียน</Link>}
               {user?.canTeach && <Link href="/dashboard/courses" className={row}><Glyph name="play-circle" size={20} className="text-neutral-500" />คอร์สของฉัน (ผู้สอน)</Link>}
               {user?.canReview && <Link href="/dashboard/review" className={row}><Glyph name="clipboard-check" size={20} className="text-neutral-500" />ตรวจสื่อ</Link>}
               {user?.isStaff && <Link href="/admin" className={row}><Glyph name="wrench" size={20} className="text-neutral-500" />จัดการระบบ</Link>}
