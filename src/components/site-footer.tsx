@@ -18,7 +18,7 @@ const QUICK = [
 ];
 
 const heading = "mb-4 text-sm font-semibold uppercase tracking-wider text-white/60";
-const link = "inline-flex min-h-9 items-center text-[15px] text-white/85 transition hover:text-white hover:underline hover:underline-offset-4";
+const link = "inline-flex min-h-9 items-center whitespace-nowrap text-[15px] text-white/85 transition hover:text-white hover:underline hover:underline-offset-4";
 
 function Stat({ icon, label, children }: { icon: string; label: string; children: React.ReactNode }) {
   return (
@@ -54,7 +54,7 @@ export default async function SiteFooter() {
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#4F8BFF] via-[#0052FF] to-[#7C3AED]" aria-hidden />
 
         <div className="relative mx-auto max-w-6xl px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-12 md:pb-8">
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1.2fr_1.2fr]">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[auto_1fr_1.1fr_1fr] lg:gap-8">
             <div>
               <Link href="/" className="inline-flex items-center gap-3" aria-label={`${site.systemName} — หน้าแรก`}>
                 {site.logoUrl ? (
@@ -65,8 +65,8 @@ export default async function SiteFooter() {
                 )}
                 <span className="text-lg font-bold leading-tight">{site.systemName}</span>
               </Link>
-              {site.areaName && <p className="mt-3 text-[15px] font-medium text-white/90">{site.areaName}</p>}
-              {site.tagline && <p className="mt-1 max-w-xs text-sm leading-relaxed text-white/65">{site.tagline}</p>}
+              {site.areaName && <p className="mt-3 text-[13px] font-medium leading-snug text-white/90 lg:whitespace-nowrap">{site.areaName}</p>}
+              {site.tagline && <p className="mt-1 max-w-xs text-xs leading-relaxed text-white/65">{site.tagline}</p>}
               {socials.length > 0 && (
                 <ul className="mt-5 flex gap-2.5">
                   {socials.map((s) => (
@@ -117,7 +117,7 @@ export default async function SiteFooter() {
               ) : (
                 <p className="text-sm text-white/60">ดูช่องทางติดต่อได้ที่หน้า “ติดต่อเรา”</p>
               )}
-              <Link href="/contact" className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/30 px-5 text-sm font-semibold transition hover:bg-white hover:text-[#0B2A6F]">
+              <Link href="/contact" className="mt-4 inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full border border-white/30 px-5 text-sm font-semibold transition hover:bg-white hover:text-[#0B2A6F]">
                 ติดต่อเรา<Glyph name="chevron-right" size={15} strokeWidth={2.2} />
               </Link>
             </div>
