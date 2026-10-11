@@ -14,7 +14,7 @@ const LINKS = [
   { href: "/library", label: "คลังสื่อ" },
   { href: "/#courses", label: "คอร์สเรียน" },
   { href: "/schools", label: "โรงเรียน" },
-  { href: "/#about", label: "เกี่ยวกับ" },
+  { href: "/about", label: "เกี่ยวกับ" },
 ];
 
 type Props = { user: { name: string; isStaff: boolean; canReview: boolean; typeLabel: string; avatar: AvatarData | null } | null; name: string; areaName?: string; logoUrl: string | null; areas: DrawerArea[] };
@@ -46,7 +46,7 @@ function useActiveSection(ids: string[]) {
 
 export default function NavbarClient({ user, name, areaName, logoUrl, areas }: Props) {
   const pathname = usePathname();
-  const section = useActiveSection(["courses", "about"]);
+  const section = useActiveSection(["courses"]);
 
   const tabs: Tab[] = [
     { href: "/", label: "หน้าแรก", icon: "home" },

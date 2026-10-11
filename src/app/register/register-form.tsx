@@ -218,7 +218,7 @@ export default function RegisterForm({ requireCode, systemName, areaName, logoUr
             <label className={label}>ยืนยันรหัสผ่าน *<input name="confirm" type="password" required minLength={8} autoComplete="new-password" className={input} /></label>
             <label className="flex items-start gap-3 text-sm text-white/90">
               <input type="checkbox" name="consent" required className="mt-0.5 h-5 w-5 shrink-0 rounded border-white/60 bg-transparent text-[#0B2A6F] focus:ring-white" />
-              <span>ยินยอมให้เก็บและใช้ข้อมูลเพื่อการเรียนรู้ การออกเกียรติบัตร และรายงานสถิติของเครือข่าย (ไม่เก็บเลขบัตรประชาชนและที่อยู่)</span>
+              <span>ยินยอมให้เก็บและใช้ข้อมูลเพื่อการเรียนรู้ การออกเกียรติบัตร และรายงานสถิติของเครือข่าย (ไม่เก็บเลขบัตรประชาชนและที่อยู่) <Link href="/privacy" target="_blank" className="font-semibold underline underline-offset-2">อ่านนโยบายความเป็นส่วนตัว</Link></span>
             </label>
           </div>
 

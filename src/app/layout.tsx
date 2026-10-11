@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Pwa from "@/components/pwa";
+import SiteFooter from "@/components/site-footer";
+import VisitBeacon from "@/components/visit-beacon";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,6 +26,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="th">
       <body className="font-sans antialiased">
         {children}
+        <SiteFooter />
+        <VisitBeacon />
         <Pwa />
       </body>
     </html>

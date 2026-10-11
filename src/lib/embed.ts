@@ -61,6 +61,12 @@ function toUrl(raw: string): URL | { error: string } {
   return u;
 }
 
+/** For plain "open this website" links (not embeds): same safety rules as media links. Returns the cleaned URL or a Thai error. */
+export function safeHttpsUrl(raw: string): { url: string } | { error: string } {
+  const u = toUrl(raw);
+  return u instanceof URL ? { url: u.toString() } : u;
+}
+
 /** "90", "1m30s", "1h2m3s" → seconds */
 function seconds(t: string | null): number {
   if (!t) return 0;

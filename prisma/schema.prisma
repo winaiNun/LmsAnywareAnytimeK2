@@ -350,6 +350,18 @@ model SiteSetting {
   slideShuffle   Boolean  @default(false) // shuffle slide order on each page load (pinned stay first)
   requireRegistrationCode Boolean @default(true) // sign-up only with an admin-issued code (turn off to allow open sign-up)
   allowServerUploads Boolean @default(false) // may members upload images to our storage? (off until there is a server; Drive links work without)
+  // footer / contact page
+  contactAddress String?
+  contactPhone   String?
+  contactEmail   String?
+  facebookUrl    String?
+  youtubeUrl     String?
+  lineUrl        String?
+  // visitor counter
+  counterSince   DateTime @default(now()) // "counting since" date shown in the footer (editable)
+  counterBase    Int      @default(0) // starting number (e.g. carried over from an older site)
+  showVisits     Boolean  @default(true)
+  showOnline     Boolean  @default(true)
   updatedAt      DateTime @updatedAt
 }
 
@@ -424,4 +436,43 @@ model RateLimitHit {
   createdAt DateTime @default(now())
 
   @@index([key, createdAt])
+}
+
+/// Unique visitors per Bangkok calendar day (one per browser per day, counted by a cookie; nothing personal is stored).
+model SiteVisitDaily {
+  day      DateTime @id @db.Date
+  visitors Int      @default(0)
+}
+
+/// "Online now": one row per open tab (random id kept in sessionStorage), refreshed by a heartbeat; rows older than a day are swept.
+model OnlinePing {
+  sid    String   @id
+  seenAt DateTime @default(now())
+
+  @@index([seenAt])
+}
+
+/// Directory of outside media sources (other websites / channels) managed by the admin.
+model ResourceLink {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  description String?
+  groupName   String   @default("ทั่วไป")
+  icon        String   @default("globe")
+  color       String   @default("#0052FF")
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  clickCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([active, sortOrder])
+}
+
+/// Editable text pages (about, contact, privacy, terms, help). No row = the built-in default text.
+model SitePage {
+  slug      String   @id
+  title     String
+  body      String
+  updatedAt DateTime @updatedAt
 }

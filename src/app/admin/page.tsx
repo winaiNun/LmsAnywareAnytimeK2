@@ -121,6 +121,21 @@ export default async function AdminDashboard() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
+        <Card title="ผู้เข้าชมเว็บไซต์ 14 วันล่าสุด" className="xl:col-span-2" action={more("/admin/pages", "ตั้งค่าตัวนับ")}>
+          <div className="mb-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+            {[["ออนไลน์ตอนนี้", d.visits.online], ["วันนี้", d.visits.today], ["เดือนนี้", d.visits.month], ["ทั้งหมด", d.visits.total]].map(([l, v]) => (
+              <div key={l as string} className="rounded-xl bg-neutral-50 px-3 py-2"><p className="text-xs text-neutral-500">{l}</p><p className="text-xl font-bold tabular-nums">{nf.format(v as number)}</p></div>
+            ))}
+          </div>
+          <BarChart data={d.visits.daily.map((x) => ({ label: String(x.day), value: x.value }))} color="#0052FF" />
+          <p className="mt-2 text-xs text-neutral-500">ผู้เข้าชมไม่ซ้ำรายวัน (นับตั้งแต่ {formatThaiDate(new Date(d.visits.since), { style: "long" })})</p>
+        </Card>
+        <Card title="แหล่งสื่อภายนอก" action={more("/admin/resources", "จัดการ")}>
+          <p className="text-sm text-neutral-600">เพิ่มเว็บ/ช่องทางที่แนะนำให้ครูและนักเรียน แสดงที่หน้าแรก ท้ายเว็บ และหน้า “แหล่งสื่อภายนอก”</p>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-3">
         <Card title="เปิดดูสื่อ 14 วันล่าสุด" className="xl:col-span-2" action={more("/admin/media", "จัดการสื่อ")}>
           <BarChart data={daily} color="#F59E0B" />
         </Card>

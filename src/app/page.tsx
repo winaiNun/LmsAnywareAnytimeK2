@@ -4,6 +4,7 @@ import BannerCarousel from "@/components/banner-carousel";
 import Glyph, { IconTile } from "@/components/glyph";
 import MediaCard from "@/components/media-card";
 import MediaRail, { RAIL_ITEM } from "@/components/media-rail";
+import ResourceCard from "@/components/resource-card";
 import SchoolCard from "@/components/school-card";
 import SiteHero from "@/components/site-hero";
 import { getActiveBanners, getSlideshowConfig, orderForDisplay } from "@/lib/banners";
@@ -55,7 +56,7 @@ function Block({ cfg, anchor, bleed = false, alt = false, children }: { cfg: Hom
 }
 
 export default async function HomePage() {
-  const [site, sections, banners, slideshow, courses, schools, schoolTotal, areas, latest, popular] = await Promise.all([
+  const [site, sections, banners, slideshow, courses, schools, schoolTotal, areas, latest, popular, resources] = await Promise.all([
     getSiteInfo(),
     getHomeSections(),
     getActiveBanners(),
@@ -66,6 +67,7 @@ export default async function HomePage() {
     areaCounts(),
     latestMedia(12),
     popularMedia(12),
+    db.resourceLink.findMany({ where: { active: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], take: 6 }),
   ]);
 
   const content: Record<string, React.ReactNode> = {
@@ -132,8 +134,13 @@ export default async function HomePage() {
           </div>
         </div>
       ),
+    resources: resources.length > 0 && (
+      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {resources.map((r) => <li key={r.id}><ResourceCard r={r} /></li>)}
+      </ul>
+    ),
   };
-  const anchors: Record<string, string> = { areas: "areas", latest: "latest", popular: "popular", courses: "courses", schools: "schools" };
+  const anchors: Record<string, string> = { areas: "areas", latest: "latest", popular: "popular", courses: "courses", schools: "schools", resources: "resources" };
 
   return (
     <>
@@ -146,14 +153,6 @@ export default async function HomePage() {
             {content[s.key]}
           </Block>
         ))}
-
-      <footer id="about" className="mt-10 border-t border-neutral-200 bg-gradient-to-b from-background to-brand-soft">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-8 text-sm text-neutral-500">
-          <span>© 2026 {site.systemName}{site.areaName ? ` · ${site.areaName}` : ""}</span>
-          <Link href="/login" className="hover:text-brand">เข้าสู่ระบบ</Link>
-        </div>
-      </footer>
-      <div className="h-[calc(4rem+env(safe-area-inset-bottom))] md:hidden" aria-hidden />
     </>
   );
 }

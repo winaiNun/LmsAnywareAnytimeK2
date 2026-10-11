@@ -121,7 +121,7 @@ export default function NavDrawer({ user, areas }: { user: DrawerUser | null; ar
               {user && <Link href="/dashboard/media" className={row}><Glyph name="file-text" size={20} className="text-neutral-500" />สื่อของฉัน</Link>}
               {user?.canReview && <Link href="/dashboard/review" className={row}><Glyph name="clipboard-check" size={20} className="text-neutral-500" />ตรวจสื่อ</Link>}
               {user?.isStaff && <Link href="/admin" className={row}><Glyph name="wrench" size={20} className="text-neutral-500" />จัดการระบบ</Link>}
-              <Link href="/#about" className={row}><Glyph name="help-circle" size={20} className="text-neutral-500" />เกี่ยวกับ</Link>
+              <Link href="/about" className={row}><Glyph name="help-circle" size={20} className="text-neutral-500" />เกี่ยวกับ</Link>
               {installable && (
                 <button type="button" onClick={() => { setOpen(false); window.dispatchEvent(new Event("pwa-open")); }} className={`${row} w-full text-left`}>
                   <Glyph name="download" size={20} className="text-neutral-500" />ติดตั้งแอปบนหน้าจอ

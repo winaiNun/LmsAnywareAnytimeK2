@@ -1,0 +1,171 @@
+/**
+ * Editable text pages (about, contact, privacy, terms, help): built-in default text, replaced by the admin's version
+ * when a row exists in SitePage. The body is a tiny, safe markup (no HTML): blank line = new paragraph,
+ * "## " = heading, "- " = list item, [text](https://...) = link (https, "/path", mailto: and tel: only).
+ */
+import { db } from "@/lib/db";
+
+export const PAGE_SLUGS = ["about", "contact", "privacy", "terms", "help"] as const;
+export type PageSlug = (typeof PAGE_SLUGS)[number];
+export const isPageSlug = (v: string): v is PageSlug => (PAGE_SLUGS as readonly string[]).includes(v);
+
+export const PAGE_META: Record<PageSlug, { path: string; label: string }> = {
+  about: { path: "/about", label: "เกี่ยวกับระบบ" },
+  contact: { path: "/contact", label: "ติดต่อเรา" },
+  privacy: { path: "/privacy", label: "นโยบายความเป็นส่วนตัว" },
+  terms: { path: "/terms", label: "เงื่อนไขการใช้งาน" },
+  help: { path: "/help", label: "วิธีใช้งาน" },
+};
+
+export const DEFAULT_PAGES: Record<PageSlug, { title: string; body: string }> = {
+  about: {
+    title: "เกี่ยวกับระบบ",
+    body: `Anywhere Anytime คือห้องสมุดสื่อการเรียนรู้และระบบเรียนรู้ออนไลน์ของสำนักงานเขตพื้นที่การศึกษาประถมศึกษานครราชสีมา เขต 2 เพื่อให้ครูและนักเรียนเข้าถึงสื่อที่ดีได้ทุกที่ ทุกเวลา
+
+## สิ่งที่มีในระบบ
+- คลังสื่อการเรียนรู้ครบทั้ง 8 กลุ่มสาระ เปิดดูได้ทันทีโดยไม่ต้องเข้าสู่ระบบ
+- ทำเนียบโรงเรียนในเขตพื้นที่และลิงก์ไปยังเว็บไซต์ของแต่ละโรงเรียน
+- ทำเนียบแหล่งสื่อภายนอกที่คัดมาแล้ว
+- ครูและบุคลากรเพิ่มสื่อของตนเองได้ โดยผ่านการตรวจจากผู้ดูแลก่อนเผยแพร่
+
+## ผู้จัดทำ
+ดูแลโดยสำนักงานเขตพื้นที่การศึกษาประถมศึกษานครราชสีมา เขต 2 หากพบปัญหาหรือมีข้อเสนอแนะ ติดต่อได้ที่หน้า [ติดต่อเรา](/contact)`,
+  },
+  contact: {
+    title: "ติดต่อเรา",
+    body: `หากมีคำถาม พบปัญหาการใช้งาน หรือต้องการเสนอสื่อ ติดต่อเราได้ตามช่องทางด้านล่าง
+
+## ลืมรหัสผ่านหรือเข้าสู่ระบบไม่ได้
+ติดต่อผู้ดูแลระบบหรือครูผู้ดูแลของโรงเรียนเพื่อขอรหัสผ่านใหม่ เมื่อเข้าสู่ระบบด้วยรหัสชั่วคราวแล้ว ระบบจะให้ตั้งรหัสผ่านใหม่ทันที`,
+  },
+  privacy: {
+    title: "นโยบายความเป็นส่วนตัว",
+    body: `(ฉบับร่าง — กรุณาให้ผู้รับผิดชอบด้านกฎหมายหรือผู้คุ้มครองข้อมูลส่วนบุคคลของหน่วยงานตรวจสอบและแก้ไขก่อนใช้จริง)
+
+เราให้ความสำคัญกับข้อมูลส่วนบุคคลของผู้ใช้ตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA)
+
+## ข้อมูลที่เราเก็บ
+- ข้อมูลบัญชีสมาชิก: ชื่อ ประเภทสมาชิก โรงเรียนหรือหน่วยงาน อีเมลหรือชื่อผู้ใช้ เบอร์โทรศัพท์ (ถ้ากรอก) และรูปโปรไฟล์ (ถ้าเพิ่ม)
+- ข้อมูลการใช้งาน: สื่อที่สมาชิกกดถูกใจ สื่อที่สมาชิกส่ง และประวัติการตรวจ
+- สถิติผู้เข้าชมโดยรวม: จำนวนผู้เข้าชมต่อวันและจำนวนผู้ที่เปิดเว็บอยู่ขณะนั้น โดยไม่เก็บข้อมูลที่ระบุตัวตนได้
+
+## วัตถุประสงค์
+เพื่อให้บริการระบบเรียนรู้ ยืนยันตัวตนผู้ใช้ ดูแลความปลอดภัย และปรับปรุงบริการ เราไม่ขายหรือเปิดเผยข้อมูลของท่านให้บุคคลภายนอกเพื่อการตลาด
+
+## ข้อมูลของนักเรียน
+สำหรับสมาชิกประเภทนักเรียน (ผู้เยาว์) ระบบจะไม่แสดงชื่อจริงและรูปโปรไฟล์ต่อสาธารณะ แต่จะแสดงเป็น "นักเรียน" พร้อมชื่อโรงเรียนเท่านั้น
+
+## คุกกี้
+เราใช้คุกกี้ที่จำเป็นต่อการเข้าสู่ระบบ และคุกกี้ที่ช่วยนับผู้เข้าชมไม่ซ้ำรายวัน ซึ่งไม่ใช้เพื่อติดตามตัวบุคคล
+
+## การเก็บรักษาและสิทธิของท่าน
+ท่านมีสิทธิขอเข้าถึง แก้ไข หรือลบข้อมูลของตน โดยติดต่อผู้ดูแลระบบตามช่องทางในหน้า [ติดต่อเรา](/contact)`,
+  },
+  terms: {
+    title: "เงื่อนไขการใช้งาน",
+    body: `(ฉบับร่าง — กรุณาให้ผู้รับผิดชอบของหน่วยงานตรวจสอบก่อนใช้จริง)
+
+การใช้งานระบบนี้ถือว่าท่านยอมรับเงื่อนไขต่อไปนี้
+
+## การใช้งานทั่วไป
+- ใช้ระบบเพื่อการเรียนการสอนและการพัฒนาวิชาชีพเท่านั้น
+- ดูแลรหัสผ่านและ PIN ของตนเอง และไม่แบ่งปันให้ผู้อื่น
+- ห้ามกระทำการที่รบกวนหรือสร้างความเสียหายต่อระบบ
+
+## การส่งสื่อการเรียนรู้
+- ผู้ส่งต้องมีสิทธิ์ในสื่อที่นำมาแชร์ และรับผิดชอบเรื่องลิขสิทธิ์ของสื่อนั้น
+- สื่อที่ส่งจะได้รับการตรวจโดยผู้ดูแลก่อนเผยแพร่ และผู้ดูแลอาจแก้ไข ส่งกลับ หรือถอนสื่อที่ไม่เหมาะสม
+- ห้ามส่งสื่อที่ผิดกฎหมาย ลามก หรือมีข้อมูลส่วนบุคคลของผู้อื่นโดยไม่ได้รับอนุญาต
+
+## ลิงก์ภายนอก
+ระบบมีลิงก์ไปยังเว็บไซต์ภายนอก เราไม่รับผิดชอบเนื้อหาหรือนโยบายของเว็บไซต์เหล่านั้น
+
+## การระงับบัญชี
+ผู้ดูแลระบบมีสิทธิ์ระงับบัญชีที่ฝ่าฝืนเงื่อนไขนี้`,
+  },
+  help: {
+    title: "วิธีใช้งาน",
+    body: `## ดูสื่อการเรียนรู้
+เปิดหน้า [คลังสื่อ](/library) แล้วเลือกกลุ่มสาระ หรือพิมพ์ค้นหาได้เลย ไม่ต้องเข้าสู่ระบบ กดหัวใจเพื่อถูกใจสื่อได้เมื่อเข้าสู่ระบบ
+
+## สมัครสมาชิก
+ขอ "รหัสสมัคร" จากครู ผู้บริหารโรงเรียน หรือผู้ดูแลระบบ แล้วไปที่หน้า [สมัครสมาชิก](/register) กรอกรหัสและข้อมูลตามขั้นตอน
+
+## เข้าสู่ระบบด้วย PIN บนมือถือ
+หลังเข้าสู่ระบบด้วยรหัสผ่านบนมือถือ ไปที่หน้า "บัญชีของฉัน" เพื่อตั้ง PIN 6 หลัก ครั้งต่อไปกรอก PIN ได้เลย PIN ใช้ได้กับเครื่องนั้นเท่านั้น
+
+## ส่งสื่อของตนเอง
+เข้าสู่ระบบ ไปที่ "สื่อของฉัน" กด "เพิ่มสื่อ" วางลิงก์ (YouTube, Google Drive, Google Docs ฯลฯ) ระบบจะแสดงตัวอย่างให้ เมื่อส่งแล้วผู้ตรวจจะอนุมัติก่อนเผยแพร่
+
+## ลืมรหัสผ่าน
+ติดต่อผู้ดูแลระบบหรือครูผู้ดูแลของโรงเรียนเพื่อขอรหัสผ่านใหม่ ดูช่องทางได้ที่หน้า [ติดต่อเรา](/contact)
+
+## ติดตั้งเป็นแอปบนมือถือ
+กดปุ่ม "ติดตั้งแอป" ที่มุมล่าง หรือเลือก "เพิ่มไปยังหน้าจอโฮม" ในเมนูของเบราว์เซอร์`,
+  },
+};
+
+export async function getPage(slug: PageSlug): Promise<{ title: string; body: string; custom: boolean }> {
+  const row = await db.sitePage.findUnique({ where: { slug } });
+  return row ? { title: row.title, body: row.body, custom: true } : { ...DEFAULT_PAGES[slug], custom: false };
+}
+
+// ---- body markup -------------------------------------------------------------------------------------------
+
+export type Inline = { text: string; href?: string };
+export type Block = { type: "h"; text: string } | { type: "p"; inline: Inline[] } | { type: "ul"; items: Inline[][] };
+
+/** A link target we are willing to render: https://..., a site path, mailto: or tel:. Anything else becomes plain text. */
+export const safeHref = (h: string) =>
+  /^https:\/\/[^\s<>"']+$/i.test(h) || /^\/(?!\/)[^\s<>"']*$/.test(h) || /^mailto:[^\s<>"']+$/i.test(h) || /^tel:[+\d\-\s]+$/i.test(h);
+
+export function parseInline(text: string): Inline[] {
+  const out: Inline[] = [];
+  const re = /\[([^\]\n]{1,200})\]\(([^)\s]{1,500})\)/g;
+  let last = 0;
+  for (let m = re.exec(text); m; m = re.exec(text)) {
+    if (m.index > last) out.push({ text: text.slice(last, m.index) });
+    out.push(safeHref(m[2]) ? { text: m[1], href: m[2] } : { text: m[0] });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push({ text: text.slice(last) });
+  return out;
+}
+
+export function parseBody(body: string): Block[] {
+  const blocks: Block[] = [];
+  let para: string[] = [];
+  let list: Inline[][] | null = null;
+  const flushPara = () => {
+    if (para.length) blocks.push({ type: "p", inline: parseInline(para.join(" ")) });
+    para = [];
+  };
+  const flushList = () => {
+    if (list) blocks.push({ type: "ul", items: list });
+    list = null;
+  };
+  for (const raw of body.replace(/\r/g, "").split("\n")) {
+    const line = raw.trim();
+    if (!line) {
+      flushPara();
+      flushList();
+      continue;
+    }
+    if (line.startsWith("## ")) {
+      flushPara();
+      flushList();
+      blocks.push({ type: "h", text: line.slice(3).trim() });
+      continue;
+    }
+    if (line.startsWith("- ")) {
+      flushPara();
+      (list ??= []).push(parseInline(line.slice(2).trim()));
+      continue;
+    }
+    flushList();
+    para.push(line);
+  }
+  flushPara();
+  flushList();
+  return blocks;
+}

@@ -20,6 +20,8 @@ const ICONS: Record<string, string> = {
   school: "M3 10.2 12 4l9 6.2M5 10v9.5a.5.5 0 0 0 .5.5H9v-5.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V20h3.5a.5.5 0 0 0 .5-.5V10M12 4V2M12 2h3",
   menu: "M4 7h16M4 12h16M4 17h16",
   close: "M6 6l12 12M18 6 6 18",
+  link: "M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7",
+  page: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5",
 };
 
 type NavItem = { href: string; label: string; icon: string; exact?: boolean; teacher?: boolean };
@@ -32,6 +34,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/admin/courses", label: "คอร์สเรียน", icon: "course" },
       { href: "/admin/sections", label: "เซกชันหน้าแรก", icon: "layout" },
       { href: "/admin/schools", label: "โรงเรียน", icon: "school" },
+      { href: "/admin/resources", label: "แหล่งสื่อภายนอก", icon: "link" },
       { href: "/admin/banners", label: "สไลด์แนะนำ", icon: "banner", teacher: true },
     ],
   },
@@ -40,6 +43,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/users", label: "สมาชิก", icon: "users" },
       { href: "/admin/registration-codes", label: "รหัสสมัคร", icon: "users" },
+      { href: "/admin/pages", label: "หน้าข้อมูลและ Footer", icon: "page" },
       { href: "/admin/settings", label: "ตั้งค่าเขตพื้นที่", icon: "settings" },
     ],
   },
