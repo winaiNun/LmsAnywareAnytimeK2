@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import type { AvatarData } from "@/lib/avatar";
 import Avatar from "./avatar";
 import NavDrawer, { type DrawerArea } from "./nav-drawer";
+import UserMenu from "./user-menu";
 import { Icon, type IconName } from "./icons";
 
 const LINKS = [
@@ -16,7 +17,7 @@ const LINKS = [
   { href: "/#about", label: "เกี่ยวกับ" },
 ];
 
-type Props = { user: { name: string; isStaff: boolean; canReview: boolean; avatar: AvatarData | null } | null; name: string; areaName?: string; logoUrl: string | null; areas: DrawerArea[] };
+type Props = { user: { name: string; isStaff: boolean; canReview: boolean; typeLabel: string; avatar: AvatarData | null } | null; name: string; areaName?: string; logoUrl: string | null; areas: DrawerArea[] };
 type Tab = { href: string; label: string; icon: IconName; id?: string; avatar?: boolean };
 
 /** Which home-page section is on screen, for highlighting the matching bottom tab. */
@@ -94,18 +95,7 @@ export default function NavbarClient({ user, name, areaName, logoUrl, areas }: P
           {/* desktop account area; on phones this lives in the bottom tab bar */}
           <div className="hidden items-center gap-2 md:flex">
             {user ? (
-              <>
-                {user.isStaff && (
-                  <Link href="/admin" className="flex min-h-10 items-center gap-2 rounded-full border border-neutral-200 px-4 text-sm font-medium hover:bg-neutral-50">
-                    <Icon name="shield" className="h-[18px] w-[18px] text-brand" />
-                    จัดการระบบ
-                  </Link>
-                )}
-                <Link href="/dashboard" className="flex min-h-10 items-center gap-2 rounded-full bg-brand-soft py-1 pl-1 pr-4 text-sm font-semibold text-brand">
-                  <Avatar avatar={user.avatar} name={user.name || "?"} size={32} className="ring-2 ring-white" />
-                  <span className="max-w-[10rem] truncate">{user.name || "บัญชีของฉัน"}</span>
-                </Link>
-              </>
+              <UserMenu user={user} />
             ) : (
               <Link href="/login" className="group flex min-h-10 items-center gap-2 rounded-full bg-brand px-5 text-sm font-semibold text-white shadow-sm shadow-brand/30 hover:bg-brand-dark">
                 <Icon name="login" className="h-[18px] w-[18px] transition-transform group-hover:translate-x-0.5" />

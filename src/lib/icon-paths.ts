@@ -38,6 +38,7 @@ export const ICON_PATHS: Record<string, string> = {
   pin: "M12 17v5M9 10.8V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v6.8a2 2 0 0 0 .6 1.4l1.8 1.8a1 1 0 0 1-.7 1.7H7.3a1 1 0 0 1-.7-1.7l1.8-1.8a2 2 0 0 0 .6-1.4z",
   "chevron-left": "M15 18l-6-6 6-6",
   "chevron-right": "M9 18l6-6-6-6",
+  "chevron-down": "M6 9l6 6 6-6",
   search: `${circle(11, 11, 7)}M21 21l-4.3-4.3`,
   x: "M18 6L6 18M6 6l12 12",
   check: "M20 6L9 17l-5-5",
