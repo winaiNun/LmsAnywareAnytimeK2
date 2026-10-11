@@ -1,27 +1,39 @@
 import Link from "next/link";
-import { requireManagerPage } from "@/lib/permissions";
 import { BarChart, Donut } from "@/components/admin/charts";
-import { db } from "@/lib/db";
-import { THAI_MONTHS_SHORT, formatThaiDate, lastMonthsBangkok } from "@/lib/thai-date";
+import Glyph, { IconTile } from "@/components/glyph";
+import { getDashboard, type Alert } from "@/lib/admin-stats";
+import { MEMBER_TYPE_LABEL } from "@/lib/members";
+import { isAdmin, requireManagerPage } from "@/lib/permissions";
+import { THAI_MONTHS_SHORT, formatThaiDate } from "@/lib/thai-date";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "แดชบอร์ด" };
 
 const nf = new Intl.NumberFormat("th-TH");
-const dt = (d: Date) => formatThaiDate(d);
+const TYPE_COLOR = { STUDENT: "#0052FF", TEACHER: "#17B26A", SUPERVISOR: "#F59E0B", GENERAL: "#7C3AED" } as const;
 
-function StatCard({ label, value, hint, from, to, icon }: { label: string; value: number; hint: string; from: string; to: string; icon: string }) {
+function Stat({ icon, color, label, value, hint, progress }: { icon: string; color: string; label: string; value: string; hint?: React.ReactNode; progress?: number }) {
   return (
-    <div className="relative overflow-hidden rounded-xl p-5 text-white shadow-sm" style={{ backgroundImage: `linear-gradient(135deg, ${from}, ${to})` }}>
-      <svg className="absolute -right-3 -top-3 h-24 w-24 opacity-15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden><path d={icon} /></svg>
-      <p className="text-sm text-white/90">{label}</p>
-      <p className="mt-1 text-4xl font-bold">{nf.format(value)}</p>
-      <p className="mt-2 text-sm text-white/85">{hint}</p>
+    <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm text-neutral-500">{label}</p>
+          <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight">{value}</p>
+        </div>
+        <IconTile name={icon} color={color} size={46} />
+      </div>
+      {progress !== undefined && (
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-100" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
+          <div className="h-full rounded-full" style={{ width: `${Math.min(100, progress)}%`, backgroundColor: color }} />
+        </div>
+      )}
+      {hint && <p className="mt-2 text-sm text-neutral-500">{hint}</p>}
     </div>
   );
 }
 
-const Card = ({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) => (
-  <section className="rounded-xl bg-white p-5 shadow-sm">
+const Card = ({ title, action, children, className = "" }: { title: string; action?: React.ReactNode; children: React.ReactNode; className?: string }) => (
+  <section className={`min-w-0 rounded-2xl bg-white p-5 shadow-sm ${className}`}>
     <div className="mb-4 flex items-center justify-between gap-2">
       <h2 className="font-semibold">{title}</h2>
       {action}
@@ -30,139 +42,184 @@ const Card = ({ title, action, children }: { title: string; action?: React.React
   </section>
 );
 
+const more = (href: string, text = "ดูทั้งหมด") => (
+  <Link href={href} className="inline-flex items-center gap-0.5 text-sm font-medium text-brand hover:underline">{text}<Glyph name="chevron-right" size={14} strokeWidth={2.2} /></Link>
+);
+
+/** Horizontal bars: label, bar, value (the bar is relative to the largest row). */
+function Bars({ rows, empty = "ยังไม่มีข้อมูล" }: { rows: { label: string; value: number; color?: string; suffix?: string }[]; empty?: string }) {
+  const max = Math.max(...rows.map((r) => r.value), 1);
+  if (rows.length === 0 || rows.every((r) => r.value === 0)) return <p className="text-sm text-neutral-500">{empty}</p>;
+  return (
+    <ul className="space-y-2.5">
+      {rows.map((r) => (
+        <li key={r.label} className="grid grid-cols-[minmax(0,8rem)_1fr_auto] items-center gap-3 text-sm sm:grid-cols-[minmax(0,11rem)_1fr_auto]">
+          <span className="truncate text-neutral-700" title={r.label}>{r.label}</span>
+          <span className="h-2.5 overflow-hidden rounded-full bg-neutral-100"><span className="block h-full rounded-full" style={{ width: `${(r.value / max) * 100}%`, backgroundColor: r.color ?? "#0052FF" }} /></span>
+          <span className="min-w-12 text-right tabular-nums text-neutral-600">{nf.format(r.value)}{r.suffix}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const ALERT_STYLE: Record<Alert["level"], { bar: string; tone: string }> = {
+  danger: { bar: "bg-red-500", tone: "text-red-700" },
+  warn: { bar: "bg-amber-500", tone: "text-amber-800" },
+  info: { bar: "bg-brand", tone: "text-neutral-700" },
+};
+
 export default async function AdminDashboard() {
-  await requireManagerPage();
-  const now = new Date();
-  const since30 = new Date(now.getTime() - 30 * 86400000);
-  // Month buckets are Bangkok calendar months, not the server's (a sign-up at 00:30 on the 1st counts for that month).
-  const months = lastMonthsBangkok(6, now);
-  const sixMonthsAgo = months[0].start;
-
-  const [users, newUsers, mediaPublished, mediaPending, courses, publishedCourses, enrollments, recentUsers, memberDates, courseStats, totals, areas, topMedia, pendingMedia] =
-    await Promise.all([
-      db.user.count(),
-      db.user.count({ where: { createdAt: { gte: since30 } } }),
-      db.media.count({ where: { status: "PUBLISHED" } }),
-      db.media.count({ where: { status: "PENDING" } }),
-      db.course.count(),
-      db.course.count({ where: { published: true } }),
-      db.enrollment.count(),
-      db.user.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
-      db.user.findMany({ where: { createdAt: { gte: sixMonthsAgo } }, select: { createdAt: true } }),
-      db.enrollment.groupBy({ by: ["courseId"], _count: { _all: true }, _avg: { progress: true }, orderBy: { _count: { courseId: "desc" } }, take: 5 }),
-      db.media.aggregate({ where: { status: "PUBLISHED" }, _sum: { viewCount: true, likeCount: true, downloadCount: true } }),
-      db.learningArea.findMany({ orderBy: { sortOrder: "asc" }, select: { id: true, name: true, color: true, _count: { select: { media: { where: { status: "PUBLISHED" } } } } } }),
-      db.media.findMany({ where: { status: "PUBLISHED" }, orderBy: { viewCount: "desc" }, take: 5, select: { id: true, title: true, viewCount: true, likeCount: true } }),
-      db.media.findMany({ where: { status: "PENDING" }, orderBy: { updatedAt: "asc" }, take: 5, select: { id: true, title: true, updatedAt: true, createdBy: { select: { name: true } } } }),
-    ]);
-
-  const courseTitles = new Map((await db.course.findMany({ where: { id: { in: courseStats.map((c) => c.courseId) } } })).map((c) => [c.id, c.title]));
-
-  const monthly = months.map((m) => ({
-    label: THAI_MONTHS_SHORT[m.month - 1],
-    value: memberDates.filter((u) => u.createdAt >= m.start && u.createdAt < m.end).length,
-  }));
-  const views = totals._sum.viewCount ?? 0;
-  const likes = totals._sum.likeCount ?? 0;
-  const downloads = totals._sum.downloadCount ?? 0;
+  const me = await requireManagerPage();
+  const admin = isAdmin(me.role);
+  const d = await getDashboard();
+  const monthly = d.members.monthly.map((m) => ({ label: THAI_MONTHS_SHORT[m.month - 1], value: m.value }));
+  const daily = d.media.dailyViews.map((x) => ({ label: String(x.day), value: x.value }));
+  const schoolPct = d.schools.withAccount ? (d.schools.activated / d.schools.withAccount) * 100 : 0;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">แดชบอร์ด</h1>
-        <p className="text-sm text-neutral-500">ภาพรวมคลังสื่อและการเรียนรู้</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">แดชบอร์ด</h1>
+          <p className="text-sm text-neutral-500">ภาพรวมของระบบตามข้อมูลจริง ณ วันที่ {formatThaiDate(new Date(), { style: "long" })}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/admin/media/new" className="flex min-h-11 items-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark"><Glyph name="file-text" size={18} />เพิ่มสื่อ</Link>
+          {admin && <Link href="/admin/registration-codes" className="flex min-h-11 items-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-medium hover:bg-neutral-50"><Glyph name="users" size={18} />รหัสสมัคร</Link>}
+          {admin && <Link href="/admin/users/import" className="flex min-h-11 items-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-medium hover:bg-neutral-50"><Glyph name="download" size={18} />นำเข้าสมาชิก</Link>}
+        </div>
       </div>
 
+      <section aria-label="สิ่งที่ต้องดำเนินการ" className="rounded-2xl bg-white p-5 shadow-sm">
+        <h2 className="mb-3 font-semibold">ต้องดำเนินการ {d.alerts.length > 0 && <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">{d.alerts.length}</span>}</h2>
+        {d.alerts.length === 0 ? (
+          <p className="flex items-center gap-2 rounded-xl bg-green-50 px-4 py-3 text-sm font-medium text-green-800"><Glyph name="check" size={18} strokeWidth={2.4} />ไม่มีเรื่องค้าง ทุกอย่างเรียบร้อย</p>
+        ) : (
+          <ul className="grid gap-2 lg:grid-cols-2">
+            {d.alerts.map((a) => {
+              const st = ALERT_STYLE[a.level];
+              return (
+                <li key={a.text} className="flex items-stretch overflow-hidden rounded-xl border border-neutral-200">
+                  <span className={`w-1.5 shrink-0 ${st.bar}`} aria-hidden />
+                  <div className="flex min-w-0 flex-1 items-center justify-between gap-3 px-3 py-2.5">
+                    <p className={`text-sm leading-snug ${st.tone}`}>{a.text}</p>
+                    <Link href={a.href} className="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-semibold hover:bg-neutral-50">{a.action}</Link>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="สมาชิกทั้งหมด" value={users} hint={`ใหม่ใน 30 วัน +${newUsers}`} from="#FF5A1F" to="#F04438" icon="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
-        <StatCard label="สื่อที่เผยแพร่" value={mediaPublished} hint={mediaPending > 0 ? `รออนุมัติ ${mediaPending} ชิ้น` : "ไม่มีรายการรออนุมัติ"} from="#2DD4A0" to="#17B26A" icon="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM8 7h7" />
-        <StatCard label="ยอดเปิดดูสื่อ" value={views} hint={`ถูกใจ ${nf.format(likes)} · ดาวน์โหลด/เปิดลิงก์ ${nf.format(downloads)}`} from="#FBBF24" to="#F59E0B" icon="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
-        <StatCard label="คอร์สเรียน" value={courses} hint={`เปิดแล้ว ${publishedCourses} คอร์ส`} from="#FF5C8A" to="#F43F5E" icon="M5 3l14 9-14 9z" />
+        <Stat icon="users" color="#F04438" label="สมาชิกทั้งหมด" value={nf.format(d.members.total)} hint={<>ใหม่ใน 30 วัน <strong className="text-neutral-800">+{nf.format(d.members.new30)}</strong></>} />
+        <Stat icon="book-open" color="#17B26A" label="สื่อที่เผยแพร่" value={nf.format(d.media.published)} hint={d.media.pending > 0 ? <>รออนุมัติ <strong className="text-amber-700">{d.media.pending}</strong> · ร่าง {d.media.draft}</> : <>ร่าง {d.media.draft} · ส่งกลับ {d.media.rejected}</>} />
+        <Stat icon="eye" color="#F59E0B" label="เปิดดูสื่อ 30 วันล่าสุด" value={nf.format(d.media.views30)} hint={<>รวมทั้งหมด {nf.format(d.media.views)} · ถูกใจ {nf.format(d.media.likes)} · เปิดลิงก์ {nf.format(d.media.downloads)}</>} />
+        <Stat icon="app-window" color="#0052FF" label="โรงเรียนที่เข้าใช้บัญชีแล้ว" value={`${nf.format(d.schools.activated)} / ${nf.format(d.schools.withAccount)}`} progress={schoolPct} hint={`จากทำเนียบ ${nf.format(d.schools.total)} โรงเรียน`} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <div className="xl:col-span-2">
-          <Card title="สมาชิกใหม่ 6 เดือนล่าสุด">
-            <BarChart data={monthly} />
-          </Card>
-        </div>
-        <Card title="สื่อแยกตามกลุ่มสาระ">
-          <Donut
-            centerValue={String(mediaPublished)}
-            centerLabel="สื่อที่เผยแพร่"
-            segments={areas.filter((a) => a._count.media > 0).map((a) => ({ label: a.name, value: a._count.media, color: a.color }))}
-          />
+        <Card title="เปิดดูสื่อ 14 วันล่าสุด" className="xl:col-span-2" action={more("/admin/media", "จัดการสื่อ")}>
+          <BarChart data={daily} color="#F59E0B" />
+        </Card>
+        <Card title="สมาชิกตามประเภท" action={admin ? more("/admin/users") : undefined}>
+          <Donut centerValue={nf.format(d.members.total)} centerLabel="สมาชิกทั้งหมด" segments={d.members.byType.map((t) => ({ label: t.label, value: t.value, color: TYPE_COLOR[t.type] }))} />
         </Card>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <div className="xl:col-span-2">
-          <Card title="สื่อที่ถูกเปิดดูมากที่สุด" action={<Link href="/admin/media" className="text-sm text-brand">จัดการสื่อ</Link>}>
-            {topMedia.length === 0 ? (
-              <p className="text-sm text-neutral-500">ยังไม่มีสื่อที่เผยแพร่</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[420px] text-left text-sm">
-                  <thead className="text-neutral-500"><tr><th className="pb-2 font-medium">สื่อ</th><th className="pb-2 font-medium">เปิดดู</th><th className="pb-2 font-medium">ถูกใจ</th></tr></thead>
-                  <tbody>
-                    {topMedia.map((m) => (
-                      <tr key={m.id} className="border-t border-neutral-100">
-                        <td className="py-3 font-medium"><Link href={`/library/${m.id}`} className="hover:text-brand">{m.title}</Link></td>
-                        <td className="py-3 tabular-nums text-neutral-600">{nf.format(m.viewCount)}</td>
-                        <td className="py-3 tabular-nums text-neutral-600">{nf.format(m.likeCount)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
-        </div>
+        <Card title="สมาชิกใหม่ 6 เดือนล่าสุด">
+          <BarChart data={monthly} />
+        </Card>
+        <Card title="สื่อตามกลุ่มสาระ" className="xl:col-span-2" action={more("/admin/media-taxonomy", "กลุ่มสาระและผู้ตรวจ")}>
+          <Bars rows={d.media.areas.map((a) => ({ label: a.name, value: a.count, color: a.color }))} empty="ยังไม่มีสื่อที่เผยแพร่" />
+        </Card>
+      </div>
 
-        <Card title="รออนุมัติ" action={<Link href="/admin/media?status=PENDING" className="text-sm text-brand">ดูทั้งหมด</Link>}>
-          {pendingMedia.length === 0 ? (
-            <p className="text-sm text-neutral-500">ไม่มีสื่อรออนุมัติ</p>
-          ) : (
+      <div className="grid gap-4 xl:grid-cols-3">
+        <Card title="สื่อที่ถูกดูมาก (30 วัน)" action={more("/library?sort=views", "ดูในเว็บ")}>
+          {d.media.top.length === 0 ? <p className="text-sm text-neutral-500">ยังไม่มีสื่อที่เผยแพร่</p> : (
+            <ol className="space-y-3">
+              {d.media.top.map((m, i) => (
+                <li key={m.id} className="flex items-center gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-bold text-brand">{i + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <Link href={`/admin/media/${m.id}`} className="block truncate text-sm font-medium hover:text-brand">{m.title}</Link>
+                    <p className="text-xs text-neutral-500">{m.area.name}</p>
+                  </div>
+                  <span className="shrink-0 text-right text-xs tabular-nums text-neutral-500"><span className="block font-semibold text-neutral-800">{nf.format(m.viewCount)}</span>ครั้ง</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </Card>
+
+        <Card title="รออนุมัติ" action={d.media.pending > 0 ? more("/admin/media?status=PENDING") : undefined}>
+          {d.media.pendingList.length === 0 ? <p className="text-sm text-neutral-500">ไม่มีสื่อรออนุมัติ</p> : (
             <ul className="space-y-3 text-sm">
-              {pendingMedia.map((m) => (
+              {d.media.pendingList.map((m) => (
                 <li key={m.id}>
-                  <Link href={`/admin/media/${m.id}`} className="block font-medium hover:text-brand">{m.title}</Link>
-                  <span className="text-xs text-neutral-500">{m.createdBy.name} · ส่งเมื่อ {dt(m.updatedAt)}</span>
+                  <Link href={`/admin/media/${m.id}`} className="block truncate font-medium hover:text-brand">{m.title}</Link>
+                  <span className="text-xs text-neutral-500">{m.area.name} · {m.createdBy.name} · ส่งเมื่อ {formatThaiDate(m.updatedAt)}</span>
                 </li>
               ))}
             </ul>
           )}
         </Card>
+
+        {admin ? (
+          <Card title="รหัสสมัครที่ใช้งานอยู่" action={more("/admin/registration-codes", "จัดการรหัส")}>
+            <p className="mb-3 text-sm text-neutral-500">ใช้งานได้ {d.codes.valid} จาก {d.codes.total} รหัส · ใช้สมัครไปแล้ว {nf.format(d.codes.uses)} ครั้ง (30 วันล่าสุด {nf.format(d.codes.joined30)} คน) · {d.flags.requireCode ? "ระบบบังคับใช้รหัสสมัคร" : "ระบบเปิดสมัครโดยไม่ต้องใช้รหัส"}</p>
+            {d.codes.list.length === 0 ? <p className="text-sm text-neutral-500">ยังไม่มีรหัสที่ใช้งานได้</p> : (
+              <ul className="space-y-3 text-sm">
+                {d.codes.list.map((c) => (
+                  <li key={c.id}>
+                    <div className="flex items-center justify-between gap-2">
+                      <Link href={`/admin/registration-codes/${c.id}`} className="truncate font-medium hover:text-brand">{c.label}</Link>
+                      <span className="shrink-0 text-xs tabular-nums text-neutral-500">{c.usedCount}{c.maxUses !== null ? ` / ${c.maxUses}` : ""}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-neutral-100"><div className="h-full rounded-full bg-brand" style={{ width: c.maxUses ? `${Math.min(100, (c.usedCount / c.maxUses) * 100)}%` : "100%", opacity: c.maxUses ? 1 : 0.25 }} /></div>
+                    <p className="mt-0.5 text-xs text-neutral-500">{MEMBER_TYPE_LABEL[c.memberType]}{c.school ? ` · ${c.school.name}` : ""}{c.expiresAt ? ` · หมดอายุ ${formatThaiDate(c.expiresAt)}` : ""}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        ) : (
+          <Card title="สิทธิ์ของคุณ"><p className="text-sm text-neutral-500">การจัดการสมาชิก รหัสสมัคร และตั้งค่าระบบเป็นของผู้ดูแลระบบ</p></Card>
+        )}
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <Card title="คอร์สยอดนิยม" action={<Link href="/admin/courses" className="text-sm text-brand">ทั้งหมด</Link>}>
-          <ul className="space-y-4">
-            {courseStats.map((c) => {
-              const avg = Math.round(c._avg.progress ?? 0);
-              return (
-                <li key={c.courseId} className="space-y-1.5">
-                  <div className="flex justify-between gap-2 text-sm">
-                    <span className="truncate font-medium">{courseTitles.get(c.courseId)}</span>
-                    <span className="shrink-0 text-neutral-500">{c._count._all} คน</span>
+        <Card title="ทำเนียบโรงเรียน" action={more("/admin/schools", "จัดการ")}>
+          <Bars
+            rows={[
+              { label: "เข้าใช้บัญชีแล้ว", value: d.schools.activated, color: "#17B26A", suffix: ` / ${d.schools.withAccount}` },
+              { label: "มีภาพการ์ด", value: d.schools.total - d.schools.noCard, color: "#0052FF", suffix: ` / ${d.schools.total}` },
+              { label: "มีลิงก์เว็บไซต์", value: d.schools.total - d.schools.noLink, color: "#7C3AED", suffix: ` / ${d.schools.total}` },
+            ]}
+          />
+        </Card>
+        <Card title="โรงเรียนแยกตามอำเภอ">
+          <Bars rows={d.schools.byDistrict.map((x) => ({ label: `อ.${x.district}`, value: x.count }))} empty="ยังไม่มีข้อมูลโรงเรียน" />
+        </Card>
+        {admin && (
+          <Card title="สมาชิกล่าสุด" action={more("/admin/users")}>
+            <ul className="space-y-3 text-sm">
+              {d.members.recent.map((u) => (
+                <li key={u.id} className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <Link href={`/admin/users/${u.id}`} className="block truncate font-medium hover:text-brand">{u.name}</Link>
+                    <p className="truncate text-xs text-neutral-500">{MEMBER_TYPE_LABEL[u.memberType]}{u.memberSchool ? ` · ${u.memberSchool.name}` : ""}{u.registrationCode ? ` · รหัส “${u.registrationCode.label}”` : ""}</p>
                   </div>
-                  <div className="h-2 rounded-full bg-neutral-100" role="progressbar" aria-valuenow={avg} aria-valuemin={0} aria-valuemax={100} aria-label="ความคืบหน้าเฉลี่ย">
-                    <div className="h-2 rounded-full bg-brand" style={{ width: `${avg}%` }} />
-                  </div>
-                  <p className="text-xs text-neutral-500">ความคืบหน้าเฉลี่ย {avg}%</p>
+                  <span className="shrink-0 text-xs text-neutral-500">{formatThaiDate(u.createdAt)}</span>
                 </li>
-              );
-            })}
-          </ul>
-        </Card>
-        <Card title="การลงทะเบียนเรียนทั้งหมด"><p className="text-3xl font-bold">{nf.format(enrollments)}</p><p className="text-sm text-neutral-500">ครั้ง ในทุกคอร์ส</p></Card>
-        <Card title="สมาชิกล่าสุด">
-          <ul className="space-y-2 text-sm">
-            {recentUsers.map((u) => (
-              <li key={u.id} className="flex justify-between gap-2"><span className="truncate">{u.name}</span><span className="shrink-0 text-neutral-500">{dt(u.createdAt)}</span></li>
-            ))}
-          </ul>
-        </Card>
+              ))}
+            </ul>
+          </Card>
+        )}
       </div>
     </div>
   );

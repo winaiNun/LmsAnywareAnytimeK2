@@ -1,5 +1,7 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+
 import { useEffect, useRef, useState } from "react";
 
 type InstallEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
@@ -8,6 +10,7 @@ const DISMISS_KEY = "pwa-install-dismissed";
 
 /** Registers the service worker and offers "add to home screen" (Android prompt / iOS instructions). */
 export default function Pwa() {
+  const pathname = usePathname();
   const [deferred, setDeferred] = useState<InstallEvent | null>(null);
   const [ios, setIos] = useState(false);
   const [hidden, setHidden] = useState(true);
@@ -51,7 +54,7 @@ export default function Pwa() {
     try { localStorage.setItem(DISMISS_KEY, "1"); } catch {}
   }
 
-  if (hidden || (!deferred && !ios)) return null;
+  if (hidden || (!deferred && !ios) || pathname.startsWith("/admin")) return null; // the back office has its own bottom-left controls
 
   // A small chip in the bottom-left corner (above the phone tab bar), never a big dialog.
   return (

@@ -1,9 +1,12 @@
 "use client";
 
-import Avatar from "@/components/avatar";
+import AdminSearch from "@/components/admin/admin-search";
+import Glyph from "@/components/glyph";
+import UserMenu from "@/components/user-menu";
 import type { AvatarData } from "@/lib/avatar";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { useState } from "react";
 
 const ICONS: Record<string, string> = {
@@ -50,7 +53,7 @@ const Icon = ({ name, className = "h-5 w-5" }: { name: string; className?: strin
 
 type Props = {
   site: { systemName: string; logoUrl: string | null };
-  user: { name: string; role: string; avatar: AvatarData | null };
+  user: { name: string; role: string; typeLabel: string; canReview: boolean; avatar: AvatarData | null };
   children: React.ReactNode;
 };
 
@@ -61,6 +64,8 @@ export default function AdminShell({ site, user, children }: Props) {
   // Teachers (lesson creators) only get the pages they may use.
   const manager = user.role === "ADMIN" || user.role === "LIBRARIAN";
   const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter((it) => manager || it.teacher) })).filter((g) => g.items.length > 0);
+
+  const pages = groups.flatMap((g) => g.items.map((it) => ({ href: it.href, label: it.label })));
 
   const sidebar = (
     <div className="flex h-full flex-col bg-white">
@@ -95,9 +100,14 @@ export default function AdminShell({ site, user, children }: Props) {
           </div>
         ))}
       </nav>
-      <Link href="/" className="m-3 flex min-h-11 items-center justify-center rounded-lg border border-neutral-200 text-sm text-neutral-600 hover:bg-neutral-50">
-        ดูหน้าเว็บไซต์ →
-      </Link>
+      <div className="space-y-2 border-t border-neutral-200 p-3">
+        <Link href="/" className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-neutral-200 text-sm text-neutral-700 hover:bg-neutral-50">
+          <Glyph name="home" size={18} />ดูหน้าเว็บไซต์
+        </Link>
+        <button type="button" onClick={() => signOut({ callbackUrl: "/login" })} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50">
+          <Glyph name="logout" size={18} />ออกจากระบบ
+        </button>
+      </div>
     </div>
   );
 
@@ -119,17 +129,9 @@ export default function AdminShell({ site, user, children }: Props) {
           <button type="button" aria-label="เปิดเมนู" aria-expanded={open} onClick={() => setOpen(true)} className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-white/10 lg:hidden">
             <Icon name="menu" />
           </button>
-          <label className="relative hidden max-w-sm flex-1 sm:block">
-            <span className="sr-only">ค้นหา</span>
-            <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-            <input placeholder="ค้นหา..." className="h-9 w-full rounded-lg bg-white/10 pl-9 pr-3 text-sm placeholder:text-white/60 focus:bg-white/20 focus:outline-none" />
-          </label>
-          <div className="ml-auto flex items-center gap-3">
-            <div className="hidden text-right text-sm leading-tight sm:block">
-              <p className="font-semibold">{user.name}</p>
-              <p className="text-xs text-white/70">{user.role === "ADMIN" ? "ผู้ดูแลระบบ" : user.role === "LIBRARIAN" ? "บรรณารักษ์" : "ผู้สร้างบทเรียน"}</p>
-            </div>
-            <Avatar avatar={user.avatar} name={user.name || "A"} size={36} className="ring-2 ring-white/40" />
+          <div className="min-w-0 flex-1 sm:max-w-md"><AdminSearch pages={pages} compact /></div>
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            <UserMenu context="admin" user={{ name: user.name, typeLabel: user.typeLabel, isStaff: true, canReview: user.canReview, avatar: user.avatar }} />
           </div>
         </header>
         <main className="p-4 sm:p-6">{children}</main>
