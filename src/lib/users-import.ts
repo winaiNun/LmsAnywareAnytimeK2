@@ -2,7 +2,7 @@
  * Turning a spreadsheet into validated member rows (pure functions, easy to test). Reading the .xlsx/.csv
  * file itself lives in `src/lib/excel.ts`; matching against the database happens in the server action.
  */
-import { MEMBER_TYPES, USERNAME_RE, needsSchool, profileSchema, type MemberTypeKey, PREFIXES } from "@/lib/members";
+import { MEMBER_TYPES, USERNAME_RE, needsSchool, profileSchema, type MemberTypeKey, AUTO_PREFIXES } from "@/lib/members";
 
 export type UserField = "username" | "email" | "prefix" | "firstName" | "lastName" | "fullName" | "memberType" | "school" | "posGrade" | "password";
 
@@ -103,7 +103,7 @@ export function resolveSchool(text: string, schools: SchoolRef[]): SchoolRef | "
 export function splitFullName(full: string): { prefix: string | null; first: string; last: string } {
   let rest = full.replace(/\s+/g, " ").trim();
   let prefix: string | null = null;
-  for (const p of [...PREFIXES].sort((a, b) => b.length - a.length)) {
+  for (const p of [...AUTO_PREFIXES].sort((a, b) => b.length - a.length)) {
     if (rest.startsWith(p)) { prefix = p; rest = rest.slice(p.length).trim(); break; }
   }
   const at = rest.indexOf(" ");

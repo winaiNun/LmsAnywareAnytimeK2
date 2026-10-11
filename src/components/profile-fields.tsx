@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import SchoolPicker, { type SchoolOption } from "@/components/school-picker";
-import { MEMBER_TYPES, MEMBER_TYPE_LABEL, PREFIXES, needsSchool, type MemberTypeKey } from "@/lib/members";
+import PrefixField from "@/components/prefix-field";
+import { MEMBER_TYPES, MEMBER_TYPE_LABEL, needsSchool, type MemberTypeKey } from "@/lib/members";
 
 export type { SchoolOption };
 export type ProfileValues = {
@@ -33,12 +34,7 @@ export default function ProfileFields({ values, schools }: { values: ProfileValu
         </select>
       </label>
       <div className="grid gap-4 sm:grid-cols-3">
-        <label className="block space-y-1"><span className="text-sm font-medium">คำนำหน้า</span>
-          <select name="prefix" defaultValue={values.prefix} className={input}>
-            <option value="">-</option>
-            {PREFIXES.map((p) => <option key={p}>{p}</option>)}
-          </select>
-        </label>
+        <PrefixField defaultValue={values.prefix} className={input} />
         <label className="block space-y-1"><span className="text-sm font-medium">ชื่อ *</span><input name="firstName" required maxLength={60} defaultValue={values.firstName} className={input} /></label>
         <label className="block space-y-1"><span className="text-sm font-medium">นามสกุล *</span><input name="lastName" required maxLength={60} defaultValue={values.lastName} className={input} /></label>
       </div>

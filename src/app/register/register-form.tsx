@@ -6,7 +6,8 @@ import { useRef, useState } from "react";
 import { Icon, Spinner, type IconName } from "@/components/icons";
 import Turnstile, { turnstileOn } from "@/components/turnstile";
 import SchoolPicker, { type SchoolOption } from "@/components/school-picker";
-import { MEMBER_TYPES, MEMBER_TYPE_LABEL, PREFIXES, needsSchool, type MemberTypeKey } from "@/lib/members";
+import PrefixField from "@/components/prefix-field";
+import { MEMBER_TYPES, MEMBER_TYPE_LABEL, needsSchool, type MemberTypeKey } from "@/lib/members";
 import { checkRegistrationCode } from "./actions";
 
 type Props = { requireCode: boolean; systemName: string; areaName: string; logoUrl: string | null; schools: SchoolOption[] };
@@ -178,12 +179,7 @@ export default function RegisterForm({ requireCode, systemName, areaName, logoUr
               <p className="rounded-xl bg-white/15 px-3 py-2 text-sm">✓ รหัสถูกต้อง: <strong>{verified.label}</strong> — สมัครในฐานะ <strong>{MEMBER_TYPE_LABEL[type]}</strong></p>
             )}
             <div className="grid grid-cols-3 gap-3">
-              <label className={label}>คำนำหน้า
-                <select name="prefix" defaultValue="" className={input}>
-                  <option value="">-</option>
-                  {PREFIXES.map((p) => <option key={p}>{p}</option>)}
-                </select>
-              </label>
+              <PrefixField className={input} labelClassName={label} titleClassName="" />
               <label className={`${label} col-span-2`}>ชื่อ *<input name="firstName" required maxLength={60} autoComplete="given-name" className={input} /></label>
             </div>
             <label className={label}>นามสกุล *<input name="lastName" required maxLength={60} autoComplete="family-name" className={input} /></label>

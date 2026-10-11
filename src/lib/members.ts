@@ -10,7 +10,23 @@ export const MEMBER_TYPE_LABEL: Record<MemberTypeKey, string> = {
   GENERAL: "บุคคลทั่วไป",
 };
 
-export const PREFIXES = ["เด็กชาย", "เด็กหญิง", "นาย", "นางสาว", "นาง", "ดร.", "ผศ.", "รศ.", "ศ."];
+/**
+ * Titles offered in the drop-down, grouped. Anyone whose title is not here picks "อื่นๆ" and types it (profileSchema accepts any
+ * Thai/English text up to 30 characters). `auto` = safe to recognise at the start of a full name in an import file (dotted
+ * abbreviations and the long forms); plain words like "คุณ" or "พระ" could be the start of a real name, so they are not guessed.
+ */
+export const PREFIX_GROUPS: { label: string; items: { value: string; auto: boolean }[] }[] = [
+  { label: "ทั่วไป", items: ["เด็กชาย", "เด็กหญิง", "ด.ช.", "ด.ญ.", "นาย", "นางสาว", "นาง"].map((value) => ({ value, auto: true })).concat([{ value: "คุณ", auto: false }]) },
+  { label: "วิชาการ / วิชาชีพ", items: ["ศ.ดร.", "รศ.ดร.", "ผศ.ดร.", "ศ.", "รศ.", "ผศ.", "ดร.", "นพ.", "พญ.", "ทพ.", "ภก.", "ภญ."].map((value) => ({ value, auto: true })) },
+  { label: "ทหาร", items: ["ว่าที่ร้อยตรี", "ว่าที่ร้อยตรีหญิง", "ร.ต.", "ร.ท.", "ร.อ.", "พ.ต.", "พ.ท.", "พ.อ.", "พล.ต.", "พล.ท.", "พล.อ.", "ส.ต.", "ส.ท.", "ส.อ.", "จ.ส.ต.", "จ.ส.ท.", "จ.ส.อ."].map((value) => ({ value, auto: true })) },
+  { label: "ตำรวจ", items: ["ด.ต.", "ร.ต.ต.", "ร.ต.ท.", "ร.ต.อ.", "พ.ต.ต.", "พ.ต.ท.", "พ.ต.อ.", "พล.ต.ต.", "พล.ต.ท.", "พล.ต.อ."].map((value) => ({ value, auto: true })) },
+  { label: "ศาสนา", items: ["พระ", "พระครู", "พระมหา", "สามเณร"].map((value) => ({ value, auto: false })) },
+];
+
+/** Every title in the list. */
+export const PREFIXES: string[] = PREFIX_GROUPS.flatMap((g) => g.items.map((i) => i.value));
+/** The ones an import may split off the front of "นางสาวสมหญิง ใจดี" (longest first is done by the caller). */
+export const AUTO_PREFIXES: string[] = PREFIX_GROUPS.flatMap((g) => g.items.filter((i) => i.auto).map((i) => i.value));
 
 /**
  * The full name as shown anywhere a real name appears (and as printed on certificates): the title is written attached
@@ -35,7 +51,13 @@ const text = (max: number) => z.string().trim().max(max).optional().transform((v
 export const profileSchema = z
   .object({
     memberType: z.enum(MEMBER_TYPES),
-    prefix: text(30),
+    prefix: z
+      .string()
+      .trim()
+      .max(30, "คำนำหน้าไม่เกิน 30 ตัวอักษร")
+      .regex(/^[฀-๿A-Za-z.() -]*$/, "คำนำหน้าใช้ได้เฉพาะตัวอักษรไทย/อังกฤษ และเครื่องหมาย . ( ) -")
+      .optional()
+      .transform((v) => (v ? v : undefined)),
     firstName: z.string().trim().min(1, "กรุณากรอกชื่อ").max(60),
     lastName: z.string().trim().min(1, "กรุณากรอกนามสกุล").max(60),
     phone: text(20),

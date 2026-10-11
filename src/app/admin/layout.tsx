@@ -14,14 +14,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const [site, me, reviewerCount] = await Promise.all([
     getSiteInfo(),
-    db.user.findUnique({ where: { id: session.user.id }, select: { avatarKey: true, avatarDriveId: true, avatarCx: true, avatarCy: true, avatarZoom: true, avatarAspect: true, memberType: true } }),
+    db.user.findUnique({ where: { id: session.user.id }, select: { name: true, avatarKey: true, avatarDriveId: true, avatarCx: true, avatarCy: true, avatarZoom: true, avatarAspect: true, memberType: true } }),
     db.areaReviewer.count({ where: { userId: session.user.id } }),
   ]);
 
   return (
     <AdminShell
       site={{ systemName: site.systemName, logoUrl: site.logoUrl }}
-      user={{ name: session.user.name ?? "", role: session.user.role, typeLabel: me ? MEMBER_TYPE_LABEL[me.memberType] : "", canReview: reviewerCount > 0 || session.user.role === "ADMIN", avatar: me ? avatarOf(me) : null }}
+      user={{ name: me?.name ?? session.user.name ?? "", role: session.user.role, typeLabel: me ? MEMBER_TYPE_LABEL[me.memberType] : "", canReview: reviewerCount > 0 || session.user.role === "ADMIN", avatar: me ? avatarOf(me) : null }}
     >
       {children}
     </AdminShell>

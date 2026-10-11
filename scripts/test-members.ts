@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { avatarBox, clampCenter } from "../src/lib/avatar";
 import { CODE_LENGTH, codeStatus, formatCode, generateCode, normalizeCode } from "../src/lib/registration";
 import { pinAllowed, pinProblem } from "../src/lib/pin";
-import { composePersonName, profileData, profileSchema, usernameField } from "../src/lib/members";
+import { AUTO_PREFIXES, PREFIXES, composePersonName, profileData, profileSchema, usernameField } from "../src/lib/members";
 
 let passed = 0;
 const t = (name: string, fn: () => void) => { try { fn(); passed++; } catch (e) { console.error(`✗ ${name}\n  ${(e as Error).message}`); process.exitCode = 1; } };
@@ -48,6 +48,20 @@ t("names: the title is attached to the first name (certificate rule)", () => {
   assert.equal(composePersonName("นาย", "วินัย", ""), "นายวินัย");
   const p = profileData(profileSchema.parse({ memberType: "TEACHER", prefix: "นาง", firstName: "วิภา", lastName: "ใจดี", schoolId: "s1" }));
   assert.equal(p.name, "นางวิภา ใจดี");
+});
+
+t("titles: a list plus free text", () => {
+  const base = { memberType: "GENERAL", firstName: "วินัย", lastName: "หนุนกระโทก" };
+  for (const ok of ["นาย", "ว่าที่ร้อยตรี", "พล.ต.อ.", "ว่าที่ร.ต.หญิง", "พระครูสมุห์", "ม.ล.", "Dr.", "ศ.(พิเศษ)"]) {
+    const r = profileSchema.safeParse({ ...base, prefix: ok });
+    assert.equal(r.success, true, ok);
+    assert.equal(profileData(r.data!).name, `${ok}วินัย หนุนกระโทก`);
+  }
+  assert.equal(profileSchema.safeParse({ ...base, prefix: "" }).data?.prefix, undefined);
+  for (const bad of ["x".repeat(31), "<b>", "นาย1", "นาย;drop", "line\nbreak"]) assert.equal(profileSchema.safeParse({ ...base, prefix: bad }).success, false, bad);
+  assert.equal(new Set(PREFIXES).size, PREFIXES.length, "no duplicates");
+  assert.ok(PREFIXES.includes("ว่าที่ร้อยตรี") && PREFIXES.includes("พล.ต.อ.") && PREFIXES.includes("นางสาว"));
+  assert.ok(AUTO_PREFIXES.every((p) => PREFIXES.includes(p)) && !AUTO_PREFIXES.includes("คุณ") && !AUTO_PREFIXES.includes("พระ"));
 });
 
 t("usernames", () => {

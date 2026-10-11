@@ -45,7 +45,11 @@ t("school lookup by code, by name, ambiguity", () => {
 
 t("full names are split with the prefix", () => {
   assert.deepEqual(splitFullName("นางสาวสมหญิง ใจดี"), { prefix: "นางสาว", first: "สมหญิง", last: "ใจดี" });
-  assert.deepEqual(splitFullName("เด็กชาย สมชาย รักเรียน"), { prefix: "เด็กชาย", first: "สมชาย", last: "รักเรียน" });
+  assert.deepEqual(splitFullName("ว่าที่ร้อยตรีวินัย หนุนกระโทก"), { prefix: "ว่าที่ร้อยตรี", first: "วินัย", last: "หนุนกระโทก" });
+assert.deepEqual(splitFullName("ผศ.ดร.สมศรี ใจดี"), { prefix: "ผศ.ดร.", first: "สมศรี", last: "ใจดี" });
+assert.deepEqual(splitFullName("คุณากร ใจดี"), { prefix: null, first: "คุณากร", last: "ใจดี" }); // a name that merely starts with "คุณ" is not split
+assert.deepEqual(splitFullName("พระเอก ใจดี"), { prefix: null, first: "พระเอก", last: "ใจดี" });
+assert.deepEqual(splitFullName("เด็กชาย สมชาย รักเรียน"), { prefix: "เด็กชาย", first: "สมชาย", last: "รักเรียน" });
   assert.deepEqual(splitFullName("สมศักดิ์"), { prefix: null, first: "สมศักดิ์", last: "" });
 });
 
