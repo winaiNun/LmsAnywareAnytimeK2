@@ -41,11 +41,11 @@ export default function SectionHeading(p: HeadingProps) {
   const muted = dark ? "text-white/80" : "text-neutral-500";
 
   const title = (
-    <h2 id={p.id} className={`font-bold leading-tight tracking-tight ${HEADING_SIZE[p.size]}`} style={titleStyle}>
+    <h2 id={p.id} className={`-my-1.5 py-1.5 font-bold leading-[1.45] tracking-tight ${HEADING_SIZE[p.size]}`} style={titleStyle}>
       {p.title}
     </h2>
   );
-  const sub = p.subtitle ? <p className={`mt-1.5 max-w-2xl text-[15px] leading-relaxed ${muted}`}>{p.subtitle}</p> : null;
+  const sub = p.subtitle ? <p className={`mt-1.5 max-w-2xl text-[15px] leading-relaxed ${muted} ${p.align === "center" ? "mx-auto" : p.align === "right" ? "ml-auto" : ""}`}>{p.subtitle}</p> : null;
   const label = p.eyebrow ? (
     <span
       className="mb-2 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold tracking-wide"
@@ -107,6 +107,17 @@ export default function SectionHeading(p: HeadingProps) {
   }
 
   // accent (default)
+  if (p.align === "center") {
+    return (
+      <header className="flex flex-col items-center text-center">
+        {label}
+        {title}
+        {sub}
+        <span className="mx-auto">{bar}</span>
+        {more && <div className="mt-4">{more}</div>}
+      </header>
+    );
+  }
   return (
     <header className={`flex flex-wrap items-end justify-between gap-x-6 gap-y-3 ${p.align === "right" ? "flex-row-reverse" : ""}`}>
       <div className={`flex min-w-0 flex-col ${alignClass}`}>
@@ -115,7 +126,7 @@ export default function SectionHeading(p: HeadingProps) {
         {sub}
         <span className={barAlign}>{bar}</span>
       </div>
-      {more && <div className={p.align === "center" ? "mx-auto" : ""}>{more}</div>}
+      {more && <div>{more}</div>}
     </header>
   );
 }
