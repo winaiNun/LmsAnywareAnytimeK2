@@ -7,7 +7,8 @@ import { topViewedIds } from "@/lib/media-counters";
 export const SORTS = ["latest", "views", "likes"] as const;
 export type Sort = (typeof SORTS)[number];
 export const SORT_LABEL: Record<Sort, string> = { latest: "ล่าสุด", views: "ดูมากสุด", likes: "ถูกใจมากสุด" };
-export const PER_PAGE = 20;
+/** 12 divides evenly into every column count the grid uses (1, 2, 3, 4): 4 columns x 3 rows on a desktop, so no half-empty last row. */
+export const PER_PAGE = 12;
 
 export type MediaQuery = { q?: string; area?: string; type?: string; level?: string; by?: string; sort?: Sort; page?: number };
 

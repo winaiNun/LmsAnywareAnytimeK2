@@ -43,9 +43,9 @@ export default async function LibraryPage({ searchParams }: { searchParams: SP }
           <p className="text-sm text-neutral-500">{result.total.toLocaleString("th-TH")} รายการ{searchParams.q ? ` ที่ตรงกับ “${searchParams.q}”` : ""} · คลิกเพื่อเปิดใช้งานหรือดาวน์โหลดได้ทันที ไม่ต้องเข้าสู่ระบบ</p>
         </header>
 
-        {/* learning areas: swipe sideways on a phone */}
-        <nav aria-label="กลุ่มสาระ" className="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <ul className="flex gap-2">
+        {/* learning areas: one swipeable row on a phone; on a computer they wrap onto two rows so every one is visible and clickable (a hidden scrollbar can not be dragged with a mouse) */}
+        <nav aria-label="กลุ่มสาระ" className="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden">
+          <ul className="flex gap-2 md:flex-wrap">
             <li><Link href={href({ area: undefined, page: undefined })} aria-current={!searchParams.area ? "page" : undefined} className={`${chip} ${!searchParams.area ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white"}`}>ทั้งหมด</Link></li>
             {areas.map((a) => {
               const on = searchParams.area === a.slug;
@@ -90,10 +90,13 @@ export default async function LibraryPage({ searchParams }: { searchParams: SP }
             <p className="mt-1 text-sm text-neutral-500">ลองเปลี่ยนคำค้นหรือเลือกกลุ่มสาระอื่น</p>
           </div>
         ) : (
-          <>
+          <div className="space-y-5">
             <MediaGrid items={result.items} />
+            <p className="text-center text-sm text-neutral-500" aria-live="polite">
+              แสดง {((result.page - 1) * PER_PAGE + 1).toLocaleString("th-TH")}–{Math.min(result.page * PER_PAGE, result.total).toLocaleString("th-TH")} จาก {result.total.toLocaleString("th-TH")} รายการ
+            </p>
             <Pager page={result.page} pages={result.pages} href={(p) => href({ page: p > 1 ? String(p) : undefined })} label={`เลือกหน้า (หน้าละ ${PER_PAGE} รายการ)`} />
-          </>
+          </div>
         )}
         </LiveFilter>
       </main>
