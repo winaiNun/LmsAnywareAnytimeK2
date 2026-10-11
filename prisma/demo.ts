@@ -20,9 +20,6 @@ const pick = <T,>(a: T[]) => a[Math.floor(rnd() * a.length)];
 const daysAgo = (n: number) => new Date(Date.now() - n * 86400000);
 
 async function clear() {
-  await db.enrollment.deleteMany({ where: { id: { startsWith: "demo_" } } });
-  await db.lesson.deleteMany({ where: { id: { startsWith: "demo_" } } });
-  await db.course.deleteMany({ where: { id: { startsWith: "demo_" } } });
   await db.banner.deleteMany({ where: { id: { startsWith: "demo_" } } });
   await db.user.deleteMany({ where: { id: { startsWith: "demo_" } } });
   await db.siteSetting.deleteMany({ where: { logoKey: { startsWith: "site/demo-" } } });
@@ -112,28 +109,7 @@ async function main() {
   await db.user.createMany({ data: users });
   const students = users.filter((u) => u.role === "STUDENT");
 
-  // ---- LMS ----
-  const courseDefs = [
-    ["ทักษะดิจิทัลสำหรับครู", 12], ["การวัดและประเมินผลการเรียนรู้", 8], ["พื้นฐานการวิเคราะห์ข้อมูล", 12],
-    ["การออกแบบสื่อการสอน", 10], ["ภาษาอังกฤษเพื่อการสื่อสาร", 16], ["ความปลอดภัยบนโลกออนไลน์", 6],
-  ] as const;
-  await db.course.createMany({
-    data: courseDefs.map(([title], i) => ({ id: `demo_course_${i + 1}`, title, description: "คอร์สตัวอย่างสำหรับแสดงผล", published: i !== 5, createdAt: daysAgo(30 + i * 20) })),
-  });
-  await db.lesson.createMany({
-    data: courseDefs.flatMap(([, n], i) =>
-      Array.from({ length: n }, (_, j) => ({ id: `demo_lesson_${i + 1}_${j + 1}`, courseId: `demo_course_${i + 1}`, title: `บทที่ ${j + 1}`, position: j + 1 })),
-    ),
-  });
-  const enrollments: { id: string; userId: string; courseId: string; progress: number; createdAt: Date }[] = [];
-  for (const [i, u] of students.entries()) {
-    for (const ci of new Set([Math.floor(rnd() * 5), Math.floor(rnd() * 5)])) {
-      enrollments.push({ id: `demo_enr_${i}_${ci}`, userId: u.id, courseId: `demo_course_${ci + 1}`, progress: Math.floor(rnd() * 11) * 10, createdAt: daysAgo(Math.floor(rnd() * 90)) });
-    }
-  }
-  await db.enrollment.createMany({ data: enrollments });
-
-  console.log(`Demo data created: ${users.length} users, ${courseDefs.length} courses, ${enrollments.length} enrollments.`);
+  console.log(`Demo data created: ${users.length} users.`);
   console.log("Demo members: member1@demo.local ... (password Demo12345!)");
 }
 

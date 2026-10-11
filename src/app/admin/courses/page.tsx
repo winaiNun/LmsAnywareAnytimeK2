@@ -34,7 +34,7 @@ export default async function CoursesPage() {
                     <span className="text-xs text-neutral-500">{avg.get(c.id) ?? 0}%</span>
                   </div>
                 </td>
-                <td className="p-3"><span className={`rounded-full px-3 py-1 text-xs font-medium ${c.published ? "bg-green-50 text-green-700" : "bg-neutral-100 text-neutral-500"}`}>{c.published ? "เปิดแล้ว" : "ฉบับร่าง"}</span></td>
+                <td className="p-3"><span className={`rounded-full px-3 py-1 text-xs font-medium ${c.status === "PUBLISHED" ? "bg-green-50 text-green-700" : "bg-neutral-100 text-neutral-500"}`}>{c.status === "PUBLISHED" ? "เปิดแล้ว" : "ฉบับร่าง"}</span></td>
               </tr>
             ))}
           </tbody>

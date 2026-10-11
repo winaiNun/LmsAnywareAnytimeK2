@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 // Basic public course page (title, description, lesson outline). Enrolment/learning view comes later.
 export default async function CoursePage({ params }: { params: { id: string } }) {
   const course = await db.course.findFirst({
-    where: { id: params.id, published: true },
+    where: { id: params.id, status: "PUBLISHED" },
     include: { lessons: { orderBy: { position: "asc" } }, _count: { select: { enrollments: true } } },
   });
   if (!course) notFound();

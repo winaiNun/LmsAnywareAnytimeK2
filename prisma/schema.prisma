@@ -67,6 +67,10 @@ model User {
   updatedAt    DateTime @updatedAt
 
   enrollments Enrollment[]
+  coursesCreated Course[] @relation("CourseCreator")
+  quizAttempts   QuizAttempt[]    @relation("QuizAttempts")
+  lessonProgress LessonProgress[] @relation("LessonProgress")
+  blockProgress  BlockProgress[]  @relation("BlockProgress")
   banners     Banner[]     @relation("BannerCreator")
   school      School?      @relation("SchoolAccount") // set when this account manages a school
   mustChangePassword Boolean @default(false) // temporary password issued by an admin/import
@@ -139,6 +143,7 @@ model LearningArea {
   active    Boolean @default(true)
 
   media     Media[]
+  courses   Course[]
   reviewers AreaReviewer[]
 }
 
@@ -161,6 +166,7 @@ model EducationLevel {
   active    Boolean @default(true)
 
   media MediaLevel[]
+  courses CourseLevel[]
 }
 
 model Media {
@@ -198,6 +204,7 @@ model Media {
   updatedAt DateTime @updatedAt
 
   items MediaItem[]
+  lessonBlocks LessonBlock[]
   likes MediaLike[]
   views MediaViewDaily[]
 
@@ -266,37 +273,240 @@ model AreaReviewer {
 }
 
 // ---------- LMS ----------
-model Course {
-  id          String  @id @default(cuid())
-  title       String
-  description String?
-  published   Boolean @default(false)
-  createdAt   DateTime @default(now())
+enum CourseStatus {
+  DRAFT
+  PENDING // waiting for a reviewer
+  PUBLISHED
+  REJECTED
+}
 
+enum LessonRule {
+  OPEN // anyone enrolled may open it
+  AFTER_PREVIOUS // opens when the lesson before it is done
+}
+
+enum BlockKind {
+  VIDEO // YouTube (watch time is tracked)
+  LINK // any link the media link parser understands (Drive, Docs, Apps Script, Canva, ...)
+  MEDIA // an item of the media library (published ones only)
+  TEXT // explanation text (the safe page markup)
+  QUIZ
+}
+
+enum QuestionType {
+  SINGLE
+  MULTI
+  TRUEFALSE
+  SHORT
+  NUMBER
+  MATCH
+  ORDER
+  CATEGORIZE
+  CLOZE
+}
+
+enum AnswerReveal {
+  NEVER
+  AFTER_PASS
+  EACH_ATTEMPT
+}
+
+enum ProgressStatus {
+  NONE
+  STARTED
+  DONE
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @default("")
+  areaId      String
+  area        LearningArea @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  levels      CourseLevel[]
+  // cover: an uploaded 16:9 WebP, or a public Drive file shown through its thumbnail (focus point = where to crop)
+  coverKey     String?
+  coverDriveId String?
+  coverFx      Float   @default(0.5)
+  coverFy      Float   @default(0.5)
+  instructorName String?
+  hours        Float?
+  enrollOpen   Boolean @default(true)
+
+  status       CourseStatus @default(DRAFT)
+  reviewNote   String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  publishedAt  DateTime?
+
+  createdById String
+  createdBy   User   @relation("CourseCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sections    CourseSection[]
   lessons     Lesson[]
+  quizzes     Quiz[]
   enrollments Enrollment[]
+
+  @@index([status, publishedAt])
+  @@index([areaId, status])
+  @@index([createdById])
+}
+
+model CourseLevel {
+  courseId String
+  levelId  String
+  course   Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  level    EducationLevel @relation(fields: [levelId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, levelId])
+}
+
+model CourseSection {
+  id        String @id @default(cuid())
+  courseId  String
+  course    Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title     String
+  sortOrder Int    @default(0)
+  lessons   Lesson[]
+
+  @@index([courseId, sortOrder])
 }
 
 model Lesson {
-  id       String  @id @default(cuid())
-  courseId String
-  course   Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  title    String
-  position Int
-  content  String? // markdown
-  videoUrl String?
+  id         String  @id @default(cuid())
+  courseId   String
+  course     Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  sectionId  String?
+  section    CourseSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  title      String
+  summary    String  @default("")
+  position   Int // order inside the course
+  unlockRule LessonRule @default(OPEN)
+  required   Boolean @default(true) // counts toward finishing the course
+
+  blocks   LessonBlock[]
+  progress LessonProgress[]
 
   @@index([courseId, position])
 }
 
+model LessonBlock {
+  id         String    @id @default(cuid())
+  lessonId   String
+  lesson     Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  kind       BlockKind
+  sortOrder  Int       @default(0)
+  label      String    @default("")
+  url        String? // VIDEO / LINK (the link as typed, checked by the media link parser)
+  mediaId    String?
+  media      Media?    @relation(fields: [mediaId], references: [id], onDelete: SetNull)
+  text       String? // TEXT
+  quizId     String?
+  quiz       Quiz?     @relation(fields: [quizId], references: [id], onDelete: SetNull)
+  required   Boolean   @default(false) // must be satisfied to finish the lesson
+  minPercent Int? // VIDEO: how much must be watched (default 90)
+
+  progress BlockProgress[]
+
+  @@index([lessonId, sortOrder])
+}
+
+model Quiz {
+  id               String  @id @default(cuid())
+  courseId         String
+  course           Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title            String
+  passPercent      Int     @default(60)
+  maxAttempts      Int? // null = unlimited
+  timeLimitMin     Int? // null = no limit
+  shuffleQuestions Boolean @default(false)
+  shuffleChoices   Boolean @default(true)
+  showAnswers      AnswerReveal @default(AFTER_PASS)
+  createdAt        DateTime @default(now())
+
+  questions Question[]
+  attempts  QuizAttempt[]
+  blocks    LessonBlock[]
+
+  @@index([courseId])
+}
+
+model Question {
+  id          String       @id @default(cuid())
+  quizId      String
+  quiz        Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  type        QuestionType
+  sortOrder   Int          @default(0)
+  points      Int          @default(1)
+  prompt      String
+  imageUrl    String?
+  explanation String       @default("")
+  config      Json         @default("{}") // what the learner sees (choices, pairs to match, ...)
+  answerKey   Json         @default("{}") // the answers; never sent to the browser before submitting
+
+  @@index([quizId, sortOrder])
+}
+
+model QuizAttempt {
+  id          String    @id @default(cuid())
+  quizId      String
+  quiz        Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation("QuizAttempts", fields: [userId], references: [id], onDelete: Cascade)
+  seed        Int
+  startedAt   DateTime  @default(now())
+  submittedAt DateTime?
+  score       Float     @default(0)
+  maxScore    Float     @default(0)
+  percent     Int       @default(0)
+  passed      Boolean   @default(false)
+  answers     Json      @default("{}")
+  result      Json      @default("{}")
+
+  @@index([quizId, userId])
+}
+
+model LessonProgress {
+  userId      String
+  lessonId    String
+  user        User     @relation("LessonProgress", fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  status      ProgressStatus @default(NONE)
+  confirmed   Boolean  @default(false) // "I have studied this lesson"
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  updatedAt   DateTime @updatedAt
+
+  @@id([userId, lessonId])
+}
+
+model BlockProgress {
+  userId       String
+  blockId      String
+  user         User        @relation("BlockProgress", fields: [userId], references: [id], onDelete: Cascade)
+  block        LessonBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  durationSec  Int         @default(0)
+  watchMap     String      @default("") // base64: seconds watched inside each 5-second slice of the video
+  watchPercent Int         @default(0)
+  lastReportAt DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@id([userId, blockId])
+}
+
 model Enrollment {
-  id        String   @id @default(cuid())
-  userId    String
-  courseId  String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  progress  Int      @default(0) // 0-100
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  userId       String
+  courseId     String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress     Int      @default(0) // 0-100, share of the required lessons that are done
+  completedAt  DateTime?
+  lastLessonId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@unique([userId, courseId])
 }

@@ -63,7 +63,7 @@ export default async function HomePage() {
     getHomeSections(),
     getActiveBanners(),
     getSlideshowConfig(),
-    db.course.findMany({ where: { published: true }, orderBy: { createdAt: "desc" }, take: 3, include: { _count: { select: { lessons: true, enrollments: true } } } }),
+    db.course.findMany({ where: { status: "PUBLISHED" }, orderBy: { createdAt: "desc" }, take: 3, include: { _count: { select: { lessons: true, enrollments: true } } } }),
     getRandomSchools(), // 12 = 4 columns × 3 rows, different on every visit
     countPublicSchools(),
     areaCounts(),

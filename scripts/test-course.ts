@@ -1,0 +1,375 @@
+/* Run with: npm run test:course  (pure logic of the course system: permissions, rules, watch tracking, the quiz engine) */
+import assert from "node:assert/strict";
+import { canCreateCourse, canEditCourse, canEnroll, canLearn, canPreviewCourse, canReviewCourse, courseReadiness, courseStatusAfterSave, type CourseActor } from "../src/lib/course/access";
+import { courseProgress, doneLessonIds, isLessonDone, isLessonUnlocked, needsConfirm, nextLesson, type LearnerFacts, type LessonFacts } from "../src/lib/course/rules";
+import { applyWatchReport, watchedPercent } from "../src/lib/course/watch";
+import { gradeQuestion, gradeQuiz, type QuestionRow } from "../src/lib/course/quiz/grade";
+import { normaliseText, parseNumber } from "../src/lib/course/quiz/normalise";
+import { presentQuestion, presentQuiz, seededRandom } from "../src/lib/course/quiz/present";
+import { clozePlaceholders, parseQuestion } from "../src/lib/course/quiz/schemas";
+
+let passed = 0;
+const t = (name: string, fn: () => void) => {
+  try { fn(); passed++; } catch (e) { console.error(`x ${name}\n  ${(e as Error).message}`); process.exitCode = 1; }
+};
+
+// ---------------------------------------------------------------- permissions
+const admin: CourseActor = { id: "a", role: "ADMIN", reviewerAreaIds: [] };
+const teacher: CourseActor = { id: "t", role: "TEACHER", creatorStatus: "APPROVED", reviewerAreaIds: [] };
+const other: CourseActor = { id: "o", role: "STUDENT", creatorStatus: "NONE", reviewerAreaIds: [] };
+const reviewerMath: CourseActor = { id: "r", role: "STUDENT", reviewerAreaIds: ["math"] };
+const course = (status: any, by = "t", area = "math") => ({ createdById: by, areaId: area, status });
+
+t("who may create / edit", () => {
+  assert.equal(canCreateCourse(admin), true);
+  assert.equal(canCreateCourse(teacher), true);
+  assert.equal(canCreateCourse({ role: "STUDENT", creatorStatus: "APPROVED" }), true);
+  assert.equal(canCreateCourse({ role: "STUDENT", creatorStatus: "PENDING" }), false);
+  assert.equal(canCreateCourse(other), false);
+  assert.equal(canEditCourse(teacher, course("DRAFT")), true);
+  assert.equal(canEditCourse(admin, course("DRAFT")), true);
+  assert.equal(canEditCourse(other, course("DRAFT")), false);
+  assert.equal(canEditCourse(reviewerMath, course("PENDING")), false);
+});
+
+t("review: reviewer of the area, never of their own course", () => {
+  assert.equal(canReviewCourse(admin, course("PENDING")), true);
+  assert.equal(canReviewCourse(reviewerMath, course("PENDING")), true);
+  assert.equal(canReviewCourse(reviewerMath, course("PENDING", "r")), false);
+  assert.equal(canReviewCourse({ ...reviewerMath, reviewerAreaIds: ["thai"] }, course("PENDING")), false);
+  assert.equal(canReviewCourse(teacher, course("PENDING")), false);
+});
+
+t("preview of courses that are not public", () => {
+  assert.equal(canPreviewCourse(null, course("PUBLISHED")), true);
+  assert.equal(canPreviewCourse(null, course("DRAFT")), false);
+  assert.equal(canPreviewCourse(other, course("PENDING")), false);
+  assert.equal(canPreviewCourse(teacher, course("DRAFT")), true);
+  assert.equal(canPreviewCourse(reviewerMath, course("PENDING", "r")), true, "a reviewer may look at their own area's courses");
+  assert.equal(canPreviewCourse({ ...reviewerMath, reviewerAreaIds: ["thai"] }, course("PENDING")), false);
+});
+
+t("status after saving", () => {
+  assert.equal(courseStatusAfterSave(admin, null, false), "DRAFT");
+  assert.equal(courseStatusAfterSave(admin, null, true), "PUBLISHED");
+  assert.equal(courseStatusAfterSave(admin, "PUBLISHED", false), "PUBLISHED");
+  assert.equal(courseStatusAfterSave(teacher, null, true), "PENDING");
+  assert.equal(courseStatusAfterSave(teacher, "DRAFT", false), "DRAFT");
+  assert.equal(courseStatusAfterSave(teacher, "REJECTED", false), "DRAFT");
+  assert.equal(courseStatusAfterSave(teacher, "PUBLISHED", false), "PENDING", "editing live content sends it back to the queue");
+  assert.equal(courseStatusAfterSave(teacher, "PENDING", false), "PENDING");
+});
+
+t("enrol and learn", () => {
+  assert.equal(canEnroll({ status: "PUBLISHED", enrollOpen: true }), true);
+  assert.equal(canEnroll({ status: "PUBLISHED", enrollOpen: false }), false);
+  assert.equal(canEnroll({ status: "PENDING", enrollOpen: true }), false);
+  assert.deepEqual(canLearn(null, course("PUBLISHED"), false), { ok: false, reason: "login" });
+  assert.deepEqual(canLearn(other, course("PUBLISHED"), false), { ok: false, reason: "enroll" });
+  assert.deepEqual(canLearn(other, course("PUBLISHED"), true), { ok: true, preview: false });
+  assert.deepEqual(canLearn(other, course("PENDING"), true), { ok: false, reason: "unavailable" }, "a course under re-review is closed even for enrolled learners");
+  assert.deepEqual(canLearn(teacher, course("DRAFT"), false), { ok: true, preview: true });
+  assert.deepEqual(canLearn(teacher, course("PUBLISHED"), false), { ok: true, preview: true }, "authors open their own live course without enrolling");
+});
+
+t("readiness list for review", () => {
+  const ok = { title: "คอร์สทดสอบ", description: "คำอธิบายคอร์สที่ยาวพอ", hasCover: true, lessons: [{ title: "บท 1", blockCount: 2 }], quizzes: [{ title: "แบบทดสอบ 1", questionCount: 3, invalidQuestions: 0 }] };
+  assert.deepEqual(courseReadiness(ok), []);
+  assert.ok(courseReadiness({ ...ok, hasCover: false }).some((m) => m.includes("ปก")));
+  assert.ok(courseReadiness({ ...ok, lessons: [] }).some((m) => m.includes("บทเรียนอย่างน้อย 1")));
+  assert.ok(courseReadiness({ ...ok, lessons: [{ title: "บท 1", blockCount: 0 }] }).some((m) => m.includes("ยังไม่มีเนื้อหา")));
+  assert.ok(courseReadiness({ ...ok, quizzes: [{ title: "Q", questionCount: 0, invalidQuestions: 0 }] }).some((m) => m.includes("ยังไม่มีคำถาม")));
+  assert.ok(courseReadiness({ ...ok, quizzes: [{ title: "Q", questionCount: 2, invalidQuestions: 1 }] }).some((m) => m.includes("เฉลยไม่ครบ")));
+});
+
+// ---------------------------------------------------------------- lesson rules
+const video = (id: string, req = true, min: number | null = null) => ({ id, kind: "VIDEO" as const, required: req, minPercent: min, quizId: null });
+const quizBlock = (id: string, quizId: string, req = true) => ({ id, kind: "QUIZ" as const, required: req, minPercent: null, quizId });
+const textBlock = (id: string, req = true) => ({ id, kind: "TEXT" as const, required: req, minPercent: null, quizId: null });
+const lesson = (id: string, blocks: LessonFacts["blocks"], rule: LessonFacts["unlockRule"] = "AFTER_PREVIOUS", required = true): LessonFacts => ({ id, unlockRule: rule, required, blocks });
+const facts = (p: Partial<{ confirmed: string[]; watch: Record<string, number>; passed: string[] }> = {}): LearnerFacts => ({ confirmed: new Set(p.confirmed ?? []), watch: p.watch ?? {}, passedQuizzes: new Set(p.passed ?? []) });
+
+t("a lesson is done when every required part is satisfied", () => {
+  const l = lesson("L1", [video("v", true), quizBlock("q", "Q1", true), textBlock("x", false)]);
+  assert.equal(isLessonDone(l, facts()), false);
+  assert.equal(isLessonDone(l, facts({ watch: { v: 89 } })), false, "default target is 90 %");
+  assert.equal(isLessonDone(l, facts({ watch: { v: 90 } })), false, "the quiz is still open");
+  assert.equal(isLessonDone(l, facts({ watch: { v: 95 }, passed: ["Q1"] })), true);
+  assert.equal(isLessonDone(lesson("L", [video("v", true, 50)]), facts({ watch: { v: 50 } })), true, "own watch target");
+  assert.equal(isLessonDone(lesson("L", [textBlock("x", true)]), facts()), false);
+  assert.equal(isLessonDone(lesson("L", [textBlock("x", true)]), facts({ confirmed: ["L"] })), true);
+  assert.equal(isLessonDone(lesson("L", [video("v", false)]), facts()), false, "no required part: needs the confirmation");
+  assert.equal(isLessonDone(lesson("L", [video("v", false)]), facts({ confirmed: ["L"] })), true);
+  assert.equal(isLessonDone(lesson("L", [video("v", true), textBlock("x", true)]), facts({ watch: { v: 100 } })), false, "video + text: both needed");
+  assert.equal(isLessonDone(lesson("L", [video("v", true), textBlock("x", true)]), facts({ watch: { v: 100 }, confirmed: ["L"] })), true);
+});
+
+t("which lessons show a confirmation button", () => {
+  assert.equal(needsConfirm(lesson("L", [video("v", true)])), false);
+  assert.equal(needsConfirm(lesson("L", [quizBlock("q", "Q", true)])), false);
+  assert.equal(needsConfirm(lesson("L", [textBlock("x", true)])), true);
+  assert.equal(needsConfirm(lesson("L", [])), true);
+});
+
+t("unlock order and progress", () => {
+  const ls = [lesson("A", [textBlock("a")], "OPEN"), lesson("B", [textBlock("b")]), lesson("C", [textBlock("c")]), lesson("D", [textBlock("d")], "OPEN"), lesson("E", [textBlock("e")], "AFTER_PREVIOUS", false)];
+  const none = doneLessonIds(ls, facts());
+  assert.deepEqual(ls.map((_, i) => isLessonUnlocked(ls, i, none)), [true, false, false, true, false]);
+  const a = doneLessonIds(ls, facts({ confirmed: ["A"] }));
+  assert.deepEqual(ls.map((_, i) => isLessonUnlocked(ls, i, a)), [true, true, false, true, false]);
+  assert.equal(nextLesson(ls, a)?.id, "B");
+  const all = doneLessonIds(ls, facts({ confirmed: ["A", "B", "C", "D"] }));
+  assert.deepEqual(courseProgress(ls, all), { done: 4, total: 4, percent: 100, complete: true }, "the optional lesson E does not count");
+  assert.deepEqual(courseProgress(ls, a), { done: 1, total: 4, percent: 25, complete: false });
+  assert.deepEqual(courseProgress([], new Set()), { done: 0, total: 0, percent: 0, complete: false });
+  assert.equal(isLessonUnlocked(ls, 9, none), false);
+});
+
+// ---------------------------------------------------------------- watch tracking
+const T0 = new Date("2026-10-12T10:00:00Z");
+const after = (s: number) => new Date(T0.getTime() + s * 1000);
+
+t("watch: continuous play fills slices, skipping adds nothing", () => {
+  let r = applyWatchReport(null, { durationSec: 100, segments: [[0, 30]] }, T0);
+  assert.ok(r.ok);
+  if (!r.ok) return;
+  assert.equal(r.percent, 30);
+  // a jump to the end: only the stretch really played counts
+  const r2 = applyWatchReport({ durationSec: 100, map: r.map, lastReportAt: T0 }, { durationSec: 100, segments: [[90, 100]] }, after(30));
+  assert.ok(r2.ok && r2.percent === 40, r2.ok ? String(r2.percent) : r2.error);
+});
+
+t("watch: replaying does not count twice; full watch reaches 100", () => {
+  let state: any = null;
+  let now = T0;
+  let last: any;
+  for (let from = 0; from < 100; from += 25) {
+    last = applyWatchReport(state, { durationSec: 100, segments: [[from, from + 25]] }, now);
+    assert.ok(last.ok, last.error);
+    state = { durationSec: 100, map: last.map, lastReportAt: now };
+    now = after((from / 25 + 1) * 30);
+  }
+  assert.equal(last.percent, 100);
+  const again = applyWatchReport(state, { durationSec: 100, segments: [[0, 25]] }, after(1000));
+  assert.ok(again.ok && again.percent === 100 && again.changed === false);
+});
+
+t("watch: impossible reports are refused", () => {
+  const prev = { durationSec: 600, map: "", lastReportAt: T0 };
+  assert.equal(applyWatchReport(prev, { durationSec: 600, segments: [[0, 200]] }, after(10)).ok, false, "200 s of play in 10 s");
+  assert.equal(applyWatchReport(prev, { durationSec: 600, segments: [[0, 12]] }, after(10)).ok, true, "1.2x speed is fine");
+  assert.equal(applyWatchReport(null, { durationSec: 600, segments: [[0, 200]] }, T0).ok, false, "first report is capped too");
+  assert.equal(applyWatchReport(null, { durationSec: 3, segments: [[0, 2]] }, T0).ok, false, "video too short");
+  assert.equal(applyWatchReport(null, { durationSec: 7 * 3600, segments: [] }, T0).ok, false, "video too long");
+  assert.equal(applyWatchReport(null, { durationSec: 100, segments: [[10, 5]] }, T0).ok, false, "end before start");
+  assert.equal(applyWatchReport(null, { durationSec: 100, segments: [[-5, 10]] }, T0).ok, false, "negative start");
+  assert.equal(applyWatchReport(null, { durationSec: 100, segments: [[0, 500]] }, T0).ok, false, "beyond the end");
+  assert.equal(applyWatchReport(null, { durationSec: 100, segments: [[Number.NaN, 10]] }, T0).ok, false);
+  assert.equal(applyWatchReport(null, { durationSec: 100, segments: Array.from({ length: 41 }, () => [0, 1] as [number, number]) }, T0).ok, false, "too many segments");
+});
+
+t("watch: a video that changed length starts over; percent maths", () => {
+  const first = applyWatchReport(null, { durationSec: 100, segments: [[0, 50]] }, T0);
+  assert.ok(first.ok && first.percent === 50);
+  if (!first.ok) return;
+  const changed = applyWatchReport({ durationSec: 100, map: first.map, lastReportAt: T0 }, { durationSec: 300, segments: [[0, 10]] }, after(60));
+  assert.ok(changed.ok && changed.percent === 3, changed.ok ? String(changed.percent) : changed.error);
+  assert.equal(watchedPercent("", 100), 0);
+  assert.equal(watchedPercent("", 0), 0);
+});
+
+// ---------------------------------------------------------------- text normalising
+t("normalise: Thai digits, zero-width, spaces, case", () => {
+  assert.equal(normaliseText("  ๑๒๓  "), "123");
+  assert.equal(normaliseText("ก​ข"), "กข");
+  assert.equal(normaliseText("Hello   World"), "hello world");
+  assert.equal(normaliseText("Hello", { caseSensitive: true }), "Hello");
+  assert.equal(normaliseText("a b c", { ignoreSpaces: true }), "abc");
+  assert.equal(parseNumber("๑,๒๕๐.๕"), 1250.5);
+  assert.equal(parseNumber(" -3 "), -3);
+  assert.equal(parseNumber("−3"), -3);
+  assert.equal(parseNumber(".5"), 0.5);
+  for (const bad of ["", "abc", "1.2.3", "1e5", "--2", "12abc", "∞"]) assert.equal(parseNumber(bad), null, bad);
+});
+
+// ---------------------------------------------------------------- grading, one question per type
+const q = (type: any, config: any, answerKey: any, points = 4): QuestionRow => ({ id: `q-${type}`, type, points, prompt: "คำถาม", imageUrl: null, explanation: "เพราะว่า...", sortOrder: 0, config, answerKey });
+const A = (v: object) => v as any;
+
+t("grade SINGLE / TRUEFALSE", () => {
+  const s = q("SINGLE", { choices: [{ id: "a", text: "ก" }, { id: "b", text: "ข" }] }, { correctId: "b" });
+  assert.equal(gradeQuestion(s, A({ choiceId: "b" })).status, "correct");
+  assert.equal(gradeQuestion(s, A({ choiceId: "a" })).status, "wrong");
+  assert.equal(gradeQuestion(s, A({})).status, "blank");
+  assert.equal(gradeQuestion(s, undefined).status, "blank");
+  assert.equal(gradeQuestion(s, A({ choiceId: 5 })).status, "blank", "wrong shape counts as no answer");
+  assert.equal(gradeQuestion(s, "b" as any).status, "blank");
+  const tf = q("TRUEFALSE", {}, { value: false });
+  assert.equal(gradeQuestion(tf, A({ value: false })).points, 4);
+  assert.equal(gradeQuestion(tf, A({ value: true })).points, 0);
+  assert.equal(gradeQuestion(tf, A({ value: "false" })).status, "blank");
+});
+
+t("grade MULTI (all-or-nothing and partial)", () => {
+  const choices = [{ id: "a", text: "1" }, { id: "b", text: "2" }, { id: "c", text: "3" }, { id: "d", text: "4" }];
+  const all = q("MULTI", { choices, scoring: "all" }, { correctIds: ["a", "b"] });
+  assert.equal(gradeQuestion(all, A({ choiceIds: ["b", "a"] })).status, "correct");
+  assert.equal(gradeQuestion(all, A({ choiceIds: ["a"] })).status, "wrong");
+  assert.equal(gradeQuestion(all, A({ choiceIds: ["a", "b", "c"] })).status, "wrong");
+  assert.equal(gradeQuestion(all, A({ choiceIds: [] })).status, "blank");
+  assert.equal(gradeQuestion(all, A({ choiceIds: ["zzz"] })).status, "blank", "unknown ids are ignored");
+  const part = q("MULTI", { choices, scoring: "partial" }, { correctIds: ["a", "b"] });
+  assert.equal(gradeQuestion(part, A({ choiceIds: ["a"] })).points, 2);
+  assert.equal(gradeQuestion(part, A({ choiceIds: ["a", "c"] })).points, 0, "a wrong pick cancels a right one");
+  assert.equal(gradeQuestion(part, A({ choiceIds: ["c", "d"] })).points, 0, "never negative");
+  assert.equal(gradeQuestion(part, A({ choiceIds: ["a", "b", "a"] })).status, "correct", "duplicates do not matter");
+});
+
+t("grade SHORT (Thai text) and NUMBER", () => {
+  const s = q("SHORT", {}, { accepted: ["กรุงเทพมหานคร", "กรุงเทพ"], ignoreSpaces: true, caseSensitive: false });
+  assert.equal(gradeQuestion(s, A({ text: " กรุงเทพ " })).status, "correct");
+  assert.equal(gradeQuestion(s, A({ text: "กรุง เทพ มหานคร" })).status, "correct");
+  assert.equal(gradeQuestion(s, A({ text: "เชียงใหม่" })).status, "wrong");
+  assert.equal(gradeQuestion(s, A({ text: "   " })).status, "blank");
+  const en = q("SHORT", {}, { accepted: ["Photosynthesis"], ignoreSpaces: true, caseSensitive: false });
+  assert.equal(gradeQuestion(en, A({ text: "photosynthesis" })).status, "correct");
+  const cs = q("SHORT", {}, { accepted: ["H2O"], ignoreSpaces: true, caseSensitive: true });
+  assert.equal(gradeQuestion(cs, A({ text: "h2o" })).status, "wrong");
+  assert.equal(gradeQuestion(cs, A({ text: "H๒O" })).status, "correct", "Thai digit equals Arabic digit");
+  const n = q("NUMBER", {}, { value: 12.5, tolerance: 0.1 });
+  assert.equal(gradeQuestion(n, A({ text: "๑๒.๕" })).status, "correct");
+  assert.equal(gradeQuestion(n, A({ text: "12.55" })).status, "correct");
+  assert.equal(gradeQuestion(n, A({ text: "12.7" })).status, "wrong");
+  assert.equal(gradeQuestion(n, A({ text: "สิบสอง" })).status, "wrong", "not a number: wrong, not blank");
+  assert.equal(gradeQuestion(n, A({ text: "" })).status, "blank");
+  assert.equal(gradeQuestion(n, A({ text: 12.5 })).status, "correct", "a number value is accepted too");
+  assert.equal(gradeQuestion(q("NUMBER", {}, { value: 1000, tolerance: 0 }), A({ text: "1,000" })).status, "correct");
+});
+
+t("grade MATCH / ORDER / CATEGORIZE with partial credit", () => {
+  const m = q("MATCH", { left: [{ id: "l1", text: "ก" }, { id: "l2", text: "ข" }, { id: "l3", text: "ค" }, { id: "l4", text: "ง" }], right: [{ id: "r1", text: "1" }, { id: "r2", text: "2" }, { id: "r3", text: "3" }, { id: "r4", text: "4" }, { id: "r5", text: "x" }] }, { pairs: { l1: "r1", l2: "r2", l3: "r3", l4: "r4" } });
+  assert.equal(gradeQuestion(m, A({ pairs: { l1: "r1", l2: "r2", l3: "r3", l4: "r4" } })).status, "correct");
+  assert.equal(gradeQuestion(m, A({ pairs: { l1: "r1", l2: "r2" } })).points, 2, "half right, rest unanswered");
+  assert.equal(gradeQuestion(m, A({ pairs: { l1: "r2", l2: "r1" } })).points, 0);
+  assert.equal(gradeQuestion(m, A({ pairs: {} })).status, "blank");
+  assert.equal(gradeQuestion(m, A({ pairs: { zzz: "r1" } })).status, "blank");
+  const o = q("ORDER", { items: [{ id: "a", text: "1" }, { id: "b", text: "2" }, { id: "c", text: "3" }, { id: "d", text: "4" }] }, { order: ["a", "b", "c", "d"] });
+  assert.equal(gradeQuestion(o, A({ order: ["a", "b", "c", "d"] })).status, "correct");
+  assert.equal(gradeQuestion(o, A({ order: ["a", "b", "d", "c"] })).points, 2);
+  assert.equal(gradeQuestion(o, A({ order: ["b", "a", "d", "c"] })).points, 0);
+  assert.equal(gradeQuestion(o, A({ order: ["a", "a", "a", "a"] })).points, 1, "repeating an item gains nothing");
+  assert.equal(gradeQuestion(o, A({ order: [] })).status, "blank");
+  const c = q("CATEGORIZE", { categories: [{ id: "x", text: "X" }, { id: "y", text: "Y" }], items: [{ id: "1", text: "a" }, { id: "2", text: "b" }, { id: "3", text: "c" }, { id: "4", text: "d" }] }, { map: { 1: "x", 2: "x", 3: "y", 4: "y" } });
+  assert.equal(gradeQuestion(c, A({ map: { 1: "x", 2: "x", 3: "y", 4: "y" } })).status, "correct");
+  assert.equal(gradeQuestion(c, A({ map: { 1: "x", 2: "y", 3: "y", 4: "x" } })).points, 2);
+  assert.equal(gradeQuestion(c, A({ map: { 1: "x" } })).points, 1);
+  assert.equal(gradeQuestion(c, A({})).status, "blank");
+});
+
+t("grade CLOZE (typed and chosen blanks)", () => {
+  const z = q("CLOZE", { text: "เมืองหลวงคือ {{1}} อยู่ภูมิภาค {{2}}", blanks: [{ id: "1", mode: "type" }, { id: "2", mode: "choose", options: [{ id: "o1", text: "กลาง" }, { id: "o2", text: "เหนือ" }] }] }, { blanks: { 1: { accepted: ["กรุงเทพ", "กรุงเทพมหานคร"] }, 2: { correctOptionId: "o1" } } });
+  assert.equal(gradeQuestion(z, A({ blanks: { 1: "กรุงเทพ", 2: "o1" } })).status, "correct");
+  assert.equal(gradeQuestion(z, A({ blanks: { 1: "กรุง เทพ", 2: "o2" } })).points, 2);
+  assert.equal(gradeQuestion(z, A({ blanks: { 1: "", 2: "o1" } })).points, 2);
+  assert.equal(gradeQuestion(z, A({ blanks: { 1: "x", 2: "o2" } })).status, "wrong");
+  assert.equal(gradeQuestion(z, A({ blanks: { 1: "", 2: "" } })).status, "blank");
+});
+
+t("quiz total, pass mark and rounding", () => {
+  const qs = [
+    { ...q("TRUEFALSE", {}, { value: true }, 1), id: "a" },
+    { ...q("TRUEFALSE", {}, { value: true }, 1), id: "b" },
+    { ...q("MULTI", { choices: [{ id: "x", text: "1" }, { id: "y", text: "2" }, { id: "z", text: "3" }], scoring: "partial" }, { correctIds: ["x", "y", "z"] }, 1), id: "c" },
+  ];
+  const r = gradeQuiz(qs, { a: { value: true }, b: { value: false }, c: { choiceIds: ["x"] } }, 50);
+  assert.equal(r.maxScore, 3);
+  assert.equal(r.score, 1.33);
+  assert.equal(r.percent, 44);
+  assert.equal(r.passed, false);
+  assert.equal(gradeQuiz(qs, { a: { value: true }, b: { value: true }, c: { choiceIds: ["x", "y", "z"] } }, 100).passed, true);
+  assert.equal(gradeQuiz([], {}, 0).passed, false, "an empty quiz can not be passed");
+  assert.equal(gradeQuiz(qs, {}, 0).percent, 0);
+});
+
+// ---------------------------------------------------------------- presenting questions without the key
+t("the learner copy never contains the answer key", () => {
+  const rows: QuestionRow[] = [
+    { ...q("SINGLE", { choices: [{ id: "a", text: "ก" }, { id: "b", text: "ข" }, { id: "c", text: "ค" }] }, { correctId: "SECRET-single" }), id: "s1", sortOrder: 1 },
+    { ...q("SHORT", { placeholder: "พิมพ์" }, { accepted: ["SECRET-short"], ignoreSpaces: true, caseSensitive: false }), id: "s2", sortOrder: 2 },
+    { ...q("NUMBER", {}, { value: 987654.321, tolerance: 0 }), id: "s3", sortOrder: 3 },
+    { ...q("CLOZE", { text: "{{1}}", blanks: [{ id: "1", mode: "type" }] }, { blanks: { 1: { accepted: ["SECRET-cloze"] } } }), id: "s4", sortOrder: 4 },
+    { ...q("MATCH", { left: [{ id: "l1", text: "ก" }, { id: "l2", text: "ข" }], right: [{ id: "r1", text: "1" }, { id: "r2", text: "2" }] }, { pairs: { l1: "r2", l2: "r1" } }), id: "s5", sortOrder: 5, explanation: "SECRET-explanation" },
+  ];
+  const json = JSON.stringify(presentQuiz(rows, { seed: 42, shuffleQuestions: true, shuffleChoices: true }));
+  for (const secret of ["SECRET-single", "SECRET-short", "987654", "SECRET-cloze", "SECRET-explanation", "answerKey", "correctId", "correctIds", "accepted", "correctOptionId", "pairs"]) assert.equal(json.includes(secret), false, secret);
+});
+
+t("seeded order: same seed same order, other seeds differ, nothing is lost", () => {
+  const choices = Array.from({ length: 8 }, (_, i) => ({ id: `c${i}`, text: String(i) }));
+  const sq = q("SINGLE", { choices }, { correctId: "c0" });
+  const a = presentQuestion(sq, 1234, true).config.choices.map((c: any) => c.id);
+  assert.deepEqual(presentQuestion(sq, 1234, true).config.choices.map((c: any) => c.id), a, "stable");
+  assert.notDeepEqual(a, choices.map((c) => c.id));
+  assert.ok([1, 2, 3, 4, 5, 6].some((s) => presentQuestion(sq, s, true).config.choices.map((c: any) => c.id).join() !== a.join()));
+  assert.deepEqual([...a].sort(), choices.map((c) => c.id).sort());
+  assert.deepEqual(presentQuestion(sq, 1234, false).config.choices, choices, "choices keep the author's order when shuffling is off");
+  const r = seededRandom(7);
+  const xs = Array.from({ length: 1000 }, () => r());
+  assert.ok(xs.every((x) => x >= 0 && x < 1) && new Set(xs).size > 990);
+  const rows = Array.from({ length: 10 }, (_, i) => ({ ...sq, id: `q${i}`, sortOrder: i }));
+  assert.deepEqual(presentQuiz(rows, { seed: 5, shuffleQuestions: false, shuffleChoices: false }).map((x) => x.id), rows.map((x) => x.id));
+  const sh = presentQuiz(rows, { seed: 5, shuffleQuestions: true, shuffleChoices: false }).map((x) => x.id);
+  assert.deepEqual([...sh].sort(), rows.map((x) => x.id).sort());
+  assert.notDeepEqual(sh, rows.map((x) => x.id));
+  // an ORDER question is never shown already in the right order, and MATCH rights are always mixed up
+  const ord = q("ORDER", { items: [{ id: "a", text: "1" }, { id: "b", text: "2" }, { id: "c", text: "3" }] }, { order: ["a", "b", "c"] });
+  for (let seed = 1; seed < 40; seed++) assert.notDeepEqual(presentQuestion(ord, seed, true).config.items.map((i: any) => i.id), ["a", "b", "c"]);
+});
+
+// ---------------------------------------------------------------- the editor's validation
+t("parseQuestion: valid questions of every type", () => {
+  const good: [string, any, any][] = [
+    ["SINGLE", { choices: [{ id: "a", text: "ก" }, { id: "b", text: "ข" }] }, { correctId: "a" }],
+    ["MULTI", { choices: [{ id: "a", text: "ก" }, { id: "b", text: "ข" }], scoring: "partial" }, { correctIds: ["a"] }],
+    ["TRUEFALSE", {}, { value: true }],
+    ["SHORT", {}, { accepted: ["คำตอบ"] }],
+    ["NUMBER", {}, { value: 3.14, tolerance: 0.01 }],
+    ["MATCH", { left: [{ id: "l1", text: "ก" }, { id: "l2", text: "ข" }], right: [{ id: "r1", text: "1" }, { id: "r2", text: "2" }, { id: "r3", text: "ตัวลวง" }] }, { pairs: { l1: "r1", l2: "r2" } }],
+    ["ORDER", { items: [{ id: "a", text: "1" }, { id: "b", text: "2" }] }, { order: ["b", "a"] }],
+    ["CATEGORIZE", { categories: [{ id: "x", text: "X" }, { id: "y", text: "Y" }], items: [{ id: "1", text: "a" }, { id: "2", text: "b" }] }, { map: { 1: "x", 2: "y" } }],
+    ["CLOZE", { text: "{{1}} และ {{2}}", blanks: [{ id: "1", mode: "type" }, { id: "2", mode: "choose", options: [{ id: "o1", text: "ก" }, { id: "o2", text: "ข" }] }] }, { blanks: { 1: { accepted: ["ก"] }, 2: { correctOptionId: "o2" } } }],
+  ];
+  for (const [type, cfg, key] of good) {
+    const r = parseQuestion(type, cfg, key);
+    assert.equal(r.ok, true, `${type}: ${r.ok ? "" : r.error}`);
+  }
+});
+
+t("parseQuestion: broken questions are refused with a Thai reason", () => {
+  const bad: [string, any, any, string][] = [
+    ["SINGLE", { choices: [{ id: "a", text: "ก" }] }, { correctId: "a" }, "อย่างน้อย 2"],
+    ["SINGLE", { choices: [{ id: "a", text: "ก" }, { id: "b", text: "ข" }] }, { correctId: "zzz" }, "หนึ่งในตัวเลือก"],
+    ["SINGLE", { choices: [{ id: "a", text: "ก" }, { id: "a", text: "ข" }] }, { correctId: "a" }, "ซ้ำ"],
+    ["SINGLE", { choices: [{ id: "a", text: "" }, { id: "b", text: "ข" }] }, { correctId: "a" }, "กรอกข้อความ"],
+    ["MULTI", { choices: [{ id: "a", text: "ก" }, { id: "b", text: "ข" }] }, { correctIds: [] }, "อย่างน้อย 1"],
+    ["TRUEFALSE", {}, {}, "ถูกหรือผิด"],
+    ["SHORT", {}, { accepted: [] }, "อย่างน้อย 1"],
+    ["NUMBER", {}, { value: "x" }, "เฉลย"],
+    ["MATCH", { left: [{ id: "l1", text: "ก" }, { id: "l2", text: "ข" }], right: [{ id: "r1", text: "1" }, { id: "r2", text: "2" }] }, { pairs: { l1: "r1" } }, "ให้ครบ"],
+    ["MATCH", { left: [{ id: "l1", text: "ก" }, { id: "l2", text: "ข" }], right: [{ id: "r1", text: "1" }, { id: "r2", text: "2" }] }, { pairs: { l1: "r1", l2: "r1" } }, "เพียงข้อเดียว"],
+    ["ORDER", { items: [{ id: "a", text: "1" }, { id: "b", text: "2" }] }, { order: ["a"] }, "ครบทุกรายการ"],
+    ["CATEGORIZE", { categories: [{ id: "x", text: "X" }, { id: "y", text: "Y" }], items: [{ id: "1", text: "a" }, { id: "2", text: "b" }] }, { map: { 1: "x" } }, "ให้ครบ"],
+    ["CLOZE", { text: "ไม่มีช่อง", blanks: [{ id: "1", mode: "type" }] }, { blanks: { 1: { accepted: ["ก"] } } }, "ช่องว่าง"],
+    ["CLOZE", { text: "{{1}}", blanks: [{ id: "1", mode: "choose", options: [{ id: "o1", text: "ก" }, { id: "o2", text: "ข" }] }] }, { blanks: { 1: { correctOptionId: "zzz" } } }, "คำตอบที่ถูก"],
+    ["CLOZE", { text: "{{1}}", blanks: [{ id: "1", mode: "type" }] }, { blanks: {} }, "เฉลย"],
+    ["NOPE", {}, {}, "ชนิด"],
+  ];
+  for (const [type, cfg, key, hint] of bad) {
+    const r = parseQuestion(type, cfg, key);
+    assert.equal(r.ok, false, `${type} should fail (${hint})`);
+    if (!r.ok) assert.ok(r.error.includes(hint), `${type}: "${r.error}" should mention "${hint}"`);
+  }
+  assert.deepEqual(clozePlaceholders("ก {{1}} ข {{ 2 }} ค {{x_y}}"), ["1", "2", "x_y"]);
+});
+
+console.log(`course logic: ${passed} groups passed`);

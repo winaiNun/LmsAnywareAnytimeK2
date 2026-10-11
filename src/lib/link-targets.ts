@@ -9,7 +9,7 @@ export type LinkGroup = { label: string; options: LinkOption[] };
  */
 export async function getLinkTargets(): Promise<LinkGroup[]> {
   const [courses, media] = await Promise.all([
-    db.course.findMany({ where: { published: true }, orderBy: { createdAt: "desc" }, take: 200, select: { id: true, title: true } }),
+    db.course.findMany({ where: { status: "PUBLISHED" }, orderBy: { createdAt: "desc" }, take: 200, select: { id: true, title: true } }),
     db.media.findMany({ where: { status: "PUBLISHED" }, orderBy: { publishedAt: "desc" }, take: 200, select: { id: true, title: true } }),
   ]);
 
