@@ -4,7 +4,7 @@ import { fileUrl } from "@/lib/site";
 
 export { ALIGNS, SIZES, BG_MODES, HEADING_ALIGN, HEADING_SIZE } from "@/lib/section-styles";
 
-export const SECTION_KEYS = ["recommended", "categories", "media", "courses", "schools"] as const;
+export const SECTION_KEYS = ["recommended", "areas", "latest", "popular", "courses", "schools"] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 
 export type HomeSectionConfig = {
@@ -42,8 +42,9 @@ const base: Omit<Defaults, "kind" | "title"> = {
 
 const DEFAULTS: Record<SectionKey, Defaults> = {
   recommended: { ...base, kind: "สไลด์แนะนำคอร์ส/สื่อ", title: "แนะนำสำหรับคุณ" },
-  categories: { ...base, kind: "หมวดหมู่", title: "เลือกสำรวจตามหมวด" },
-  media: { ...base, kind: "สื่อการเรียนรู้", title: "สื่อการเรียนรู้" },
+  areas: { ...base, kind: "กลุ่มสาระ (เมนู)", title: "เลือกสำรวจตามกลุ่มสาระ", subtitle: "แตะกลุ่มสาระเพื่อดูสื่อทั้งหมด" },
+  latest: { ...base, kind: "สื่อล่าสุด (สไลด์แนวข้าง)", title: "สื่อล่าสุด" },
+  popular: { ...base, kind: "สื่อที่ถูกดูมากที่สุด (สไลด์แนวข้าง)", title: "ดูมากที่สุด", subtitle: "สื่อที่ถูกเปิดดูมากในช่วง 30 วันที่ผ่านมา" },
   courses: { ...base, kind: "คอร์สเรียน", title: "คอร์สเรียน" },
   schools: { ...base, kind: "ทำเนียบโรงเรียน (Anywhere Anytime)", title: "Anywhere Anytime ของโรงเรียนในเขต", subtitle: "สุ่มโรงเรียนมาให้ชมทุกครั้งที่เข้าเว็บ" },
 };

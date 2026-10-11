@@ -1,10 +1,13 @@
 import Link from "next/link";
 import SiteNavbar from "@/components/site-navbar";
 import BannerCarousel from "@/components/banner-carousel";
+import MediaCard from "@/components/media-card";
+import MediaRail, { RAIL_ITEM } from "@/components/media-rail";
 import SchoolCard from "@/components/school-card";
 import SiteHero from "@/components/site-hero";
 import { getActiveBanners, getSlideshowConfig, orderForDisplay } from "@/lib/banners";
 import { db } from "@/lib/db";
+import { areaCounts, latestMedia, popularMedia } from "@/lib/media-list";
 import { HEADING_ALIGN, HEADING_SIZE, sectionBackground } from "@/lib/section-styles";
 import { getHomeSections, type HomeSectionConfig } from "@/lib/sections";
 import { countPublicSchools, getRandomSchools } from "@/lib/schools";
@@ -42,7 +45,7 @@ function Block({ cfg, anchor, bleed = false, children }: { cfg: HomeSectionConfi
 }
 
 export default async function HomePage() {
-  const [site, sections, banners, slideshow, courses, schools, schoolTotal] = await Promise.all([
+  const [site, sections, banners, slideshow, courses, schools, schoolTotal, areas, latest, popular] = await Promise.all([
     getSiteInfo(),
     getHomeSections(),
     getActiveBanners(),
@@ -50,10 +53,38 @@ export default async function HomePage() {
     db.course.findMany({ where: { published: true }, orderBy: { createdAt: "desc" }, take: 3, include: { _count: { select: { lessons: true, enrollments: true } } } }),
     getRandomSchools(), // 12 = 4 columns × 3 rows, different on every visit
     countPublicSchools(),
+    areaCounts(),
+    latestMedia(12),
+    popularMedia(12),
   ]);
 
   const content: Record<string, React.ReactNode> = {
     recommended: banners.length > 0 && <BannerCarousel banners={orderForDisplay(banners, slideshow.shuffle)} config={slideshow} />,
+    areas: (
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {areas.map((a) => (
+          <li key={a.id}>
+            <Link href={`/library?area=${a.slug}`} className="group flex h-full min-h-[5.5rem] items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:flex-col sm:items-start sm:gap-2 sm:p-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-2xl" style={{ backgroundColor: `${a.color}22` }} aria-hidden>{a.icon}</span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold leading-snug text-neutral-900">{a.name}</span>
+                <span className="block text-xs text-neutral-500">{a.count.toLocaleString("th-TH")} สื่อ</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    ),
+    latest: latest.length > 0 && (
+      <MediaRail label="สื่อล่าสุด" moreHref="/library?sort=latest">
+        {latest.map((c) => <li key={c.id} className={RAIL_ITEM}><MediaCard card={c} compact /></li>)}
+      </MediaRail>
+    ),
+    popular: popular.length > 0 && (
+      <MediaRail label="สื่อที่ถูกดูมากที่สุด" moreHref="/library?sort=views">
+        {popular.map((c) => <li key={c.id} className={RAIL_ITEM}><MediaCard card={c} compact /></li>)}
+      </MediaRail>
+    ),
     courses: (
       <div className="grid gap-5 md:grid-cols-3">
         {courses.map((c) => (
@@ -86,7 +117,7 @@ export default async function HomePage() {
         </div>
       ),
   };
-  const anchors: Record<string, string> = { media: "media", courses: "courses", schools: "schools" };
+  const anchors: Record<string, string> = { areas: "areas", latest: "latest", popular: "popular", courses: "courses", schools: "schools" };
 
   return (
     <>

@@ -12,6 +12,8 @@
     "db:seed": "prisma db seed",
     "db:demo": "tsx prisma/demo.ts",
     "db:demo:clear": "tsx prisma/demo.ts --clear",
+    "db:demo:media": "tsx --env-file=.env prisma/demo-media.ts",
+    "db:demo:media:clear": "tsx --env-file=.env prisma/demo-media.ts --clear",
     "storage:migrate": "tsx scripts/migrate-local-to-s3.ts",
     "postinstall": "prisma generate",
     "vercel-build": "prisma generate && prisma migrate deploy && next build",

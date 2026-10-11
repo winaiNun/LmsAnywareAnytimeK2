@@ -7,7 +7,7 @@ import { Icon, type IconName } from "./icons";
 
 const LINKS = [
   { href: "/", label: "หน้าแรก" },
-  { href: "/#media", label: "สื่อการเรียนรู้" },
+  { href: "/library", label: "คลังสื่อ" },
   { href: "/#courses", label: "คอร์สเรียน" },
   { href: "/schools", label: "โรงเรียน" },
   { href: "/#about", label: "เกี่ยวกับ" },
@@ -42,11 +42,11 @@ function useActiveSection(ids: string[]) {
 
 export default function NavbarClient({ user, name, logoUrl }: Props) {
   const pathname = usePathname();
-  const section = useActiveSection(["media", "courses", "about"]);
+  const section = useActiveSection(["courses", "about"]);
 
   const tabs: Tab[] = [
     { href: "/", label: "หน้าแรก", icon: "home" },
-    { href: "/#media", label: "สื่อ", icon: "library", id: "media" },
+    { href: "/library", label: "สื่อ", icon: "library" },
     { href: "/#courses", label: "คอร์ส", icon: "course", id: "courses" },
     user?.isStaff ? { href: "/admin", label: "จัดการ", icon: "shield" } : { href: "/schools", label: "โรงเรียน", icon: "school" },
     user ? { href: "/dashboard", label: "บัญชี", icon: "userCircle" } : { href: "/login", label: "เข้าสู่ระบบ", icon: "login" },
