@@ -10,7 +10,15 @@ export const metadata: Metadata = {
   applicationName: "Anywhere Anytime",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Anywhere Anytime", statusBarStyle: "default" },
-  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
+  icons: {
+    icon: [{ url: "/favicon.ico", sizes: "any" }, { url: "/icons/icon.svg", type: "image/svg+xml" }, { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [
+      { url: "/icons/apple-touch-icon-120.png", sizes: "120x120" },
+      { url: "/icons/apple-touch-icon-152.png", sizes: "152x152" },
+      { url: "/icons/apple-touch-icon-167.png", sizes: "167x167" },
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180" },
+    ],
+  },
   formatDetection: { telephone: false },
 };
 
