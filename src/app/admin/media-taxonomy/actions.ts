@@ -28,6 +28,14 @@ type Kind = "area" | "type" | "level";
 export async function saveTaxonomy(kind: Kind, id: string | null, _prev: TaxState, formData: FormData): Promise<TaxState> {
   const actor = await assertRole(isAdmin);
   const raw = Object.fromEntries(formData);
+  // Learning areas: a "|" in the name is the admin's own line break on the home cards ("A|B" -> name "A B", card shows two lines).
+  let cardName: string | null = null;
+  if (kind === "area" && typeof raw.name === "string" && raw.name.includes("|")) {
+    const parts = raw.name.split("|").map((x) => x.replace(/\s+/g, " ").trim()).filter(Boolean);
+    if (parts.length > 4) return { error: "ขึ้นบรรทัดใหม่ได้ไม่เกิน 4 บรรทัด" };
+    cardName = parts.length > 1 ? parts.join("\n") : null;
+    raw.name = parts.join(" ");
+  }
   const schema = kind === "area" ? areaSchema : kind === "type" ? typeSchema : levelSchema;
   const parsed = schema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -38,7 +46,7 @@ export async function saveTaxonomy(kind: Kind, id: string | null, _prev: TaxStat
 
   const table = kind === "area" ? db.learningArea : kind === "type" ? db.mediaType : db.educationLevel;
   const common = { name: String(d.name), sortOrder: Number(d.sortOrder), active };
-  const extra = kind === "area" ? { icon: String(d.icon), color: String(d.color) } : kind === "type" ? { icon: String(d.icon) } : {};
+  const extra = kind === "area" ? { icon: String(d.icon), color: String(d.color), cardName } : kind === "type" ? { icon: String(d.icon) } : {};
   try {
     // @ts-expect-error the three tables share these columns; Prisma's delegates are not assignable to one union type
     if (id) await table.update({ where: { id }, data: { ...common, ...extra } });

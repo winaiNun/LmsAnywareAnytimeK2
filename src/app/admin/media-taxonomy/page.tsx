@@ -13,7 +13,7 @@ export default async function TaxonomyPage() {
     db.mediaType.findMany({ orderBy: { sortOrder: "asc" }, include: { _count: { select: { media: true } } } }),
     db.educationLevel.findMany({ orderBy: { sortOrder: "asc" }, include: { _count: { select: { media: true } } } }),
   ]);
-  const item = (r: { id: string; slug: string; name: string; sortOrder: number; active: boolean; _count: { media: number } } & { icon?: string; color?: string }): TaxItem => ({ id: r.id, slug: r.slug, name: r.name, icon: r.icon, color: r.color, sortOrder: r.sortOrder, active: r.active, used: r._count.media });
+  const item = (r: { id: string; slug: string; name: string; sortOrder: number; active: boolean; _count: { media: number } } & { icon?: string; color?: string; cardName?: string | null }): TaxItem => ({ id: r.id, slug: r.slug, name: r.name, nameInput: r.cardName ? r.cardName.split("\n").join(" | ") : undefined, icon: r.icon, color: r.color, sortOrder: r.sortOrder, active: r.active, used: r._count.media });
 
   return (
     <div className="space-y-8">
@@ -25,6 +25,7 @@ export default async function TaxonomyPage() {
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">กลุ่มสาระ</h2>
+        <p className="text-sm text-neutral-500">อยากให้ชื่อขึ้นบรรทัดใหม่ตรงไหนในการ์ดหน้าแรก ให้พิมพ์ <code className="rounded bg-neutral-100 px-1">|</code> คั่น เช่น <code className="rounded bg-neutral-100 px-1">เทคโนโลยีและการบริหาร | สำหรับครู</code> (ที่อื่นจะแสดงเป็นชื่อต่อกันตามปกติ) · ถ้าไม่ใส่ ระบบแบ่งบรรทัดให้สมดุลเอง</p>
         {areas.map((a) => (
           <div key={a.id} className="space-y-3 rounded-2xl bg-neutral-50 p-3">
             <TaxonomyForm kind="area" item={item(a)} />

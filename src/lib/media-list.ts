@@ -70,7 +70,7 @@ export async function areaCounts() {
   const areas = await db.learningArea.findMany({
     where: { active: true },
     orderBy: { sortOrder: "asc" },
-    select: { id: true, slug: true, name: true, icon: true, color: true, _count: { select: { media: { where: { status: "PUBLISHED" } } } } },
+    select: { id: true, slug: true, name: true, cardName: true, icon: true, color: true, _count: { select: { media: { where: { status: "PUBLISHED" } } } } },
   });
-  return areas.map((a) => ({ id: a.id, slug: a.slug, name: a.name, icon: a.icon, color: a.color, count: a._count.media }));
+  return areas.map((a) => ({ id: a.id, slug: a.slug, name: a.name, cardName: a.cardName, icon: a.icon, color: a.color, count: a._count.media }));
 }

@@ -132,6 +132,7 @@ model LearningArea {
   id        String  @id
   slug      String  @unique
   name      String
+  cardName  String? // the name with the admin's own line breaks (newline-separated), used on the home cards; null = break automatically
   icon      String  @default("book-open") // icon KEY from src/lib/icon-paths.ts (drawn as a line icon)
   color     String  @default("#0052FF")
   sortOrder Int     @default(0)

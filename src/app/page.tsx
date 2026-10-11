@@ -88,7 +88,7 @@ export default async function HomePage() {
               <span className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100" style={{ backgroundColor: `${a.color}14` }} aria-hidden />
               <IconTile name={a.icon} color={a.color} size={46} className="transition group-hover:scale-105" />
               <span className="min-w-0">
-                <span className="block text-sm font-semibold leading-snug text-neutral-900">{a.name}</span>
+                <span className="block whitespace-pre-line text-sm font-semibold leading-snug text-neutral-900 [text-wrap:balance]">{a.cardName ?? a.name}</span>
                 <span className="block text-xs text-neutral-500">{a.count.toLocaleString("th-TH")} สื่อ</span>
               </span>
               <Glyph name="chevron-right" size={16} strokeWidth={2.2} className="absolute bottom-3 right-3 hidden -translate-x-1 opacity-0 transition duration-200 group-hover:translate-x-0 group-hover:opacity-100 sm:block" />

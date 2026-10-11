@@ -9,7 +9,7 @@ import { addReviewer, deleteTaxonomy, removeReviewer, saveTaxonomy, type TaxStat
 
 const input = "min-h-10 rounded-lg border border-neutral-300 bg-white px-3 text-sm";
 type Kind = "area" | "type" | "level";
-export type TaxItem = { id: string; slug: string; name: string; icon?: string; color?: string; sortOrder: number; active: boolean; used: number };
+export type TaxItem = { id: string; slug: string; name: string; nameInput?: string; icon?: string; color?: string; sortOrder: number; active: boolean; used: number };
 
 function Save({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus();
@@ -25,7 +25,7 @@ export function TaxonomyForm({ kind, item }: { kind: Kind; item: TaxItem | null 
   return (
     <form action={action} className="flex flex-wrap items-center gap-2 rounded-xl border border-neutral-200 bg-white p-3">
       {kind !== "level" && <IconPicker defaultValue={item?.icon ?? (kind === "area" ? "book-open" : "file-text")} />}
-      <input name="name" defaultValue={item?.name ?? ""} placeholder={item ? "" : "ชื่อใหม่"} required aria-label="ชื่อ" maxLength={80} className={`${input} min-w-[180px] flex-1`} />
+      <input name="name" defaultValue={item?.nameInput ?? item?.name ?? ""} placeholder={item ? "" : "ชื่อใหม่"} required aria-label="ชื่อ" maxLength={80} className={`${input} min-w-[180px] flex-1`} />
       {!item && <input name="slug" placeholder="รหัสอังกฤษ เช่น math-fun" required aria-label="รหัสภาษาอังกฤษ" className={`${input} w-44`} />}
       {kind === "area" && <input name="color" type="color" defaultValue={item?.color ?? "#0052FF"} aria-label="สี" className="h-10 w-12 rounded-lg border border-neutral-300 bg-white p-1" />}
       <input name="sortOrder" type="number" min={0} max={999} defaultValue={item?.sortOrder ?? 99} aria-label="ลำดับ" className={`${input} w-20`} />
