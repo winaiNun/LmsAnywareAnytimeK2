@@ -23,7 +23,6 @@ export type BlockInput = {
   text?: string | null;
   quizId?: string | null;
   required?: boolean;
-  minPercent?: number | null;
 };
 
 export type CleanBlock = {
@@ -34,7 +33,6 @@ export type CleanBlock = {
   text: string | null;
   quizId: string | null;
   required: boolean;
-  minPercent: number | null;
 };
 
 /** The 11-character id of a single YouTube video (null for playlists and anything else). */
@@ -72,14 +70,12 @@ export function parseVideoLink(raw: string): { ok: true; url: string; videoId: s
 
 /** Check one block as typed in the editor and return the clean row to store. Does not look at the database. */
 export function cleanBlock(input: BlockInput): { ok: true; block: CleanBlock } | { ok: false; error: string } {
-  const base = { label: (input.label ?? "").trim().slice(0, 80), url: null as string | null, mediaId: null as string | null, text: null as string | null, quizId: null as string | null, required: !!input.required, minPercent: null as number | null };
+  const base = { label: (input.label ?? "").trim().slice(0, 80), url: null as string | null, mediaId: null as string | null, text: null as string | null, quizId: null as string | null, required: input.kind === "QUIZ" && !!input.required };
   switch (input.kind) {
     case "VIDEO": {
       const v = parseVideoLink(input.url ?? "");
       if (!v.ok) return v;
-      const min = input.minPercent ?? null;
-      if (min !== null && (!Number.isInteger(min) || min < 10 || min > 100)) return { ok: false, error: "เปอร์เซ็นต์ที่ต้องดูต้องอยู่ระหว่าง 10–100" };
-      return { ok: true, block: { ...base, kind: "VIDEO", url: v.url, minPercent: min } };
+      return { ok: true, block: { ...base, kind: "VIDEO", url: v.url } };
     }
     case "LINK": {
       const r = parseMediaLink(input.url ?? "");

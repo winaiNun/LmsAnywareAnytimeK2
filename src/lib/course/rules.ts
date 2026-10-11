@@ -5,44 +5,34 @@
 export type LessonRule = "OPEN" | "AFTER_PREVIOUS";
 export type BlockKind = "VIDEO" | "LINK" | "MEDIA" | "TEXT" | "QUIZ";
 
-export const DEFAULT_WATCH_PERCENT = 90;
-
-export type BlockFacts = { id: string; kind: BlockKind; required: boolean; minPercent: number | null; quizId: string | null };
+export type BlockFacts = { id: string; kind: BlockKind; required: boolean; quizId: string | null };
 export type LessonFacts = { id: string; unlockRule: LessonRule; required: boolean; blocks: BlockFacts[] };
 
 /** What the learner has done so far. */
 export type LearnerFacts = {
   /** lesson ids the learner pressed "I have studied this lesson" on */
   confirmed: ReadonlySet<string>;
-  /** watched percent per VIDEO block id */
-  watch: Readonly<Record<string, number>>;
   /** quiz ids the learner has passed */
   passedQuizzes: ReadonlySet<string>;
 };
 
-export const watchTarget = (b: Pick<BlockFacts, "minPercent">) => b.minPercent ?? DEFAULT_WATCH_PERCENT;
-
-/** Is this one required block satisfied? (Blocks that can not be measured need the lesson's "I have studied it" press.) */
-export function isBlockSatisfied(lessonId: string, b: BlockFacts, l: LearnerFacts): boolean {
-  if (b.kind === "VIDEO") return (l.watch[b.id] ?? 0) >= watchTarget(b);
-  if (b.kind === "QUIZ") return !!b.quizId && l.passedQuizzes.has(b.quizId);
-  return l.confirmed.has(lessonId);
-}
+/** The "unlock questions" of a lesson: its required quiz blocks. */
+const unlockQuizzes = (lesson: LessonFacts) => lesson.blocks.filter((b) => b.kind === "QUIZ" && b.required);
 
 /**
- * A lesson is done when every required block is satisfied. A lesson with no required block at all is done once the
- * learner confirms it. (A lesson with a required video AND a required text needs both the watch and the confirmation.)
+ * How a lesson is finished (watching is not measured):
+ * - if the author put a required quiz (an "unlock question") in it, passing every such quiz finishes it;
+ * - otherwise the learner presses "I have studied this lesson".
  */
 export function isLessonDone(lesson: LessonFacts, l: LearnerFacts): boolean {
-  const required = lesson.blocks.filter((b) => b.required);
-  if (required.length === 0) return l.confirmed.has(lesson.id);
-  return required.every((b) => isBlockSatisfied(lesson.id, b, l));
+  const unlock = unlockQuizzes(lesson);
+  if (unlock.length === 0) return l.confirmed.has(lesson.id);
+  return unlock.every((b) => !!b.quizId && l.passedQuizzes.has(b.quizId));
 }
 
-/** Does this lesson need the learner to press the confirmation button? */
+/** Does this lesson need the learner to press the confirmation button? (Not when an unlock question decides.) */
 export function needsConfirm(lesson: LessonFacts): boolean {
-  const required = lesson.blocks.filter((b) => b.required);
-  return required.length === 0 || required.some((b) => b.kind !== "VIDEO" && b.kind !== "QUIZ");
+  return unlockQuizzes(lesson).length === 0;
 }
 
 /** `lessons` must be in course order. Lesson i is open when its rule is OPEN, it is first, or the lesson before it is done. */

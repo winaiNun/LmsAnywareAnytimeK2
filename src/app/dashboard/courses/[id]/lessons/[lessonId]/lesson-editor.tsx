@@ -7,17 +7,17 @@ import { Spinner } from "@/components/icons";
 import SitePageBody from "@/components/site-page-body";
 import { BLOCK_KINDS, BLOCK_LABEL, MAX_TEXT, cleanBlock, youtubeVideoId } from "@/lib/course/blocks";
 import { MAX_BLOCKS_PER_LESSON } from "@/lib/course/access";
-import { DEFAULT_WATCH_PERCENT, type BlockKind } from "@/lib/course/rules";
+import type { BlockKind } from "@/lib/course/rules";
 import { isParsed, parseMediaLink } from "@/lib/embed";
 import { addBlock, deleteBlock, moveBlock, searchMediaForCourse, updateBlock, updateLesson } from "../../../actions";
 
 export type LessonValues = { id: string; title: string; summary: string; unlockRule: "OPEN" | "AFTER_PREVIOUS"; required: boolean; sectionTitle: string };
-export type BlockValues = { id: string; kind: BlockKind; label: string; url: string; mediaId: string; mediaTitle: string; text: string; quizId: string; required: boolean; minPercent: number | null };
+export type BlockValues = { id: string; kind: BlockKind; label: string; url: string; mediaId: string; mediaTitle: string; text: string; quizId: string; required: boolean };
 type QuizOption = { id: string; title: string };
 
 const input = "min-h-11 w-full rounded-lg border border-neutral-300 bg-white px-3";
 const iconBtn = "flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-300 text-neutral-600 hover:bg-neutral-50 disabled:opacity-30";
-const blank = (kind: BlockKind): BlockValues => ({ id: "", kind, label: "", url: "", mediaId: "", mediaTitle: "", text: "", quizId: "", required: kind === "VIDEO" || kind === "QUIZ", minPercent: null });
+const blank = (kind: BlockKind): BlockValues => ({ id: "", kind, label: "", url: "", mediaId: "", mediaTitle: "", text: "", quizId: "", required: kind === "QUIZ" });
 
 // ------------------------------------------------------------------------------------------------ lesson settings
 export function LessonSettings({ courseId, lesson, sections }: { courseId: string; lesson: LessonValues; sections: string[] }) {
@@ -117,7 +117,7 @@ function BlockCard({ courseId, lessonId, initial, quizzes, index, count, isNew, 
   const [msg, setMsg] = useState("");
   const [pending, start] = useTransition();
 
-  const payload = () => ({ kind: b.kind, label: b.label, url: b.url, mediaId: b.mediaId || null, text: b.text, quizId: b.quizId || null, required: b.required, minPercent: b.kind === "VIDEO" ? b.minPercent : null });
+  const payload = () => ({ kind: b.kind, label: b.label, url: b.url, mediaId: b.mediaId || null, text: b.text, quizId: b.quizId || null, required: b.kind === "QUIZ" && b.required });
 
   function save() {
     setError("");
@@ -140,13 +140,6 @@ function BlockCard({ courseId, lessonId, initial, quizzes, index, count, isNew, 
       router.refresh();
     });
 
-  const requiredText: Record<BlockKind, string> = {
-    VIDEO: "ต้องดูวิดีโอให้ถึงเปอร์เซ็นต์ที่กำหนดก่อนจบบท",
-    LINK: "ต้องกด “ฉันเรียนบทนี้แล้ว” ก่อนจบบท",
-    MEDIA: "ต้องกด “ฉันเรียนบทนี้แล้ว” ก่อนจบบท",
-    TEXT: "ต้องกด “ฉันเรียนบทนี้แล้ว” ก่อนจบบท",
-    QUIZ: "ต้องทำแบบทดสอบให้ผ่านก่อนจบบท",
-  };
 
   return (
     <div className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
@@ -191,14 +184,14 @@ function BlockCard({ courseId, lessonId, initial, quizzes, index, count, isNew, 
         </label>
       )}
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl bg-neutral-50 p-3">
-        <label className="flex min-h-10 items-center gap-2 text-sm"><input type="checkbox" checked={b.required} onChange={(e) => setB({ ...b, required: e.target.checked })} className="h-5 w-5" />{requiredText[b.kind]}</label>
-        {b.kind === "VIDEO" && b.required && (
-          <label className="flex items-center gap-2 text-sm">ดูให้ถึง
-            <input type="number" min={10} max={100} value={b.minPercent ?? DEFAULT_WATCH_PERCENT} onChange={(e) => setB({ ...b, minPercent: e.target.value ? Number(e.target.value) : null })} className="min-h-10 w-20 rounded-lg border border-neutral-300 px-2 text-center" aria-label="เปอร์เซ็นต์ที่ต้องดู" />%
-          </label>
-        )}
-      </div>
+      {b.kind === "QUIZ" ? (
+        <div className="space-y-1 rounded-xl bg-neutral-50 p-3">
+          <label className="flex min-h-10 items-start gap-2 text-sm"><input type="checkbox" checked={b.required} onChange={(e) => setB({ ...b, required: e.target.checked })} className="mt-0.5 h-5 w-5 shrink-0" /><span><strong>ใช้เป็นคำถามปลดล็อกบทถัดไป</strong> — ผู้เรียนต้องผ่านแบบทดสอบนี้จึงจะเรียนบทถัดไปได้ (ไม่ต้องกดปุ่ม “ฉันเรียนบทนี้แล้ว”)</span></label>
+          <p className="text-xs text-neutral-500">ใช้ถามเพื่อเช็กว่าผู้เรียนดูวิดีโอหรืออ่านเอกสารแล้ว ตั้งเกณฑ์ผ่าน 100% และไม่จำกัดจำนวนครั้ง เพื่อให้ทำซ้ำจนถูกทั้งหมด</p>
+        </div>
+      ) : (
+        <p className="rounded-xl bg-neutral-50 p-3 text-xs text-neutral-600">ระบบไม่นับการดูวิดีโอหรือการอ่าน — ผู้เรียนกดปุ่ม “ฉันเรียนบทนี้แล้ว” เพื่อไปบทถัดไป หรือเพิ่ม “คำถามปลดล็อก” (ส่วนเนื้อหาชนิดแบบทดสอบ) เพื่อเช็กความเข้าใจแทน</p>
+      )}
 
       {error && <p role="alert" className="text-sm font-medium text-red-600">{error}</p>}
       {msg && <p role="status" className="text-sm font-medium text-green-700">{msg}</p>}
@@ -216,7 +209,7 @@ export function BlocksEditor({ courseId, lessonId, blocks, quizzes }: { courseId
     <section className="space-y-3">
       <h2 className="font-semibold">เนื้อหาในบทเรียน</h2>
       {blocks.length === 0 && !adding && <p className="rounded-2xl border border-dashed border-neutral-300 bg-white p-6 text-center text-neutral-600">ยังไม่มีเนื้อหา — เลือกชนิดที่ต้องการเพิ่มด้านล่าง</p>}
-      {blocks.map((b, i) => <BlockCard key={`${b.id}-${JSON.stringify([b.url, b.text, b.required, b.minPercent, b.label, b.quizId, b.mediaId])}`} courseId={courseId} lessonId={lessonId} initial={b} quizzes={quizzes} index={i} count={blocks.length} isNew={false} onDone={() => {}} />)}
+      {blocks.map((b, i) => <BlockCard key={`${b.id}-${JSON.stringify([b.url, b.text, b.required, b.label, b.quizId, b.mediaId])}`} courseId={courseId} lessonId={lessonId} initial={b} quizzes={quizzes} index={i} count={blocks.length} isNew={false} onDone={() => {}} />)}
       {adding && <BlockCard key={`new-${adding}`} courseId={courseId} lessonId={lessonId} initial={blank(adding)} quizzes={quizzes} index={blocks.length} count={blocks.length + 1} isNew onDone={() => setAdding(null)} />}
       {!adding && (
         <div className="rounded-2xl bg-white p-4 shadow-sm">

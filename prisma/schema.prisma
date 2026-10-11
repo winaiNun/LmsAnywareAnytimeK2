@@ -70,7 +70,6 @@ model User {
   coursesCreated Course[] @relation("CourseCreator")
   quizAttempts   QuizAttempt[]    @relation("QuizAttempts")
   lessonProgress LessonProgress[] @relation("LessonProgress")
-  blockProgress  BlockProgress[]  @relation("BlockProgress")
   banners     Banner[]     @relation("BannerCreator")
   school      School?      @relation("SchoolAccount") // set when this account manages a school
   mustChangePassword Boolean @default(false) // temporary password issued by an admin/import
@@ -286,7 +285,7 @@ enum LessonRule {
 }
 
 enum BlockKind {
-  VIDEO // YouTube (watch time is tracked)
+  VIDEO // YouTube (shown in the lesson; watching is not measured)
   LINK // any link the media link parser understands (Drive, Docs, Apps Script, Canva, ...)
   MEDIA // an item of the media library (published ones only)
   TEXT // explanation text (the safe page markup)
@@ -405,10 +404,7 @@ model LessonBlock {
   text       String? // TEXT
   quizId     String?
   quiz       Quiz?     @relation(fields: [quizId], references: [id], onDelete: SetNull)
-  required   Boolean   @default(false) // must be satisfied to finish the lesson
-  minPercent Int? // VIDEO: how much must be watched (default 90)
-
-  progress BlockProgress[]
+  required   Boolean   @default(false) // QUIZ only: must be passed to finish the lesson (an "unlock question")
 
   @@index([lessonId, sortOrder])
 }
@@ -480,20 +476,6 @@ model LessonProgress {
   updatedAt   DateTime @updatedAt
 
   @@id([userId, lessonId])
-}
-
-model BlockProgress {
-  userId       String
-  blockId      String
-  user         User        @relation("BlockProgress", fields: [userId], references: [id], onDelete: Cascade)
-  block        LessonBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
-  durationSec  Int         @default(0)
-  watchMap     String      @default("") // base64: seconds watched inside each 5-second slice of the video
-  watchPercent Int         @default(0)
-  lastReportAt DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-
-  @@id([userId, blockId])
 }
 
 model Enrollment {

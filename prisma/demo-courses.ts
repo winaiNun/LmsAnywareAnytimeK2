@@ -85,7 +85,7 @@ async function main() {
       }
     },
     lessons: [
-      { title: "บทนำ: การเรียนรู้ตลอดชีวิต", section: "ตอนที่ 1 พื้นฐาน", blocks: [{ kind: "VIDEO", label: "วิดีโอแนะนำ", url: YT[0], required: true, minPercent: 80 }, { kind: "TEXT", label: "สรุป", text: "## ประเด็นสำคัญ\n- การเรียนรู้เกิดขึ้นได้ทุกที่ ทุกเวลา\n- ตั้งเป้าหมายเล็กๆ ที่ทำได้จริง\n\nอ่านเพิ่มเติมได้ที่ [คลังสื่อ](/library)", required: false }] },
+      { title: "บทนำ: การเรียนรู้ตลอดชีวิต", section: "ตอนที่ 1 พื้นฐาน", blocks: [{ kind: "VIDEO", label: "วิดีโอแนะนำ", url: YT[0], required: true }, { kind: "TEXT", label: "สรุป", text: "## ประเด็นสำคัญ\n- การเรียนรู้เกิดขึ้นได้ทุกที่ ทุกเวลา\n- ตั้งเป้าหมายเล็กๆ ที่ทำได้จริง\n\nอ่านเพิ่มเติมได้ที่ [คลังสื่อ](/library)", required: false }] },
       { title: "ฝึกคิดและแก้ปัญหา", section: "ตอนที่ 1 พื้นฐาน", rule: "AFTER_PREVIOUS", blocks: [{ kind: "VIDEO", url: YT[1], required: true }, { kind: "TEXT", text: "ลองสังเกตว่าวิดีโอใช้วิธีใดในการอธิบายปัญหา แล้วจดไว้ 3 ข้อ", required: true }] },
       { title: "แบบฝึกหัดท้ายตอน", section: "ตอนที่ 2 ทบทวน", rule: "AFTER_PREVIOUS", blocks: [{ kind: "QUIZ", label: "ทดสอบความเข้าใจ", required: true, quizId: `${c1}_q1` }] },
     ],

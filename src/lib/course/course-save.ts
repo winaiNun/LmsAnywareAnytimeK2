@@ -353,14 +353,15 @@ const quizSchema = z.object({
 });
 export type QuizSettings = z.infer<typeof quizSchema>;
 
-export async function createQuizAs(actor: CourseActor, courseId: string, title: string): Promise<Res<{ id: string }>> {
+/** `unlock` = an "unlock question" set: must be answered 100 % right, unlimited tries, answers never shown (so retrying means thinking, not copying). */
+export async function createQuizAs(actor: CourseActor, courseId: string, title: string, unlock = false): Promise<Res<{ id: string }>> {
   const own = await loadOwned(actor, courseId);
   if ("error" in own) return own;
   if (tooMany(actor)) return { error: "แก้ไขบ่อยเกินไป กรุณารอสักครู่" };
   const t = title.trim();
   if (!t) return { error: "กรุณากรอกชื่อแบบทดสอบ" };
   if ((await db.quiz.count({ where: { courseId } })) >= 60) return { error: "คอร์สหนึ่งมีแบบทดสอบได้ไม่เกิน 60 ชุด" };
-  const q = await db.quiz.create({ data: { courseId, title: t.slice(0, 120) }, select: { id: true } });
+  const q = await db.quiz.create({ data: { courseId, title: t.slice(0, 120), ...(unlock && { passPercent: 100, maxAttempts: null, timeLimitMin: null, shuffleQuestions: true, shuffleChoices: true, showAnswers: "NEVER" as const }) }, select: { id: true } });
   await touch(actor, courseId, own.course.status);
   return { ok: true, id: q.id };
 }

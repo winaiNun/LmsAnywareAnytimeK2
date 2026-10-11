@@ -57,7 +57,7 @@ export default function CourseReviewView({ course: c }: { course: ReviewCourse }
             <ul className="space-y-2">
               {l.blocks.map((b) => (
                 <li key={b.id} className="rounded-xl border border-neutral-200 p-3 text-sm">
-                  <p className="flex flex-wrap items-center gap-2 font-medium">{BLOCK_LABEL[b.kind]}{b.label && <span className="text-neutral-600">— {b.label}</span>}{b.required && <span className={mark}>{b.kind === "VIDEO" ? `ต้องดู ${b.minPercent ?? 90}%` : b.kind === "QUIZ" ? "ต้องผ่าน" : "ต้องยืนยัน"}</span>}</p>
+                  <p className="flex flex-wrap items-center gap-2 font-medium">{BLOCK_LABEL[b.kind]}{b.label && <span className="text-neutral-600">— {b.label}</span>}{b.kind === "QUIZ" && b.required && <span className={mark}>คำถามปลดล็อก</span>}</p>
                   {(b.kind === "VIDEO" || b.kind === "LINK") && b.url && <a href={b.url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex max-w-full items-center gap-1 break-all text-brand underline">{b.url}<Glyph name="external-link" size={13} className="shrink-0" /></a>}
                   {b.kind === "MEDIA" && (b.media ? <a href={`/library/${b.media.id}`} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-brand underline">{b.media.title}<Glyph name="external-link" size={13} /></a> : <span className="mt-1 block text-red-600">สื่อนี้ถูกลบแล้ว</span>)}
                   {b.kind === "TEXT" && b.text && <div className="mt-2 rounded-lg bg-neutral-50 p-3"><SitePageBody body={b.text} /></div>}

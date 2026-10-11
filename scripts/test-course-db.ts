@@ -74,12 +74,14 @@ async function main() {
 
     // 3) blocks
     const quiz = ok(await createQuizAs(teacher, c1.id, "zz-course แบบทดสอบ")).id;
+    const unlockQuiz = await db.quiz.findUniqueOrThrow({ where: { id: ok(await createQuizAs(teacher, c1.id, "zz-course คำถามปลดล็อก", true)).id } });
+    assert.deepEqual([unlockQuiz.passPercent, unlockQuiz.maxAttempts, unlockQuiz.timeLimitMin, unlockQuiz.showAnswers], [100, null, null, "NEVER"], "an unlock question: all right, unlimited tries, no answers shown");
+    await db.quiz.delete({ where: { id: unlockQuiz.id } }); // (an empty quiz would block the submit check below)
     const otherCourse = ok(await saveCourseInfoAs(teacher, null, info("zz-course สอง")));
     const otherQuiz = ok(await createQuizAs(teacher, otherCourse.id, "zz-course ของคอร์สอื่น")).id;
-    const v = ok(await addBlockAs(teacher, l1, { kind: "VIDEO", label: "วิดีโอ", url: YT, required: true, minPercent: 80 })).id;
+    const v = ok(await addBlockAs(teacher, l1, { kind: "VIDEO", label: "วิดีโอ", url: YT, required: true })).id;
     fails(await addBlockAs(teacher, l1, { kind: "VIDEO", url: "https://www.youtube.com/playlist?list=PLabc123456789" }), "เพลย์ลิสต์");
     fails(await addBlockAs(teacher, l1, { kind: "VIDEO", url: "https://vimeo.com/123456" }), "YouTube");
-    fails(await addBlockAs(teacher, l1, { kind: "VIDEO", url: YT, minPercent: 5 }), "10–100");
     ok(await addBlockAs(teacher, l1, { kind: "LINK", url: DRIVE }));
     fails(await addBlockAs(teacher, l1, { kind: "LINK", url: "javascript:alert(1)" }), "https");
     fails(await addBlockAs(teacher, l1, { kind: "LINK", url: "http://example.com" }), "https");
@@ -93,8 +95,8 @@ async function main() {
     const published = await db.media.findFirst({ where: { status: "PUBLISHED" }, select: { id: true } });
     if (published) ok(await addBlockAs(teacher, l3, { kind: "MEDIA", mediaId: published.id }));
     fails(await updateBlockAs(teacher, v, { kind: "TEXT", text: "เปลี่ยนชนิด" }), "เปลี่ยนชนิด");
-    ok(await updateBlockAs(teacher, v, { kind: "VIDEO", url: YT, required: true, minPercent: 95 }));
-    assert.equal((await db.lessonBlock.findUniqueOrThrow({ where: { id: v } })).minPercent, 95);
+    ok(await updateBlockAs(teacher, v, { kind: "VIDEO", url: YT, required: true }));
+    assert.equal((await db.lessonBlock.findUniqueOrThrow({ where: { id: v } })).required, false, "only a quiz can be required");
     const order = async () => (await db.lessonBlock.findMany({ where: { lessonId: l1 }, orderBy: { sortOrder: "asc" } })).map((b) => b.kind);
     assert.deepEqual(await order(), ["VIDEO", "LINK", "TEXT"]);
     ok(await moveBlockAs(teacher, v, "down"));

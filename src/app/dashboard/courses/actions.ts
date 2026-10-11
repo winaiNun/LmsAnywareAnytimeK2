@@ -68,8 +68,8 @@ export async function moveBlock(courseId: string, blockId: string, direction: "u
   return run(courseId, (a) => save.moveBlockAs(a, blockId, direction));
 }
 
-export async function createQuiz(courseId: string, title: string) {
-  return run(courseId, (a) => save.createQuizAs(a, courseId, title));
+export async function createQuiz(courseId: string, title: string, unlock = false) {
+  return run(courseId, (a) => save.createQuizAs(a, courseId, title, unlock));
 }
 export async function updateQuiz(courseId: string, quizId: string, input: unknown) {
   return run(courseId, (a) => save.updateQuizAs(a, quizId, input));

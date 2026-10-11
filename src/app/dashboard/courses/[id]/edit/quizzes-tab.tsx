@@ -14,12 +14,11 @@ export default function QuizzesTab({ courseId, quizzes }: { courseId: string; qu
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
 
-  function add(e: React.FormEvent) {
-    e.preventDefault();
+  function create(unlock: boolean) {
     setError("");
     if (!title.trim()) return setError("กรุณากรอกชื่อแบบทดสอบ");
     start(async () => {
-      const r = await createQuiz(courseId, title);
+      const r = await createQuiz(courseId, title, unlock);
       if ("error" in r && r.error) return setError(r.error);
       if ("id" in r) router.push(`/dashboard/courses/${courseId}/quizzes/${r.id}`);
     });
@@ -51,9 +50,11 @@ export default function QuizzesTab({ courseId, quizzes }: { courseId: string; qu
           ))}
         </ul>
       )}
-      <form onSubmit={add} className="flex flex-wrap gap-2 rounded-2xl bg-white p-3 shadow-sm">
+      <form onSubmit={(e) => { e.preventDefault(); create(false); }} className="flex flex-wrap gap-2 rounded-2xl bg-white p-3 shadow-sm">
         <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="ชื่อแบบทดสอบใหม่ เช่น แบบฝึกหัดท้ายบทที่ 1" aria-label="ชื่อแบบทดสอบใหม่" className="min-h-11 min-w-0 flex-1 rounded-lg border border-neutral-300 px-3" />
         <button disabled={pending} className="min-h-11 rounded-lg bg-brand px-5 font-semibold text-white disabled:opacity-60">+ สร้างแบบทดสอบ</button>
+        <button type="button" disabled={pending} onClick={() => create(true)} className="min-h-11 rounded-lg border border-brand px-5 font-semibold text-brand disabled:opacity-60">+ สร้างคำถามปลดล็อกบทถัดไป</button>
+        <p className="w-full text-xs text-neutral-500">“คำถามปลดล็อก” คือชุดคำถามปรนัยสั้นๆ ที่ผู้เรียนต้องตอบถูกทั้งหมดจึงจะเรียนบทถัดไปได้ ทำซ้ำได้ไม่จำกัด ใช้เช็กว่าได้ดูวิดีโอหรืออ่านเอกสารแล้ว (ไม่ใช้ก็ได้ — ผู้เรียนกดปุ่ม “ฉันเรียนบทนี้แล้ว” แทน)</p>
       </form>
     </section>
   );

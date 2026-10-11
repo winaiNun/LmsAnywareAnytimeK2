@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
 import type { CourseActor } from "../src/lib/course/access";
 import { addBlockAs, addLessonAs, createQuizAs, saveCourseInfoAs, saveQuestionAs, submitCourseAs, updateLessonAs, updateQuizAs } from "../src/lib/course/course-save";
-import { accessLesson, confirmLessonAs, quizStatusFor, recomputeProgress, reportWatchAs, startAttemptAs, submitAttemptAs, touchLessonAs } from "../src/lib/course/course-learn";
+import { accessLesson, confirmLessonAs, quizStatusFor, recomputeProgress, startAttemptAs, submitAttemptAs, touchLessonAs } from "../src/lib/course/course-learn";
 import { enrollAs } from "../src/lib/course/course-review";
 
 const db = new PrismaClient();
@@ -28,7 +28,7 @@ async function main() {
     const l2 = ok(await addLessonAs(admin, course, "บท 2 อ่าน")).id;
     const l3 = ok(await addLessonAs(admin, course, "บท 3 ทดสอบ")).id;
     for (const l of [l2, l3]) ok(await updateLessonAs(admin, l, { title: l === l2 ? "บท 2 อ่าน" : "บท 3 ทดสอบ", summary: "", unlockRule: "AFTER_PREVIOUS", required: true, sectionTitle: "" }));
-    const video = ok(await addBlockAs(admin, l1, { kind: "VIDEO", url: YT, required: true })).id;
+    ok(await addBlockAs(admin, l1, { kind: "VIDEO", url: YT })).id;
     const text = ok(await addBlockAs(admin, l2, { kind: "TEXT", text: "อ่านแล้วกดยืนยัน", required: true })).id;
     const quiz = ok(await createQuizAs(admin, course, "zz-learn แบบทดสอบ")).id;
     ok(await updateQuizAs(admin, quiz, { title: "zz-learn แบบทดสอบ", passPercent: 50, maxAttempts: 2, timeLimitMin: null, shuffleQuestions: true, shuffleChoices: true, showAnswers: "AFTER_PASS" }));
@@ -42,7 +42,7 @@ async function main() {
     ok(await submitCourseAs(admin, course));
     a = await accessLesson(studentU.id, course, l1);
     assert.ok(!a.ok && a.reason === "not-enrolled");
-    fails(await reportWatchAs(studentU.id, video, { durationSec: 100, segments: [[0, 10]] }, T0), "ยังไม่ได้ลงทะเบียน");
+    fails(await confirmLessonAs(studentU.id, course, l1), "ยังไม่ได้ลงทะเบียน");
     ok(await enrollAs(studentU.id, course));
     a = await accessLesson(studentU.id, course, l1);
     assert.ok(a.ok);
@@ -55,36 +55,25 @@ async function main() {
     await touchLessonAs(studentU.id, course, l1);
     assert.equal((await db.enrollment.findFirstOrThrow({ where: { userId: studentU.id, courseId: course } })).lastLessonId, l1);
 
-    // 2) watching: reports are checked against real time; a skip adds nothing
-    fails(await reportWatchAs(studentU.id, "no_such_block", { durationSec: 100, segments: [[0, 10]] }, T0), "ไม่พบวิดีโอ");
-    fails(await reportWatchAs(studentU.id, text, { durationSec: 100, segments: [[0, 10]] }, T0), "ไม่พบวิดีโอ");
-    const w1 = ok(await reportWatchAs(studentU.id, video, { durationSec: 100, segments: [[0, 40]] }, T0));
-    assert.equal(w1.percent, 40);
-    assert.equal(w1.lessonDone, false);
-    fails(await reportWatchAs(studentU.id, video, { durationSec: 100, segments: [[40, 95]] }, after(10)), "มากกว่าเวลาจริง");
-    assert.equal((await db.blockProgress.findFirstOrThrow({ where: { userId: studentU.id, blockId: video } })).watchPercent, 40, "a refused report changes nothing");
-    const w2 = ok(await reportWatchAs(studentU.id, video, { durationSec: 100, segments: [[40, 95]] }, after(60)));
-    assert.equal(w2.percent, 95);
-    assert.equal(w2.lessonDone, true, "95 % of a video that needs 90 % finishes the lesson");
-    assert.equal(w2.progress, 33);
-    ok(await reportWatchAs(studentU.id, video, { durationSec: 100, segments: [[0, 20]] }, after(100)));
-    assert.equal((await db.blockProgress.findFirstOrThrow({ where: { userId: studentU.id, blockId: video } })).watchPercent, 95, "replaying never lowers the percent");
+    // 2) a lesson without an unlock question is finished by the confirmation (watching is not measured)
+    assert.equal(await db.lessonProgress.count({ where: { userId: studentU.id, lessonId: l1, status: "DONE" } }), 0);
+    const c1 = ok(await confirmLessonAs(studentU.id, course, l1));
+    assert.deepEqual([c1.done, c1.progress, c1.complete], [true, 33, false]);
+    ok(await confirmLessonAs(studentU.id, course, l1)); // twice is harmless
     assert.equal(await db.lessonProgress.count({ where: { userId: studentU.id, lessonId: l1, status: "DONE" } }), 1);
 
-    // 3) two tabs reporting at the same moment do not lose each other
-    const concurrent = await Promise.all([reportWatchAs(otherU.id, video, { durationSec: 100, segments: [[0, 10]] }, T0), reportWatchAs(otherU.id, video, { durationSec: 100, segments: [[10, 20]] }, T0)]);
-    assert.ok(concurrent.every((r) => "error" in r), "the other user is not enrolled");
+    // 3) two confirmations at the same moment (two tabs) do not break anything
     ok(await enrollAs(otherU.id, course));
-    const both = await Promise.all([reportWatchAs(otherU.id, video, { durationSec: 100, segments: [[0, 8]] }, T0), reportWatchAs(otherU.id, video, { durationSec: 100, segments: [[8, 16]] }, T0)]);
+    const both = await Promise.all([confirmLessonAs(otherU.id, course, l1), confirmLessonAs(otherU.id, course, l1)]);
     assert.ok(both.every((r) => "ok" in r), JSON.stringify(both));
-    assert.equal((await db.blockProgress.findFirstOrThrow({ where: { userId: otherU.id, blockId: video } })).watchPercent, 15, "both stretches are kept (one alone would give 10 %)");
+    assert.equal(await db.lessonProgress.count({ where: { userId: otherU.id, lessonId: l1, status: "DONE" } }), 1);
 
     // 4) confirming a lesson
-    fails(await confirmLessonAs(studentU.id, course, l1), "ไม่ต้องกดยืนยัน");
     fails(await confirmLessonAs(studentU.id, course, l3), "บทก่อนหน้า");
     const c2 = ok(await confirmLessonAs(studentU.id, course, l2));
     assert.deepEqual([c2.done, c2.progress, c2.complete], [true, 67, false]);
     ok(await confirmLessonAs(studentU.id, course, l2)); // twice is harmless
+    fails(await confirmLessonAs(studentU.id, course, l3), "ไม่ต้องกดยืนยัน"); // its unlock question decides
 
     // 5) the quiz: keys never travel, one open attempt, two tries, reveal only after passing
     const s1 = ok(await startAttemptAs(studentU.id, quiz));

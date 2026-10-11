@@ -1,9 +1,8 @@
-/* Run with: npm run test:course  (pure logic of the course system: permissions, rules, watch tracking, the quiz engine) */
+/* Run with: npm run test:course  (pure logic of the course system: permissions, rules, the quiz engine) */
 import assert from "node:assert/strict";
 import { canCreateCourse, canEditCourse, canEnroll, canLearn, canPreviewCourse, canReviewCourse, courseReadiness, courseStatusAfterSave, type CourseActor } from "../src/lib/course/access";
 import { courseProgress, doneLessonIds, isLessonDone, isLessonUnlocked, needsConfirm, nextLesson, type LearnerFacts, type LessonFacts } from "../src/lib/course/rules";
 import { cleanBlock, parseVideoLink, youtubeStart, youtubeVideoId } from "../src/lib/course/blocks";
-import { applyWatchReport, watchedPercent } from "../src/lib/course/watch";
 import { gradeQuestion, gradeQuiz, type QuestionRow } from "../src/lib/course/quiz/grade";
 import { emptyState, stateFromQuestion, stateToQuestion, syncBlanks, type EditorState } from "../src/lib/course/quiz/editor-model";
 import { normaliseText, parseNumber } from "../src/lib/course/quiz/normalise";
@@ -85,32 +84,36 @@ t("readiness list for review", () => {
 });
 
 // ---------------------------------------------------------------- lesson rules
-const video = (id: string, req = true, min: number | null = null) => ({ id, kind: "VIDEO" as const, required: req, minPercent: min, quizId: null });
-const quizBlock = (id: string, quizId: string, req = true) => ({ id, kind: "QUIZ" as const, required: req, minPercent: null, quizId });
-const textBlock = (id: string, req = true) => ({ id, kind: "TEXT" as const, required: req, minPercent: null, quizId: null });
+const video = (id: string, req = false) => ({ id, kind: "VIDEO" as const, required: req, quizId: null });
+const quizBlock = (id: string, quizId: string, req = true) => ({ id, kind: "QUIZ" as const, required: req, quizId });
+const textBlock = (id: string, req = true) => ({ id, kind: "TEXT" as const, required: req, quizId: null });
 const lesson = (id: string, blocks: LessonFacts["blocks"], rule: LessonFacts["unlockRule"] = "AFTER_PREVIOUS", required = true): LessonFacts => ({ id, unlockRule: rule, required, blocks });
-const facts = (p: Partial<{ confirmed: string[]; watch: Record<string, number>; passed: string[] }> = {}): LearnerFacts => ({ confirmed: new Set(p.confirmed ?? []), watch: p.watch ?? {}, passedQuizzes: new Set(p.passed ?? []) });
+const facts = (p: Partial<{ confirmed: string[]; passed: string[] }> = {}): LearnerFacts => ({ confirmed: new Set(p.confirmed ?? []), passedQuizzes: new Set(p.passed ?? []) });
 
-t("a lesson is done when every required part is satisfied", () => {
-  const l = lesson("L1", [video("v", true), quizBlock("q", "Q1", true), textBlock("x", false)]);
+t("a lesson is done by the confirmation, or by its unlock question when it has one", () => {
+  // no unlock question: the "I have studied this lesson" press decides, whatever the blocks are
+  for (const blocks of [[], [video("v")], [video("v"), textBlock("x", true)]]) {
+    assert.equal(isLessonDone(lesson("L", blocks), facts()), false);
+    assert.equal(isLessonDone(lesson("L", blocks), facts({ confirmed: ["L"] })), true);
+  }
+  // with a required quiz: passing it is enough, pressing the button is not
+  const l = lesson("L1", [video("v"), quizBlock("q", "Q1", true)]);
   assert.equal(isLessonDone(l, facts()), false);
-  assert.equal(isLessonDone(l, facts({ watch: { v: 89 } })), false, "default target is 90 %");
-  assert.equal(isLessonDone(l, facts({ watch: { v: 90 } })), false, "the quiz is still open");
-  assert.equal(isLessonDone(l, facts({ watch: { v: 95 }, passed: ["Q1"] })), true);
-  assert.equal(isLessonDone(lesson("L", [video("v", true, 50)]), facts({ watch: { v: 50 } })), true, "own watch target");
-  assert.equal(isLessonDone(lesson("L", [textBlock("x", true)]), facts()), false);
-  assert.equal(isLessonDone(lesson("L", [textBlock("x", true)]), facts({ confirmed: ["L"] })), true);
-  assert.equal(isLessonDone(lesson("L", [video("v", false)]), facts()), false, "no required part: needs the confirmation");
-  assert.equal(isLessonDone(lesson("L", [video("v", false)]), facts({ confirmed: ["L"] })), true);
-  assert.equal(isLessonDone(lesson("L", [video("v", true), textBlock("x", true)]), facts({ watch: { v: 100 } })), false, "video + text: both needed");
-  assert.equal(isLessonDone(lesson("L", [video("v", true), textBlock("x", true)]), facts({ watch: { v: 100 }, confirmed: ["L"] })), true);
+  assert.equal(isLessonDone(l, facts({ confirmed: ["L1"] })), false, "the button does not replace the unlock question");
+  assert.equal(isLessonDone(l, facts({ passed: ["Q2"] })), false);
+  assert.equal(isLessonDone(l, facts({ passed: ["Q1"] })), true);
+  assert.equal(isLessonDone(lesson("L", [quizBlock("q", "Q1", false)]), facts({ passed: ["Q1"] })), false, "an optional quiz does not finish a lesson");
+  const two = lesson("L2", [quizBlock("a", "QA"), quizBlock("b", "QB")]);
+  assert.equal(isLessonDone(two, facts({ passed: ["QA"] })), false, "every unlock question must be passed");
+  assert.equal(isLessonDone(two, facts({ passed: ["QA", "QB"] })), true);
 });
 
 t("which lessons show a confirmation button", () => {
-  assert.equal(needsConfirm(lesson("L", [video("v", true)])), false);
-  assert.equal(needsConfirm(lesson("L", [quizBlock("q", "Q", true)])), false);
+  assert.equal(needsConfirm(lesson("L", [video("v")])), true);
   assert.equal(needsConfirm(lesson("L", [textBlock("x", true)])), true);
   assert.equal(needsConfirm(lesson("L", [])), true);
+  assert.equal(needsConfirm(lesson("L", [quizBlock("q", "Q", false)])), true);
+  assert.equal(needsConfirm(lesson("L", [video("v"), quizBlock("q", "Q", true)])), false, "the unlock question decides");
 });
 
 t("unlock order and progress", () => {
@@ -125,59 +128,6 @@ t("unlock order and progress", () => {
   assert.deepEqual(courseProgress(ls, a), { done: 1, total: 4, percent: 25, complete: false });
   assert.deepEqual(courseProgress([], new Set()), { done: 0, total: 0, percent: 0, complete: false });
   assert.equal(isLessonUnlocked(ls, 9, none), false);
-});
-
-// ---------------------------------------------------------------- watch tracking
-const T0 = new Date("2026-10-12T10:00:00Z");
-const after = (s: number) => new Date(T0.getTime() + s * 1000);
-
-t("watch: continuous play fills slices, skipping adds nothing", () => {
-  let r = applyWatchReport(null, { durationSec: 100, segments: [[0, 30]] }, T0);
-  assert.ok(r.ok);
-  if (!r.ok) return;
-  assert.equal(r.percent, 30);
-  // a jump to the end: only the stretch really played counts
-  const r2 = applyWatchReport({ durationSec: 100, map: r.map, lastReportAt: T0 }, { durationSec: 100, segments: [[90, 100]] }, after(30));
-  assert.ok(r2.ok && r2.percent === 40, r2.ok ? String(r2.percent) : r2.error);
-});
-
-t("watch: replaying does not count twice; full watch reaches 100", () => {
-  let state: any = null;
-  let now = T0;
-  let last: any;
-  for (let from = 0; from < 100; from += 25) {
-    last = applyWatchReport(state, { durationSec: 100, segments: [[from, from + 25]] }, now);
-    assert.ok(last.ok, last.error);
-    state = { durationSec: 100, map: last.map, lastReportAt: now };
-    now = after((from / 25 + 1) * 30);
-  }
-  assert.equal(last.percent, 100);
-  const again = applyWatchReport(state, { durationSec: 100, segments: [[0, 25]] }, after(1000));
-  assert.ok(again.ok && again.percent === 100 && again.changed === false);
-});
-
-t("watch: impossible reports are refused", () => {
-  const prev = { durationSec: 600, map: "", lastReportAt: T0 };
-  assert.equal(applyWatchReport(prev, { durationSec: 600, segments: [[0, 200]] }, after(10)).ok, false, "200 s of play in 10 s");
-  assert.equal(applyWatchReport(prev, { durationSec: 600, segments: [[0, 12]] }, after(10)).ok, true, "1.2x speed is fine");
-  assert.equal(applyWatchReport(null, { durationSec: 600, segments: [[0, 200]] }, T0).ok, false, "first report is capped too");
-  assert.equal(applyWatchReport(null, { durationSec: 3, segments: [[0, 2]] }, T0).ok, false, "video too short");
-  assert.equal(applyWatchReport(null, { durationSec: 7 * 3600, segments: [] }, T0).ok, false, "video too long");
-  assert.equal(applyWatchReport(null, { durationSec: 100, segments: [[10, 5]] }, T0).ok, false, "end before start");
-  assert.equal(applyWatchReport(null, { durationSec: 100, segments: [[-5, 10]] }, T0).ok, false, "negative start");
-  assert.equal(applyWatchReport(null, { durationSec: 100, segments: [[0, 500]] }, T0).ok, false, "beyond the end");
-  assert.equal(applyWatchReport(null, { durationSec: 100, segments: [[Number.NaN, 10]] }, T0).ok, false);
-  assert.equal(applyWatchReport(null, { durationSec: 100, segments: Array.from({ length: 41 }, () => [0, 1] as [number, number]) }, T0).ok, false, "too many segments");
-});
-
-t("watch: a video that changed length starts over; percent maths", () => {
-  const first = applyWatchReport(null, { durationSec: 100, segments: [[0, 50]] }, T0);
-  assert.ok(first.ok && first.percent === 50);
-  if (!first.ok) return;
-  const changed = applyWatchReport({ durationSec: 100, map: first.map, lastReportAt: T0 }, { durationSec: 300, segments: [[0, 10]] }, after(60));
-  assert.ok(changed.ok && changed.percent === 3, changed.ok ? String(changed.percent) : changed.error);
-  assert.equal(watchedPercent("", 100), 0);
-  assert.equal(watchedPercent("", 0), 0);
 });
 
 // ---------------------------------------------------------------- text normalising
@@ -390,10 +340,8 @@ t("YouTube links: id, start time, only single videos", () => {
 });
 
 t("block input is cleaned per kind", () => {
-  const v = cleanBlock({ kind: "VIDEO", url: "youtu.be/dQw4w9WgXcQ", label: "  คลิป  ", required: true, minPercent: 80 });
-  assert.ok(v.ok && v.block.url === "https://www.youtube.com/watch?v=dQw4w9WgXcQ" && v.block.label === "คลิป" && v.block.minPercent === 80);
-  assert.equal(cleanBlock({ kind: "VIDEO", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", minPercent: 9 }).ok, false);
-  assert.equal(cleanBlock({ kind: "VIDEO", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", minPercent: 90.5 }).ok, false);
+  const v = cleanBlock({ kind: "VIDEO", url: "youtu.be/dQw4w9WgXcQ", label: "  คลิป  ", required: true });
+  assert.ok(v.ok && v.block.url === "https://www.youtube.com/watch?v=dQw4w9WgXcQ" && v.block.label === "คลิป" && v.block.required === false, "only a quiz can be required");
   assert.ok(cleanBlock({ kind: "LINK", url: "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view" }).ok);
   for (const bad of ["javascript:alert(1)", "http://example.com", "https://localhost/x", "ftp://x.org", ""]) assert.equal(cleanBlock({ kind: "LINK", url: bad }).ok, false, bad);
   assert.equal(cleanBlock({ kind: "TEXT", text: "  " }).ok, false);

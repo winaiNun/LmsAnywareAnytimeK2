@@ -12,7 +12,6 @@ import { courseProgress, doneLessonIds, isLessonDone, isLessonUnlocked, needsCon
 import { gradeQuiz, type QuestionRow } from "./quiz/grade";
 import { presentQuiz, type PublicQuestion } from "./quiz/present";
 import { buildOutcome, type QuizOutcome } from "./quiz/reveal";
-import { applyWatchReport, type Segment } from "./watch";
 
 type Res<T extends object = object> = ({ ok: true } & T) | { error: string };
 
@@ -31,20 +30,18 @@ export async function loadCourseState(userId: string, courseId: string): Promise
     where: { id: courseId },
     select: {
       id: true, title: true, status: true, enrollOpen: true,
-      lessons: { orderBy: { position: "asc" }, select: { id: true, title: true, position: true, summary: true, unlockRule: true, required: true, section: { select: { title: true } }, blocks: { orderBy: { sortOrder: "asc" }, select: { id: true, kind: true, required: true, minPercent: true, quizId: true } } } },
+      lessons: { orderBy: { position: "asc" }, select: { id: true, title: true, position: true, summary: true, unlockRule: true, required: true, section: { select: { title: true } }, blocks: { orderBy: { sortOrder: "asc" }, select: { id: true, kind: true, required: true, quizId: true } } } },
     },
   });
   if (!course) return null;
-  const [enrollment, progress, blocks, passed] = await Promise.all([
+  const [enrollment, progress, passed] = await Promise.all([
     db.enrollment.findUnique({ where: { userId_courseId: { userId, courseId } }, select: { id: true, progress: true, completedAt: true, lastLessonId: true } }),
     db.lessonProgress.findMany({ where: { userId, lesson: { courseId } }, select: { lessonId: true, confirmed: true } }),
-    db.blockProgress.findMany({ where: { userId, block: { lesson: { courseId } } }, select: { blockId: true, watchPercent: true } }),
     db.quizAttempt.findMany({ where: { userId, passed: true, quiz: { courseId } }, select: { quizId: true }, distinct: ["quizId"] }),
   ]);
   const lessons: LearnLesson[] = course.lessons.map((l) => ({ id: l.id, title: l.title, position: l.position, summary: l.summary, sectionTitle: l.section?.title ?? null, unlockRule: l.unlockRule, required: l.required, blocks: l.blocks as BlockFacts[] }));
   const learner: LearnerFacts = {
     confirmed: new Set(progress.filter((p) => p.confirmed).map((p) => p.lessonId)),
-    watch: Object.fromEntries(blocks.map((b) => [b.blockId, b.watchPercent])),
     passedQuizzes: new Set(passed.map((p) => p.quizId)),
   };
   return { course: { id: course.id, title: course.title, status: course.status, enrollOpen: course.enrollOpen }, lessons, learner, done: doneLessonIds(lessons, learner), enrollment };
@@ -118,32 +115,8 @@ export async function confirmLessonAs(userId: string, courseId: string, lessonId
   return { ok: true, done: !!r?.done.includes(lessonId), progress: r?.progress ?? 0, complete: !!r?.complete };
 }
 
-// ------------------------------------------------------------------------------------------------ video watching
-export async function reportWatchAs(userId: string, blockId: string, report: { durationSec: number; segments: Segment[] }, now: Date = new Date()): Promise<Res<{ percent: number; lessonDone: boolean; progress: number; complete: boolean }>> {
-  if (rateLimited(`watch:${userId}:${blockId}`, 20, 5 * 60 * 1000)) return { error: "ส่งรายงานบ่อยเกินไป" };
-  const block = await db.lessonBlock.findUnique({ where: { id: blockId }, select: { id: true, kind: true, lessonId: true, lesson: { select: { courseId: true } } } });
-  if (!block || block.kind !== "VIDEO") return { error: "ไม่พบวิดีโอนี้" };
-  const courseId = block.lesson.courseId;
-  const a = await accessLesson(userId, courseId, block.lessonId);
-  if (!a.ok) return { error: reasonText(a.reason) };
-
-  // one learner, one video: two tabs reporting at once must not overwrite each other, so the row is locked while we merge
-  const result = await db.$transaction(async (tx) => {
-    // make sure the row exists (two first reports at once both try; one wins), then lock it while we merge
-    await tx.$executeRaw`INSERT INTO "BlockProgress" ("userId", "blockId", "durationSec", "watchMap", "watchPercent", "lastReportAt", "updatedAt") VALUES (${userId}, ${blockId}, 0, '', 0, ${now}, ${now}) ON CONFLICT ("userId", "blockId") DO NOTHING`;
-    await tx.$executeRaw`SELECT 1 FROM "BlockProgress" WHERE "userId" = ${userId} AND "blockId" = ${blockId} FOR UPDATE`;
-    const prev = await tx.blockProgress.findUniqueOrThrow({ where: { userId_blockId: { userId, blockId } } });
-    const r = applyWatchReport({ durationSec: prev.durationSec, map: prev.watchMap, lastReportAt: prev.durationSec > 0 ? prev.lastReportAt : null }, report, now);
-    if (!r.ok) return r;
-    await tx.blockProgress.update({ where: { userId_blockId: { userId, blockId } }, data: { durationSec: r.durationSec, watchMap: r.map, watchPercent: r.percent, lastReportAt: now } });
-    return r;
-  });
-  if (!result.ok) return { error: result.error };
-  const p = await recomputeProgress(userId, courseId);
-  return { ok: true, percent: result.percent, lessonDone: !!p?.done.includes(block.lessonId), progress: p?.progress ?? 0, complete: !!p?.complete };
-}
-
 // ------------------------------------------------------------------------------------------------ quizzes
+
 const GRACE_SECONDS = 20; // slack for the network when a time limit runs out
 
 type QuizContext = { quiz: { id: string; courseId: string; title: string; passPercent: number; maxAttempts: number | null; timeLimitMin: number | null; shuffleQuestions: boolean; shuffleChoices: boolean; showAnswers: "NEVER" | "AFTER_PASS" | "EACH_ATTEMPT" }; lessonId: string };

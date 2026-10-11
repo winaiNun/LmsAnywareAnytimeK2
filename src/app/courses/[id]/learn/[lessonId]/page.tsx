@@ -5,7 +5,6 @@ import Breadcrumb from "@/components/breadcrumb";
 import ConfirmButton from "@/components/course/confirm-button";
 import LessonNav, { type NavLesson } from "@/components/course/lesson-nav";
 import QuizBlock from "@/components/course/quiz-block";
-import YouTubePlayer from "@/components/course/youtube-player";
 import Glyph from "@/components/glyph";
 import MediaViewer from "@/components/media-viewer";
 import SitePageBody from "@/components/site-page-body";
@@ -14,7 +13,7 @@ import { canPreviewCourse } from "@/lib/course/access";
 import { youtubeStart, youtubeVideoId } from "@/lib/course/blocks";
 import { accessLesson, loadCourseState, quizStatusFor, reasonText, touchLessonAs } from "@/lib/course/course-learn";
 import { getCourseActor } from "@/lib/course/course-server";
-import { isLessonUnlocked, needsConfirm, watchTarget } from "@/lib/course/rules";
+import { isLessonUnlocked, needsConfirm } from "@/lib/course/rules";
 import { db } from "@/lib/db";
 import { toViewItem } from "@/lib/media-view";
 import { plainText } from "@/lib/site-texts";
@@ -59,7 +58,7 @@ export default async function LearnPage({ params }: { params: { id: string; less
       blocks: {
         orderBy: { sortOrder: "asc" },
         select: {
-          id: true, kind: true, label: true, url: true, text: true, required: true, minPercent: true,
+          id: true, kind: true, label: true, url: true, text: true, required: true,
           media: { select: { id: true, title: true, status: true, items: { orderBy: { sortOrder: "asc" }, select: { id: true, kind: true, label: true, url: true, storageKey: true, mimeType: true, sizeBytes: true, html: true } } } },
           quiz: { select: { id: true, title: true, passPercent: true, maxAttempts: true, timeLimitMin: true, _count: { select: { questions: true } } } },
         },
@@ -84,7 +83,14 @@ export default async function LearnPage({ params }: { params: { id: string; less
     if (b.kind === "VIDEO") {
       const videoId = youtubeVideoId(b.url);
       view = videoId
-        ? <YouTubePlayer blockId={b.id} videoId={videoId} start={youtubeStart(b.url)} record={!preview} minPercent={watchTarget(b)} initialPercent={state.learner.watch[b.id] ?? 0} label={b.label || undefined} />
+        ? (
+          <div className="space-y-2">
+            {b.label && <p className="font-semibold">{b.label}</p>}
+            <div className="aspect-video w-full overflow-hidden rounded-xl bg-black">
+              <iframe src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&start=${youtubeStart(b.url)}`} title={b.label || "วิดีโอประกอบบทเรียน"} loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="h-full w-full border-0" />
+            </div>
+          </div>
+        )
         : <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">วิดีโอนี้ไม่ใช่ลิงก์ YouTube ที่เปิดได้ — แจ้งผู้สอน</p>;
     } else if (b.kind === "LINK") {
       const item = toViewItem({ id: b.id, kind: "LINK", label: b.label, url: b.url, storageKey: null, mimeType: null, sizeBytes: null, html: null });
@@ -161,7 +167,7 @@ export default async function LearnPage({ params }: { params: { id: string; less
                 ) : showConfirm ? (
                   <ConfirmButton courseId={course.id} lessonId={lesson.id} confirmed={confirmed} />
                 ) : (
-                  <p className="text-sm text-neutral-600">บทนี้จะนับว่าจบเมื่อดูวิดีโอถึงเกณฑ์และทำแบบทดสอบที่กำหนดให้ผ่าน</p>
+                  <p className="text-sm text-neutral-600">บทนี้จะเปิดบทถัดไปเมื่อตอบ “คำถามปลดล็อก” ด้านบนให้ถูกทั้งหมด</p>
                 )}
               </div>
             )}

@@ -55,7 +55,7 @@ export default function QuizBlock({ courseId, quiz, status, required }: { course
     <section className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-5" aria-label={`แบบทดสอบ ${quiz.title}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 font-semibold"><Glyph name="clipboard-check" size={18} className="text-brand" />{quiz.title}</h3>
-        {status.passed ? <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-sm font-semibold text-green-700"><Glyph name="check" size={14} strokeWidth={2.6} />ผ่านแล้ว</span> : required ? <span className="rounded-full bg-amber-50 px-3 py-1 text-sm font-medium text-amber-800">ต้องทำให้ผ่านก่อนจบบท</span> : null}
+        {status.passed ? <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-sm font-semibold text-green-700"><Glyph name="check" size={14} strokeWidth={2.6} />ผ่านแล้ว</span> : required ? <span className="rounded-full bg-amber-50 px-3 py-1 text-sm font-medium text-amber-800">คำถามปลดล็อกบทถัดไป</span> : null}
       </div>
       <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-neutral-600">
         <li>{quiz.questionCount} ข้อ</li>
