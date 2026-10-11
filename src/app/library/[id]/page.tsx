@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Avatar from "@/components/avatar";
+import Breadcrumb from "@/components/breadcrumb";
 import Glyph from "@/components/glyph";
 import MediaDetailBody from "@/components/media-detail";
 import { MediaGrid } from "@/components/media-card";
@@ -41,9 +42,7 @@ export default async function MediaPage({ params }: { params: { id: string } }) 
     <>
       <SiteNavbar />
       <main className="mx-auto max-w-5xl space-y-8 px-4 pb-28 pt-24 md:pb-16">
-        <nav aria-label="เส้นทาง" className="text-sm text-neutral-500">
-          <Link href="/library" className="text-brand">คลังสื่อ</Link> <Glyph name="chevron-right" size={14} className="mx-0.5 inline-block align-[-2px]" /> <Link href={`/library?area=${media.area.slug}`} className="text-brand">{media.area.name}</Link>
-        </nav>
+        <Breadcrumb items={[{ label: "คลังสื่อ", href: "/library" }, { label: media.area.name, href: `/library?area=${media.area.slug}` }, { label: media.title.length > 40 ? `${media.title.slice(0, 40)}…` : media.title }]} />
 
         {!published && (
           <p role="status" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">

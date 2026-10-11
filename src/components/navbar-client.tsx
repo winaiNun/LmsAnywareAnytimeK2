@@ -82,11 +82,19 @@ export default function NavbarClient({ user, name, areaName, logoUrl, areas }: P
           </Link>
 
           <nav aria-label="เมนูหลัก" className="hidden items-center gap-1 md:flex">
-            {LINKS.map((l) => (
-              <Link key={l.href} href={l.href} className="rounded-full px-4 py-2 text-[15px] text-neutral-700 hover:bg-brand-soft hover:text-brand">
-                {l.label}
-              </Link>
-            ))}
+            {LINKS.map((l) => {
+              const current = l.href === "/" ? pathname === "/" : !l.href.includes("#") && pathname.startsWith(l.href);
+              return (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  aria-current={current ? "page" : undefined}
+                  className={`rounded-full px-4 py-2 text-[15px] transition-colors ${current ? "bg-brand-soft font-semibold text-brand" : "text-neutral-700 hover:bg-brand-soft hover:text-brand"}`}
+                >
+                  {l.label}
+                </Link>
+              );
+            })}
           </nav>
 
           {/* phones: the hamburger holds everything the bottom tabs do not */}

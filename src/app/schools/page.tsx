@@ -1,3 +1,4 @@
+import Breadcrumb from "@/components/breadcrumb";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Pager from "@/components/pager";
@@ -34,7 +35,7 @@ export default async function SchoolsPage({ searchParams }: { searchParams: Reco
       <SiteNavbar />
       <main className="mx-auto max-w-6xl space-y-6 px-4 pb-28 pt-24 md:pb-16">
         <header className="space-y-1">
-          <Link href="/" className="text-sm text-brand">← หน้าแรก</Link>
+          <Breadcrumb items={[{ label: "ทำเนียบโรงเรียน" }]} />
           <h1 className="text-2xl font-bold sm:text-3xl">ทำเนียบ Anywhere Anytime ของโรงเรียน</h1>
           <p className="text-neutral-600">เว็บไซต์การเรียนรู้ Anywhere Anytime ของทุกโรงเรียนในเขต กดที่การ์ดเพื่อเปิดเว็บไซต์ของโรงเรียน</p>
         </header>

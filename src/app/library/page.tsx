@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import Breadcrumb from "@/components/breadcrumb";
 import Glyph from "@/components/glyph";
 import LiveFilter from "@/components/live-filter";
 import { MediaGrid } from "@/components/media-card";
@@ -38,6 +39,8 @@ export default async function LibraryPage({ searchParams }: { searchParams: SP }
     <>
       <SiteNavbar />
       <main className="mx-auto max-w-6xl space-y-5 px-4 pb-28 pt-24 md:pb-16">
+        <Breadcrumb items={current ? [{ label: "คลังสื่อ", href: "/library" }, { label: current.name }] : [{ label: "คลังสื่อ" }]} />
+
         <header className="space-y-1">
           <h1 className="text-2xl font-bold sm:text-3xl">{current ? current.name : "คลังสื่อการเรียนรู้"}</h1>
           <p className="text-sm text-neutral-500">{result.total.toLocaleString("th-TH")} รายการ{searchParams.q ? ` ที่ตรงกับ “${searchParams.q}”` : ""} · คลิกเพื่อเปิดใช้งานหรือดาวน์โหลดได้ทันที ไม่ต้องเข้าสู่ระบบ</p>
