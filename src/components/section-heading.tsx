@@ -83,7 +83,7 @@ export default function SectionHeading(p: HeadingProps) {
     return (
       <header className="flex flex-col items-center text-center">
         {label}
-        <div className="flex w-full items-center gap-5">{rule(false)}{title}{rule(true)}</div>
+        <div className="flex w-full items-center justify-center gap-5 text-center">{rule(false)}{title}{rule(true)}</div>
         {sub}
         {more && <div className="mt-4">{more}</div>}
       </header>
