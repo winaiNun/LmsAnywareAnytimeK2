@@ -10,7 +10,7 @@ import { Prisma } from "@prisma/client";
 import { canEditCourse, isCourseAdmin, type CourseActor } from "@/lib/course/access";
 import { db } from "@/lib/db";
 import { fetchDriveImage } from "@/lib/drive-fetch";
-import { parseFields, patternProblem, pickDesign, takeNumber, type SerialState } from "./schema";
+import { NUMBER_MODES, parseFields, patternProblem, pickDesign, takeNumber, type NumberMode, type SerialState } from "./schema";
 
 export type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 const fail = (error: string): { ok: false; error: string } => ({ ok: false, error });
@@ -81,12 +81,21 @@ export async function ensureAllForUser(userId: string, now = new Date()): Promis
   for (const e of done) await ensureCertificate(userId, e.courseId, now);
 }
 
+type Tx = Prisma.TransactionClient;
+type LockedSerial = SerialState & { mode: NumberMode };
+
+/** Read a number series and lock its row until the transaction ends: nobody else can hand out a number from it meanwhile. */
+async function lockSerial(tx: Tx, serialId: string): Promise<LockedSerial | null> {
+  const rows = await tx.$queryRaw<LockedSerial[]>`SELECT "pattern", "padding", "nextNo", "resetYearly", "lastYear", "endNo", "mode"::text AS "mode" FROM "CertificateSerial" WHERE "id" = ${serialId} FOR UPDATE`;
+  return rows[0] ?? null;
+}
+
 /**
  * Give a number to every learner of the course who is waiting, oldest finisher first. Admins only: the numbers come from
  * the district's register. One transaction per number series, with the series row locked, so two admins pressing the
- * button at once can never hand out the same number.
+ * button at once can never hand out the same number. Stops (stopped = true) when a series' range is used up.
  */
-export async function issueNumbers(actor: Pick<CourseActor, "role" | "id">, courseId: string, now = new Date()): Promise<Result<{ issued: number }>> {
+export async function issueNumbers(actor: Pick<CourseActor, "role" | "id">, courseId: string, now = new Date()): Promise<Result<{ issued: number; stopped: boolean }>> {
   if (!isCourseAdmin(actor)) return fail("เฉพาะผู้ดูแลระบบที่ออกเลขเกียรติบัตรได้");
   await backfillCertificates(courseId, now);
   const waiting = await db.certificate.findMany({ where: { courseId, status: "PENDING" }, orderBy: [{ completedAt: "asc" }, { id: "asc" }], select: { id: true, serialId: true, user: { select: { name: true } } } });
@@ -94,28 +103,77 @@ export async function issueNumbers(actor: Pick<CourseActor, "role" | "id">, cour
   for (const w of waiting) if (w.serialId) bySerial.set(w.serialId, [...(bySerial.get(w.serialId) ?? []), w]);
 
   let issued = 0;
+  let stopped = false;
   for (const [serialId, rows] of bySerial) {
-    issued += await db.$transaction(
+    const r = await db.$transaction(
       async (tx) => {
-        const locked = await tx.$queryRaw<{ pattern: string; padding: number; nextNo: number; resetYearly: boolean; lastYear: number | null }[]>`SELECT "pattern", "padding", "nextNo", "resetYearly", "lastYear" FROM "CertificateSerial" WHERE "id" = ${serialId} FOR UPDATE`;
-        if (locked.length === 0) return 0;
-        let state: SerialState = locked[0];
+        let state = await lockSerial(tx, serialId);
+        if (!state) return { count: 0, stopped: false };
         let count = 0;
-        for (const r of rows) {
+        for (const row of rows) {
           const t = takeNumber(state, now);
-          // the status check skips anyone another admin numbered a moment ago (then the number is not used up)
-          const claimed = await tx.certificate.updateMany({ where: { id: r.id, status: "PENDING" }, data: { status: "ISSUED", number: t.number, issuedAt: now, issuedById: actor.id, nameSnapshot: r.user.name } });
+          if (!t) return await finish(tx, serialId, state, count, true); // the range is used up
+          // the status check skips anyone numbered a moment ago by someone else (then the number is not used up)
+          const claimed = await tx.certificate.updateMany({ where: { id: row.id, status: "PENDING" }, data: { status: "ISSUED", number: t.number, issuedAt: now, issuedById: actor.id, nameSnapshot: row.user.name } });
           if (claimed.count === 0) continue;
-          state = t.next;
+          state = { ...state, ...t.next };
           count++;
         }
-        await tx.certificateSerial.update({ where: { id: serialId }, data: { nextNo: state.nextNo, lastYear: state.lastYear } });
-        return count;
+        return await finish(tx, serialId, state, count, false);
       },
       { timeout: 60_000, maxWait: 10_000 },
     );
+    issued += r.count;
+    stopped ||= r.stopped;
   }
-  return { ok: true, issued };
+  return { ok: true, issued, stopped };
+}
+
+async function finish(tx: Tx, serialId: string, state: SerialState, count: number, stopped: boolean) {
+  await tx.certificateSerial.update({ where: { id: serialId }, data: { nextNo: state.nextNo, lastYear: state.lastYear } });
+  return { count, stopped };
+}
+
+class Rollback extends Error {
+  constructor(readonly why: "exhausted" | "taken") { super(why); }
+}
+
+/**
+ * "ตรวจชื่อแล้ว รับเกียรติบัตร": for a series that runs automatically the LEARNER gets the next number at once.
+ * Everything happens in one transaction with the series row locked, so 100 people pressing together get 100 different,
+ * consecutive numbers; a double click (or a second tab) does not use a second number.
+ */
+export async function confirmCertificate(userId: string, courseId: string, now = new Date()): Promise<Result<{ number: string | null }>> {
+  const cert = await db.certificate.findUnique({ where: { courseId_userId: { courseId, userId } }, select: { id: true, status: true, number: true, serialId: true, user: { select: { name: true } } } });
+  if (!cert) return fail("ไม่พบเกียรติบัตร — ต้องเรียนคอร์สนี้จบก่อน");
+  if (cert.status === "ISSUED") return { ok: true, number: cert.number };
+  if (cert.status === "REVOKED") return fail("เกียรติบัตรนี้ถูกเพิกถอน");
+  if (!cert.serialId) return fail("เกียรติบัตรนี้ไม่ต้องรับเลข");
+  const serialId = cert.serialId;
+  try {
+    const number = await db.$transaction(
+      async (tx) => {
+        const state = await lockSerial(tx, serialId);
+        if (!state || state.mode !== "AUTO") throw new Error("not-auto");
+        const t = takeNumber(state, now);
+        if (!t) throw new Rollback("exhausted");
+        const claimed = await tx.certificate.updateMany({ where: { id: cert.id, status: "PENDING" }, data: { status: "ISSUED", number: t.number, issuedAt: now, issuedById: userId, nameSnapshot: cert.user.name } });
+        if (claimed.count === 0) throw new Rollback("taken"); // undo: the number must not be used up
+        await tx.certificateSerial.update({ where: { id: serialId }, data: { nextNo: t.next.nextNo, lastYear: t.next.lastYear } });
+        return t.number;
+      },
+      { timeout: 15_000, maxWait: 10_000 },
+    );
+    return { ok: true, number };
+  } catch (e) {
+    if (e instanceof Rollback && e.why === "exhausted") return fail("เลขชุดนี้หมดแล้ว กรุณารอผู้ดูแลระบบขยายช่วงเลข แล้วกลับมากดรับอีกครั้ง");
+    if (e instanceof Rollback && e.why === "taken") {
+      const again = await db.certificate.findUnique({ where: { id: cert.id }, select: { status: true, number: true } });
+      return again?.status === "ISSUED" ? { ok: true, number: again.number } : fail("ทำรายการไม่สำเร็จ ลองใหม่อีกครั้ง");
+    }
+    if (e instanceof Error && e.message === "not-auto") return fail("เกียรติบัตรนี้ผู้ดูแลระบบเป็นผู้ออกเลข ยังกดรับเองไม่ได้");
+    throw e;
+  }
 }
 
 export async function revokeCertificate(actor: Pick<CourseActor, "role">, id: string, note: string, now = new Date()): Promise<Result> {
@@ -210,7 +268,7 @@ export async function deleteDesign(actor: CourseActor, designId: string): Promis
 
 // ---------- number series and fonts (admins) ----------
 
-export type SerialInput = { name: string; pattern: string; padding: number; nextNo: number; resetYearly: boolean };
+export type SerialInput = { name: string; pattern: string; padding: number; nextNo: number; resetYearly: boolean; mode: NumberMode; endNo: number | null };
 
 function cleanSerial(i: SerialInput): Result<{ data: SerialInput }> {
   const name = i.name.trim();
@@ -219,14 +277,22 @@ function cleanSerial(i: SerialInput): Result<{ data: SerialInput }> {
   if (bad) return fail(bad);
   if (!Number.isInteger(i.padding) || i.padding < 1 || i.padding > 8) return fail("จำนวนหลักต้องเป็น 1–8");
   if (!Number.isInteger(i.nextNo) || i.nextNo < 1 || i.nextNo > 99_999_999) return fail("เลขเริ่มต้นต้องเป็นจำนวนเต็มตั้งแต่ 1");
-  return { ok: true, data: { name, pattern: i.pattern.trim(), padding: i.padding, nextNo: i.nextNo, resetYearly: i.resetYearly } };
+  if (!NUMBER_MODES.includes(i.mode)) return fail("เลือกวิธีออกเลข");
+  if (i.endNo !== null) {
+    if (!Number.isInteger(i.endNo) || i.endNo < 1 || i.endNo > 99_999_999) return fail("เลขสิ้นสุดต้องเป็นจำนวนเต็มตั้งแต่ 1 (หรือเว้นว่างถ้าไม่จำกัด)");
+    if (i.endNo < i.nextNo - 1) return fail("เลขสิ้นสุดต้องไม่น้อยกว่าเลขเริ่มต้น");
+  }
+  return { ok: true, data: { name, pattern: i.pattern.trim(), padding: i.padding, nextNo: i.nextNo, resetYearly: i.resetYearly, mode: i.mode, endNo: i.endNo } };
 }
 
 export async function saveSerial(actor: Pick<CourseActor, "role">, id: string | null, input: SerialInput): Promise<Result<{ id: string }>> {
   if (!isCourseAdmin(actor)) return fail("เฉพาะผู้ดูแลระบบ");
   const clean = cleanSerial(input);
   if (!clean.ok) return clean;
-  if (!id) return { ok: true, id: (await db.certificateSerial.create({ data: clean.data })).id };
+  if (!id) {
+    if (clean.data.endNo !== null && clean.data.endNo < clean.data.nextNo) return fail("เลขสิ้นสุดต้องไม่น้อยกว่าเลขเริ่มต้น");
+    return { ok: true, id: (await db.certificateSerial.create({ data: clean.data })).id };
+  }
   const used = await db.certificate.count({ where: { serialId: id, number: { not: null } } });
   // once numbers went out, the pattern must not change under them and the counter must not go back (it would repeat numbers)
   const cur = await db.certificateSerial.findUnique({ where: { id } });

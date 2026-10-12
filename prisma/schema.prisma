@@ -680,6 +680,11 @@ enum CertificateStatus {
   REVOKED
 }
 
+enum CertificateNumberMode {
+  MANUAL // an admin presses "issue numbers" for everybody waiting
+  AUTO // the learner confirms their name and the next number is given at once
+}
+
 /// A running number series ("0001/2569"). One series can serve many courses/designs, so several work groups share one register.
 model CertificateSerial {
   id          String  @id @default(cuid())
@@ -689,6 +694,8 @@ model CertificateSerial {
   nextNo      Int     @default(1)
   resetYearly Boolean @default(true)
   lastYear    Int? // พ.ศ. of the last number given (drives the yearly reset)
+  mode        CertificateNumberMode @default(MANUAL)
+  endNo       Int? // last number of the range the district gave us; null = no limit
   createdAt   DateTime @default(now())
 
   designs      CertificateDesign[]

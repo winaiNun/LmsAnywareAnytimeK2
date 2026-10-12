@@ -40,7 +40,7 @@ export function IssuePanel({ courseId, waiting, finishedWithoutRow }: { courseId
   const count = waiting + finishedWithoutRow;
   return (
     <div className="space-y-2 rounded-xl bg-amber-50 p-4">
-      <p className="text-sm text-amber-900">มีผู้เรียนรอออกเลข <strong>{count.toLocaleString("th-TH")}</strong> คน — เมื่อกดแล้วระบบจะออกเลขเรียงตามวันที่เรียนจบ (คนจบก่อนได้เลขก่อน) และผู้เรียนจะดาวน์โหลดได้ทันที</p>
+      <p className="text-sm text-amber-900">มีผู้เรียนรอออกเลข <strong>{count.toLocaleString("th-TH")}</strong> คน — เมื่อกดแล้วระบบจะออกเลขเรียงตามวันที่เรียนจบ (คนจบก่อนได้เลขก่อน) และผู้เรียนจะดาวน์โหลดได้ทันที · ชุดเลขแบบ “ต่อเนื่องอัตโนมัติ” ผู้เรียนกดรับเองได้ ปุ่มนี้ใช้เก็บตกคนที่ยังไม่ได้กด</p>
       <button
         type="button"
         disabled={pending || count === 0}
@@ -49,7 +49,7 @@ export function IssuePanel({ courseId, waiting, finishedWithoutRow }: { courseId
           setMsg(null);
           start(async () => {
             const r = await issueNumbersAction(courseId);
-            if (r.ok) { setMsg({ ok: true, text: `ออกเลขแล้ว ${r.issued} คน` }); router.refresh(); } else setMsg({ ok: false, text: r.error });
+            if (r.ok) { setMsg({ ok: !r.stopped, text: r.stopped ? `ออกเลขแล้ว ${r.issued} คน แต่หยุดเพราะเลขในชุดหมด — ขยาย “เลขสิ้นสุด” ที่เมนูแอดมิน › เกียรติบัตร แล้วกดอีกครั้ง` : `ออกเลขแล้ว ${r.issued} คน` }); router.refresh(); } else setMsg({ ok: false, text: r.error });
           });
         }}
         className={`${btn} bg-brand text-white hover:bg-brand-dark`}

@@ -4,9 +4,11 @@
 import assert from "node:assert/strict";
 import { encode } from "next-auth/jwt";
 import { db } from "../src/lib/db";
-import { createDesign, ensureCertificate, issueNumbers, saveDesign, saveSerial } from "../src/lib/certificate/cert-store";
+import { confirmCertificate, createDesign, ensureCertificate, issueNumbers, saveDesign, saveSerial } from "../src/lib/certificate/cert-store";
 import { defaultFields } from "../src/lib/certificate/schema";
 
+// the menu's props carry every editable text, so look for the real element, not just the words
+const CONFIRM_BUTTON = />ตรวจชื่อแล้ว รับเกียรติบัตร<\/(button|a)>/;
 const BASE = process.env.SMOKE_BASE ?? "http://localhost:3000";
 const stamp = Date.now();
 
@@ -29,10 +31,12 @@ async function main() {
   const stranger = await mk("คนนอก ทดสอบ", "STUDENT");
   const course = await db.course.create({ data: { title: "คอร์สทดสอบเกียรติบัตร", areaId: area.id, createdById: teacher.id, status: "PUBLISHED", enrollOpen: true } });
   let serialId = "";
+  let autoSerialId = "";
+  let course2Id = "";
   try {
     const A = { id: admin.id, role: "ADMIN", reviewerAreaIds: [] as string[] };
     const T = { id: teacher.id, role: "TEACHER", creatorStatus: "APPROVED", reviewerAreaIds: [] as string[] };
-    const s = await saveSerial(A, null, { name: "ชุดทดสอบ smoke", pattern: "{no}/{year}", padding: 4, nextNo: 1, resetYearly: true });
+    const s = await saveSerial(A, null, { name: "ชุดทดสอบ smoke", pattern: "{no}/{year}", padding: 4, nextNo: 1, resetYearly: true, mode: "MANUAL", endNo: null });
     assert.ok(s.ok);
     serialId = s.ok ? s.id : "";
     const d = await createDesign(T, course.id, "แบบทดสอบ");
@@ -89,7 +93,7 @@ async function main() {
     assert.notEqual((await get("/admin/certificates", cT)).status, 200, "a teacher is turned away");
 
     // ---- after the admin issues numbers
-    assert.deepEqual(await issueNumbers(A, course.id), { ok: true, issued: 1 });
+    assert.deepEqual(await issueNumbers(A, course.id), { ok: true, issued: 1, stopped: false });
     r = await get(`/courses/${course.id}`, cL);
     assert.ok(r.text.includes(`/certificates/${row!.id}`), "download link appears once numbered");
     assert.ok(r.text.includes("เปิดเพื่อพิมพ์"));
@@ -104,9 +108,45 @@ async function main() {
     assert.ok((await get("/verify/ZZZZZZZZZZZZ")).text.includes("ไม่พบเกียรติบัตร"));
     assert.equal((await get("/verify")).status, 200);
 
+    // ---- an automatic series: the learner sees the name check + button, then the number and the print button
+    const as = await saveSerial(A, null, { name: "ชุดอัตโนมัติ smoke", pattern: "น.{no}/{year}", padding: 3, nextNo: 1, resetYearly: false, mode: "AUTO", endNo: null });
+    assert.ok(as.ok);
+    autoSerialId = as.ok ? as.id : "";
+    const course2 = await db.course.create({ data: { title: "คอร์สนักเรียน smoke", areaId: area.id, createdById: teacher.id, status: "PUBLISHED", enrollOpen: true } });
+    course2Id = course2.id;
+    const d2 = await createDesign(T, course2.id, "แบบนักเรียน");
+    assert.ok(d2.ok);
+    assert.ok((await saveDesign(A, d2.ok ? d2.id : "", { name: "แบบนักเรียน", isDefault: true, minScore: null, serialId: autoSerialId, fields: defaultFields() })).ok);
+    await db.enrollment.create({ data: { userId: stranger.id, courseId: course2.id, progress: 100, completedAt: new Date() } });
+    const rowA = await ensureCertificate(stranger.id, course2.id);
+    assert.ok(rowA);
+
+    r = await get(`/courses/${course2.id}`, cS);
+    assert.equal(r.status, 200);
+    assert.ok(CONFIRM_BUTTON.test(r.text), "the learner can take the number");
+    assert.ok(r.text.includes("คนนอก ทดสอบ"), "the name to check is shown");
+    assert.ok(!r.text.includes("พิมพ์ / ดาวน์โหลด (ยังไม่เปิดให้ใช้)"), "no greyed-out print button for an automatic series");
+    r = await get(`/certificates/${rowA!.id}`, cS);
+    assert.ok(CONFIRM_BUTTON.test(r.text) && !r.text.includes("พิมพ์ / บันทึกเป็น PDF"));
+    r = await get(`/certificates/${rowA!.id}`, cT);
+    assert.ok(!CONFIRM_BUTTON.test(r.text), "the course author does not get the learner's button");
+    r = await get("/dashboard/certificates", cS);
+    assert.ok(CONFIRM_BUTTON.test(r.text));
+    r = await get("/admin/certificates", cA);
+    assert.ok(r.text.includes("ต่อเนื่องอัตโนมัติ") && r.text.includes("เลขลำดับสิ้นสุด"));
+
+    const got = await confirmCertificate(stranger.id, course2.id);
+    assert.ok(got.ok && got.number === "น.001/2569".replace("2569", String(new Date().getFullYear() + 543)));
+    r = await get(`/certificates/${rowA!.id}`, cS);
+    assert.ok(r.text.includes("พิมพ์ / บันทึกเป็น PDF") && r.text.includes("น.001/"), "after taking the number the print button appears");
+    r = await get(`/verify/${rowA!.verifyCode}`);
+    assert.ok(r.text.includes("เกียรติบัตรนี้ถูกต้อง") && r.text.includes("น.001/"));
+
     console.log("certificate pages smoke: all checks passed");
   } finally {
-    await db.certificate.deleteMany({ where: { courseId: course.id } });
+    await db.certificate.deleteMany({ where: { courseId: { in: [course.id, course2Id].filter(Boolean) } } });
+    if (course2Id) await db.course.deleteMany({ where: { id: course2Id } });
+    if (autoSerialId) await db.certificateSerial.deleteMany({ where: { id: autoSerialId } });
     await db.course.delete({ where: { id: course.id } });
     if (serialId) await db.certificateSerial.deleteMany({ where: { id: serialId } });
     await db.user.deleteMany({ where: { id: { in: [admin.id, teacher.id, learner.id, stranger.id] } } });

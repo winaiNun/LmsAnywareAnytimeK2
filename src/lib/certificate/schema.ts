@@ -144,15 +144,43 @@ export function patternProblem(pattern: string): string | null {
 export const formatSerialNumber = (pattern: string, no: number, padding: number, beYear: number) =>
   pattern.replace("{no}", String(no).padStart(Math.min(8, Math.max(1, padding)), "0")).replace("{year}", String(beYear));
 
-export type SerialState = { pattern: string; padding: number; nextNo: number; resetYearly: boolean; lastYear: number | null };
+export type SerialState = { pattern: string; padding: number; nextNo: number; resetYearly: boolean; lastYear: number | null; endNo: number | null };
 
-/** The number to hand out now, and the series' state afterwards (restarts at 1 when the พ.ศ. changes and resetYearly is on). */
-export function takeNumber(s: SerialState, now: Date): { number: string; no: number; year: number; next: SerialState } {
+function nextPosition(s: SerialState, now: Date) {
   const year = toBE(bangkokParts(now).year);
   const restart = s.resetYearly && s.lastYear !== null && s.lastYear !== year;
-  const no = restart ? 1 : s.nextNo;
+  return { year, no: restart ? 1 : s.nextNo };
+}
+
+/**
+ * The number to hand out now, and the series' state afterwards (restarts at 1 when the พ.ศ. changes and resetYearly is on).
+ * Null when the range the district gave us is used up (`endNo`), so nobody can be given a number outside it.
+ */
+export function takeNumber(s: SerialState, now: Date): { number: string; no: number; year: number; next: SerialState } | null {
+  const { year, no } = nextPosition(s, now);
+  if (s.endNo !== null && no > s.endNo) return null;
   return { number: formatSerialNumber(s.pattern, no, s.padding, year), no, year, next: { ...s, nextNo: no + 1, lastYear: year } };
 }
+
+/** How many numbers are left in the range (null = no limit). */
+export function serialRemaining(s: SerialState, now: Date): number | null {
+  if (s.endNo === null) return null;
+  return Math.max(0, s.endNo - nextPosition(s, now).no + 1);
+}
+
+/** A running-out warning for the admin: "ok" | "low" (10 left, or 10% of the range) | "empty". */
+export function serialLevel(remaining: number | null, endNo: number | null): "ok" | "low" | "empty" {
+  if (remaining === null) return "ok";
+  if (remaining === 0) return "empty";
+  return remaining <= Math.max(10, Math.ceil((endNo ?? 0) * 0.1)) ? "low" : "ok";
+}
+
+export const NUMBER_MODES = ["MANUAL", "AUTO"] as const;
+export type NumberMode = (typeof NUMBER_MODES)[number];
+export const NUMBER_MODE_LABEL: Record<NumberMode, { title: string; hint: string }> = {
+  MANUAL: { title: "รอผู้ดูแลระบบออกเลข", hint: "ผู้เรียนจบแล้วรอ ผู้ดูแลระบบกดออกเลขให้ทั้งคอร์สทีเดียว (เรียงตามวันที่เรียนจบ)" },
+  AUTO: { title: "ต่อเนื่องอัตโนมัติ", hint: "ผู้เรียนตรวจชื่อแล้วกดรับ ระบบออกเลขถัดไปให้ทันที ไม่ต้องรอผู้ดูแลระบบ (เหมาะกับเลขที่ขอไว้เฉพาะกลุ่ม เช่น ของนักเรียน)" },
+};
 
 // ---------- designs ----------
 

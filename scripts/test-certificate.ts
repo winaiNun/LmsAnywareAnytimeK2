@@ -1,6 +1,6 @@
 // Pure certificate rules. Run: npm run test:cert
 import assert from "node:assert/strict";
-import { FIELD_KEYS, canDownload, certValues, defaultFields, formatSerialNumber, parseFields, patternProblem, pickDesign, renderTemplate, takeNumber } from "../src/lib/certificate/schema";
+import { FIELD_KEYS, canDownload, serialLevel, serialRemaining, certValues, defaultFields, formatSerialNumber, parseFields, patternProblem, pickDesign, renderTemplate, takeNumber } from "../src/lib/certificate/schema";
 
 let groups = 0;
 const group = (name: string, fn: () => void) => { fn(); groups++; void name; };
@@ -50,16 +50,40 @@ group("patternProblem", () => {
 group("serial numbers run, pad and restart each พ.ศ.", () => {
   assert.equal(formatSerialNumber("{no}/{year}", 7, 4, 2569), "0007/2569");
   assert.equal(formatSerialNumber("{no}", 12345, 4, 2569), "12345", "never cut a long number");
-  let s = { pattern: "{no}/{year}", padding: 4, nextNo: 1, resetYearly: true, lastYear: null as number | null };
-  const a = takeNumber(s, new Date("2026-10-11T05:00:00Z"));
+  assert.equal(formatSerialNumber("น.{no}/{year}", 1, 3, 2569), "น.001/2569", "a Thai prefix in the pattern");
+  let s = { pattern: "{no}/{year}", padding: 4, nextNo: 1, resetYearly: true, lastYear: null as number | null, endNo: null as number | null };
+  const a = takeNumber(s, new Date("2026-10-11T05:00:00Z"))!;
   assert.equal(a.number, "0001/2569"); s = a.next;
-  const b = takeNumber(s, new Date("2026-10-12T05:00:00Z"));
+  const b = takeNumber(s, new Date("2026-10-12T05:00:00Z"))!;
   assert.equal(b.number, "0002/2569"); s = b.next;
-  const c = takeNumber(s, new Date("2027-01-02T05:00:00Z"));
+  const c = takeNumber(s, new Date("2027-01-02T05:00:00Z"))!;
   assert.equal(c.number, "0001/2570", "new year restarts"); s = c.next;
   assert.equal(s.nextNo, 2);
-  const keep = takeNumber({ ...s, resetYearly: false, nextNo: 50 }, new Date("2028-01-02T05:00:00Z"));
+  const keep = takeNumber({ ...s, resetYearly: false, nextNo: 50 }, new Date("2028-01-02T05:00:00Z"))!;
   assert.equal(keep.number, "0050/2571", "no reset when switched off");
+});
+
+group("a requested range (endNo) stops the numbers", () => {
+  const now = new Date("2026-10-11T05:00:00Z");
+  let s = { pattern: "น.{no}/{year}", padding: 3, nextNo: 148, resetYearly: false, lastYear: null as number | null, endNo: 150 as number | null };
+  assert.equal(serialRemaining(s, now), 3);
+  const nums: string[] = [];
+  for (;;) { const t = takeNumber(s, now); if (!t) break; nums.push(t.number); s = t.next; }
+  assert.deepEqual(nums, ["น.148/2569", "น.149/2569", "น.150/2569"], "the last number of the range is given, nothing after it");
+  assert.equal(serialRemaining(s, now), 0);
+  assert.equal(takeNumber(s, now), null);
+  assert.equal(serialRemaining({ ...s, endNo: null }, now), null, "no limit");
+  // a new year restarts inside the range
+  assert.equal(takeNumber({ ...s, resetYearly: true, lastYear: 2569 }, new Date("2027-02-01T05:00:00Z"))?.number, "น.001/2570");
+  assert.equal(serialRemaining({ ...s, resetYearly: true, lastYear: 2569 }, new Date("2027-02-01T05:00:00Z")), 150, "the whole range is free again");
+  // warning levels
+  assert.equal(serialLevel(null, null), "ok");
+  assert.equal(serialLevel(0, 150), "empty");
+  assert.equal(serialLevel(10, 150), "low");
+  assert.equal(serialLevel(16, 150), "ok", "16 > 10% of 150 and > 10");
+  assert.equal(serialLevel(15, 150), "low", "15 = 10% of 150");
+  assert.equal(serialLevel(200, 1000), "ok");
+  assert.equal(serialLevel(100, 1000), "low");
 });
 
 group("pickDesign: highest reached score, else the default", () => {

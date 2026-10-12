@@ -4,6 +4,7 @@ import { backfillCertificatesPreview } from "@/lib/certificate/cert-read";
 import { parseFields, type CertValues } from "@/lib/certificate/schema";
 import { db } from "@/lib/db";
 import { driveThumbnailUrl } from "@/lib/drive";
+import { NUMBER_MODE_LABEL } from "@/lib/certificate/schema";
 import { formatThaiDate } from "@/lib/thai-date";
 import CertificateDesigner from "./certificate-designer";
 import { IssuePanel, NewDesignForm, RowActions } from "./certificate-manage";
@@ -19,7 +20,7 @@ export default async function CertificateTab({ courseId, isAdmin, designId, stat
   const base = `/dashboard/courses/${courseId}/edit?tab=certificate`;
   const [course, designs, serials, fonts] = await Promise.all([
     db.course.findUniqueOrThrow({ where: { id: courseId }, select: { title: true, hours: true, instructorName: true } }),
-    db.certificateDesign.findMany({ where: { courseId }, orderBy: { position: "asc" }, include: { serial: { select: { name: true } }, _count: { select: { certificates: true } } } }),
+    db.certificateDesign.findMany({ where: { courseId }, orderBy: { position: "asc" }, include: { serial: { select: { name: true, mode: true } }, _count: { select: { certificates: true } } } }),
     db.certificateSerial.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, pattern: true } }),
     db.certificateFont.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
@@ -48,7 +49,7 @@ export default async function CertificateTab({ courseId, isAdmin, designId, stat
   const filter = ["PENDING", "ISSUED", "REVOKED"].includes(status ?? "") ? (status as "PENDING" | "ISSUED" | "REVOKED") : undefined;
   const [counts, rows, finishedWithoutRow] = await Promise.all([
     db.certificate.groupBy({ by: ["status"], where: { courseId }, _count: true }),
-    db.certificate.findMany({ where: { courseId, ...(filter && { status: filter }) }, orderBy: [{ completedAt: "desc" }], take: 100, include: { user: { select: { name: true } }, design: { select: { name: true } } } }),
+    db.certificate.findMany({ where: { courseId, ...(filter && { status: filter }) }, orderBy: [{ completedAt: "desc" }], take: 100, include: { user: { select: { name: true } }, design: { select: { name: true, serial: { select: { mode: true } } } } } }),
     backfillCertificatesPreview(courseId),
   ]);
   const n = (s: string) => counts.find((c) => c.status === s)?._count ?? 0;
@@ -80,7 +81,7 @@ export default async function CertificateTab({ courseId, isAdmin, designId, stat
                   <p className="flex flex-wrap gap-1.5 text-xs">
                     {d.isDefault && <span className="rounded-full bg-brand-soft px-2 py-0.5 font-medium text-brand">แบบเริ่มต้น</span>}
                     {d.minScore !== null && <span className="rounded-full bg-neutral-100 px-2 py-0.5">คะแนน ≥ {d.minScore}%</span>}
-                    <span className="rounded-full bg-neutral-100 px-2 py-0.5">{d.serial ? `ชุดเลข: ${d.serial.name}` : "ไม่ใช้เลข"}</span>
+                    <span className="rounded-full bg-neutral-100 px-2 py-0.5">{d.serial ? `ชุดเลข: ${d.serial.name} (${NUMBER_MODE_LABEL[d.serial.mode].title})` : "ไม่ใช้เลข"}</span>
                     {!d.imageDriveId && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-amber-800">ยังไม่มีภาพเทมเพลต</span>}
                   </p>
                   <Link href={`${base}&design=${d.id}`} className="inline-flex min-h-10 items-center text-sm font-semibold text-brand">ออกแบบ/แก้ไข →</Link>
@@ -96,7 +97,7 @@ export default async function CertificateTab({ courseId, isAdmin, designId, stat
         <div className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
           <h2 className="font-semibold">ผู้เรียนที่ได้รับเกียรติบัตร</h2>
           <div className="grid grid-cols-3 gap-3">
-            {([["รอออกเลข", waitingAll], ["ออกแล้ว", n("ISSUED")], ["เพิกถอน", n("REVOKED")]] as const).map(([l, v]) => (
+            {([["รอออกเลข / รอกดรับ", waitingAll], ["ออกแล้ว", n("ISSUED")], ["เพิกถอน", n("REVOKED")]] as const).map(([l, v]) => (
               <div key={l} className="rounded-lg bg-neutral-50 p-3"><p className="text-2xl font-bold tabular-nums">{v.toLocaleString("th-TH")}</p><p className="text-sm text-neutral-600">{l}</p></div>
             ))}
           </div>
@@ -116,7 +117,8 @@ export default async function CertificateTab({ courseId, isAdmin, designId, stat
           ) : (
             <ul className="divide-y divide-neutral-100">
               {rows.map((r) => {
-                const [label, tone] = STATUS[r.status];
+                const [label0, tone] = STATUS[r.status];
+                const label = r.status === "PENDING" && r.design.serial?.mode === "AUTO" ? "รอผู้เรียนกดรับ" : label0;
                 return (
                   <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
                     <div className="min-w-0">

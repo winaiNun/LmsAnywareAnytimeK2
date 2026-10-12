@@ -47,10 +47,11 @@ export default async function MyCertificatesPage() {
               <div className="space-y-2 p-4">
                 <p className="break-words font-semibold">{c.courseTitle}</p>
                 <p className="text-xs text-neutral-500">เรียนจบ {formatThaiDate(c.completedAt)}{c.number ? ` · เลขที่ ${c.number}` : ""}</p>
-                {c.status === "PENDING" && <p className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">{plainText(texts["cert.pending.label"])}</p>}
+                {c.status === "PENDING" && c.numberMode !== "AUTO" && <p className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">{plainText(texts["cert.pending.label"])}</p>}
+                {c.status === "PENDING" && c.numberMode === "AUTO" && <Link href={`/certificates/${c.id}`} className="flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white">{plainText(texts["cert.auto.button"])}</Link>}
                 {c.status === "REVOKED" && <p className="inline-flex rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">ถูกเพิกถอน</p>}
                 {c.status === "ISSUED" && <Link href={`/certificates/${c.id}`} className="flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white">พิมพ์ / บันทึกเป็น PDF</Link>}
-                {c.status === "PENDING" && <p className="text-xs text-neutral-500">{plainText(texts["cert.pending.note"])}</p>}
+                {c.status === "PENDING" && c.numberMode !== "AUTO" && <p className="text-xs text-neutral-500">{plainText(texts["cert.pending.note"])}</p>}
               </div>
             </li>
           ))}

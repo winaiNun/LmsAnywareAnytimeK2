@@ -3,12 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { addFontAction, deleteFontAction, deleteSerialAction, saveSerialAction } from "@/app/dashboard/courses/[id]/edit/certificate-actions";
-import { formatSerialNumber, patternProblem } from "@/lib/certificate/schema";
+import { NUMBER_MODES, NUMBER_MODE_LABEL, formatSerialNumber, patternProblem, type NumberMode } from "@/lib/certificate/schema";
 
 const input = "min-h-11 w-full rounded-lg border border-neutral-300 bg-white px-3";
 const btn = "flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold disabled:opacity-50";
 
-export type SerialRow = { id: string; name: string; pattern: string; padding: number; nextNo: number; resetYearly: boolean; used: number; designs: number };
+export type SerialRow = { id: string; name: string; pattern: string; padding: number; nextNo: number; resetYearly: boolean; mode: NumberMode; endNo: number | null; lastYear: number | null; used: number; designs: number };
 
 export function SerialForm({ serial }: { serial: SerialRow | null }) {
   const router = useRouter();
@@ -17,11 +17,15 @@ export function SerialForm({ serial }: { serial: SerialRow | null }) {
   const [padding, setPadding] = useState(String(serial?.padding ?? 4));
   const [nextNo, setNextNo] = useState(String(serial?.nextNo ?? 1));
   const [reset, setReset] = useState(serial?.resetYearly ?? true);
+  const [mode, setMode] = useState<NumberMode>(serial?.mode ?? "MANUAL");
+  const [endNo, setEndNo] = useState(serial?.endNo ? String(serial.endNo) : "");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
   const frozen = !!serial && serial.used > 0;
   const bad = patternProblem(pattern);
-  const preview = bad ? "—" : formatSerialNumber(pattern, Number(nextNo) || 1, Number(padding) || 4, 2569);
+  const first = Number(nextNo) || 1;
+  const preview = bad ? "—" : formatSerialNumber(pattern, first, Number(padding) || 4, 2569);
+  const endPreview = bad || !endNo.trim() ? null : formatSerialNumber(pattern, Number(endNo) || 1, Number(padding) || 4, 2569);
 
   return (
     <form
@@ -29,7 +33,7 @@ export function SerialForm({ serial }: { serial: SerialRow | null }) {
         e.preventDefault();
         setMsg(null);
         start(async () => {
-          const r = await saveSerialAction(serial?.id ?? null, { name, pattern, padding: Number(padding), nextNo: Number(nextNo), resetYearly: reset });
+          const r = await saveSerialAction(serial?.id ?? null, { name, pattern, padding: Number(padding), nextNo: Number(nextNo), resetYearly: reset, mode, endNo: endNo.trim() === "" ? null : Number(endNo) });
           if (r.ok) {
             setMsg({ ok: true, text: "บันทึกแล้ว" });
             if (!serial) { setName(""); setNextNo("1"); }
@@ -48,10 +52,22 @@ export function SerialForm({ serial }: { serial: SerialRow | null }) {
         </label>
         <label className="block space-y-1"><span className="text-sm font-medium">จำนวนหลักของเลขลำดับ</span><input type="number" min={1} max={8} value={padding} onChange={(e) => setPadding(e.target.value)} disabled={frozen} className={input} /></label>
         <label className="block space-y-1"><span className="text-sm font-medium">{serial ? "เลขลำดับถัดไป" : "เลขลำดับเริ่มต้น"}</span><input type="number" min={1} value={nextNo} onChange={(e) => setNextNo(e.target.value)} className={input} /></label>
+        <label className="block space-y-1"><span className="text-sm font-medium">เลขลำดับสิ้นสุด (ไม่บังคับ)</span><input type="number" min={1} value={endNo} onChange={(e) => setEndNo(e.target.value)} placeholder="เว้นว่าง = ไม่จำกัด" className={input} /><span className="block text-xs text-neutral-500">ใส่เมื่อขอเลขมาเป็นช่วง เช่น 1–150 พอเลขหมด ระบบหยุดออกเลขและแจ้งเตือน</span></label>
       </div>
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">วิธีออกเลข</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {NUMBER_MODES.map((m) => (
+            <label key={m} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${mode === m ? "border-brand bg-brand-soft" : "border-neutral-200"}`}>
+              <input type="radio" name={`mode-${serial?.id ?? "new"}`} checked={mode === m} onChange={() => setMode(m)} className="mt-1 h-5 w-5 shrink-0 accent-[#0052FF]" />
+              <span><span className="block font-semibold">{NUMBER_MODE_LABEL[m].title}</span><span className="block text-xs text-neutral-600">{NUMBER_MODE_LABEL[m].hint}</span></span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
       <label className="flex items-center gap-3"><input type="checkbox" checked={reset} onChange={(e) => setReset(e.target.checked)} className="h-5 w-5 accent-[#0052FF]" /><span className="text-sm">เริ่มนับ 1 ใหม่เมื่อขึ้นปี พ.ศ. ใหม่</span></label>
-      <p className="text-sm text-neutral-600">เลขถัดไปจะออกเป็น: <strong className="font-mono">{bad ? "—" : preview}</strong>{bad && <span className="ml-2 text-red-600">{bad}</span>}</p>
-      {frozen && <p className="text-xs text-amber-700">ออกเลขไปแล้ว จึงเปลี่ยนรูปแบบไม่ได้ และเลขถัดไปปรับได้เฉพาะเพิ่มขึ้น</p>}
+      <p className="text-sm text-neutral-600">เลขถัดไปจะออกเป็น: <strong className="font-mono">{bad ? "—" : preview}</strong>{endPreview && <> · เลขสุดท้าย: <strong className="font-mono">{endPreview}</strong></>}{bad && <span className="ml-2 text-red-600">{bad}</span>}</p>
+      {frozen && <p className="text-xs text-amber-700">ออกเลขไปแล้ว จึงเปลี่ยนรูปแบบไม่ได้ และเลขถัดไปปรับได้เฉพาะเพิ่มขึ้น (วิธีออกเลขและเลขสิ้นสุดแก้ได้ แต่เลขสิ้นสุดต้องไม่ต่ำกว่าเลขที่ออกไปแล้ว)</p>}
       <div className="flex flex-wrap items-center gap-2">
         <button disabled={pending || !!bad} className={`${btn} bg-brand text-white hover:bg-brand-dark`}>{pending ? "กำลังบันทึก…" : serial ? "บันทึก" : "+ สร้างชุดเลข"}</button>
         {msg && <span role={msg.ok ? "status" : "alert"} className={`text-sm font-medium ${msg.ok ? "text-green-700" : "text-red-600"}`}>{msg.text}</span>}

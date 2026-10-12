@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isAdmin } from "@/lib/permissions";
+import { NUMBER_MODE_LABEL, serialLevel, serialRemaining } from "@/lib/certificate/schema";
 import { DeleteButton, FontForm, SerialForm, type SerialRow } from "./certificate-admin-forms";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export default async function AdminCertificatesPage() {
   ]);
   const rows: SerialRow[] = await Promise.all(
     serials.map(async (s) => ({
-      id: s.id, name: s.name, pattern: s.pattern, padding: s.padding, nextNo: s.nextNo, resetYearly: s.resetYearly,
+      id: s.id, name: s.name, pattern: s.pattern, padding: s.padding, nextNo: s.nextNo, resetYearly: s.resetYearly, mode: s.mode, endNo: s.endNo, lastYear: s.lastYear,
       used: await db.certificate.count({ where: { serialId: s.id, number: { not: null } } }), designs: s._count.designs,
     })),
   );
@@ -33,15 +34,23 @@ export default async function AdminCertificatesPage() {
         <h2 className="text-lg font-semibold">ชุดเลขเกียรติบัตร</h2>
         <p className="text-sm text-neutral-600">เลขจะออกเรียงต่อกันตามวันที่เรียนจบเมื่อกด “ออกเลข” ในคอร์ส หลายกลุ่มงานใช้ชุดเดียวกันได้เพื่อให้เลขไม่ซ้ำกันทั้งทะเบียน</p>
         <ul className="space-y-3">
-          {rows.map((s) => (
+          {rows.map((s) => {
+            const left = serialRemaining(s, new Date());
+            const level = serialLevel(left, s.endNo);
+            return (
             <li key={s.id} className="space-y-3 rounded-xl border border-neutral-200 p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="text-sm text-neutral-600">ออกเลขไปแล้ว <strong>{s.used.toLocaleString("th-TH")}</strong> ใบ · ใช้ใน {s.designs} แบบ</p>
+                <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-600">
+                  <span className="rounded-full bg-neutral-100 px-3 py-0.5 text-xs font-semibold">{NUMBER_MODE_LABEL[s.mode].title}</span>
+                  <span>ออกเลขไปแล้ว <strong>{s.used.toLocaleString("th-TH")}</strong> ใบ · ใช้ใน {s.designs} แบบ</span>
+                  {left !== null && <span className={`rounded-full px-3 py-0.5 text-xs font-semibold ${level === "empty" ? "bg-red-50 text-red-700" : level === "low" ? "bg-amber-50 text-amber-800" : "bg-green-50 text-green-700"}`}>{level === "empty" ? "เลขหมดแล้ว — ขยายเลขสิ้นสุดเพื่อออกต่อ" : `เหลือ ${left.toLocaleString("th-TH")} เลข${level === "low" ? " (ใกล้หมด)" : ""}`}</span>}
+                </p>
                 <DeleteButton kind="serial" id={s.id} label={s.name} />
               </div>
               <SerialForm serial={s} />
             </li>
-          ))}
+            );
+          })}
         </ul>
         <div className="rounded-xl border border-dashed border-neutral-300 p-4">
           <h3 className="mb-3 font-semibold">สร้างชุดเลขใหม่</h3>

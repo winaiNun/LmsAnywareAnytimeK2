@@ -14,6 +14,7 @@ export type CertRender = {
   userId: string;
   courseAuthorId: string;
   designName: string;
+  numberMode: "MANUAL" | "AUTO" | null; // how the series gives numbers; null = this design needs no number
   imageSrc: string | null;
   aspect: number;
   fields: CertField[];
@@ -30,6 +31,7 @@ export async function loadCertificate(where: { id: string } | { verifyCode: stri
     where,
     include: {
       design: true,
+      serial: { select: { mode: true } },
       course: { select: { title: true, hours: true, instructorName: true, createdById: true } },
       user: { select: { name: true, organization: true, memberSchool: { select: { name: true } } } },
     },
@@ -45,6 +47,7 @@ export async function loadCertificate(where: { id: string } | { verifyCode: stri
   return {
     id: c.id, status: c.status, number: c.number, verifyCode: c.verifyCode, courseId: c.courseId, courseTitle: c.course.title, userId: c.userId, courseAuthorId: c.course.createdById,
     designName: c.design.name,
+    numberMode: c.serial?.mode ?? null,
     imageSrc: c.design.imageDriveId ? driveThumbnailUrl(c.design.imageDriveId, 2400) : null,
     aspect: c.design.imageW > 0 && c.design.imageH > 0 ? c.design.imageW / c.design.imageH : A4,
     fields, values, usedFonts: fontIds.map((id) => ({ id, name: "" })),

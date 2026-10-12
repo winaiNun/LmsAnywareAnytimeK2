@@ -4,6 +4,7 @@ import { loadCertificate } from "@/lib/certificate/cert-render-data";
 import { plainText } from "@/lib/site-texts";
 import { getSiteTexts } from "@/lib/site-texts-server";
 import CertificateView from "./certificate-view";
+import PendingNotice from "./pending-notice";
 
 /**
  * The finished-course card: the learner always SEES the certificate (marked as a sample while it has no number), and the
@@ -25,9 +26,8 @@ export default async function LearnerCertificate({ userId, courseId }: { userId:
           <CertificateView imageSrc={c.imageSrc} aspect={c.aspect} fields={c.fields} values={c.values} usedFonts={c.usedFonts} watermark={c.status === "PENDING" ? "ตัวอย่าง · รอออกเลข" : undefined} className="rounded-lg shadow ring-1 ring-black/10" />
           {c.status === "PENDING" ? (
             <div className="space-y-2">
-              <p className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-800">{plainText(texts["cert.pending.label"])}</p>
-              <p className="text-sm text-neutral-600">{plainText(texts["cert.pending.note"])}</p>
-              <button type="button" disabled className="flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-xl bg-neutral-200 px-6 font-semibold text-neutral-500 sm:w-auto">พิมพ์ / ดาวน์โหลด (ยังไม่เปิดให้ใช้)</button>
+              <PendingNotice c={c} texts={texts} isHolder />
+              {c.numberMode !== "AUTO" && <button type="button" disabled className="flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-xl bg-neutral-200 px-6 font-semibold text-neutral-500 sm:w-auto">พิมพ์ / ดาวน์โหลด (ยังไม่เปิดให้ใช้)</button>}
             </div>
           ) : (
             <div className="space-y-2">

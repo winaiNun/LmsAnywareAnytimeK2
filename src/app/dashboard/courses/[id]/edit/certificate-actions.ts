@@ -44,7 +44,7 @@ export async function deleteDesignAction(courseId: string, designId: string): Pr
   return r;
 }
 
-export async function issueNumbersAction(courseId: string): Promise<Result<{ issued: number }>> {
+export async function issueNumbersAction(courseId: string): Promise<Result<{ issued: number; stopped: boolean }>> {
   const a = await actor();
   if (!a) return NEED_LOGIN;
   const r = await issueNumbers(a, courseId);

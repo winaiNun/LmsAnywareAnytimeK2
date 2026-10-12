@@ -3,11 +3,11 @@ import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import CertificateView from "@/components/certificate/certificate-view";
 import { PRINT_CSS } from "@/components/certificate/print-css";
+import PendingNotice from "@/components/certificate/pending-notice";
 import PrintButton from "@/components/certificate/print-button";
 import SiteNavbar from "@/components/site-navbar";
 import { authOptions } from "@/lib/auth";
 import { loadCertificate } from "@/lib/certificate/cert-render-data";
-import { plainText } from "@/lib/site-texts";
 import { getSiteTexts } from "@/lib/site-texts-server";
 
 export const dynamic = "force-dynamic";
@@ -40,10 +40,7 @@ export default async function CertificatePage({ params }: { params: { id: string
             <CertificateView imageSrc={c.imageSrc} aspect={c.aspect} fields={c.fields} values={c.values} usedFonts={c.usedFonts} watermark={c.status === "PENDING" ? "ตัวอย่าง · รอออกเลข" : undefined} className="rounded-lg shadow-lg ring-1 ring-black/10" />
             <div className="no-print space-y-3">
               {c.status === "PENDING" ? (
-                <>
-                  <p className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-800">{plainText(texts["cert.pending.label"])}</p>
-                  <p className="text-neutral-600">{plainText(texts["cert.pending.note"])}</p>
-                </>
+                <PendingNotice c={c} texts={texts} isHolder={holder} />
               ) : (
                 <>
                   <PrintButton />
