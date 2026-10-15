@@ -1,17 +1,18 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { processLogo } from "@/lib/image";
+import { processHeroImage, processLogo } from "@/lib/image";
 import { getStorage } from "@/lib/storage";
 
 // Vercel rejects request bodies over ~4.5 MB, so keep uploads that pass through the server below that.
 const MAX_LOGO_BYTES = 4 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 30 * 1024 * 1024;
+const MAX_HERO_IMAGE_BYTES = 4 * 1024 * 1024; // stills arrive already cropped (small); GIFs are posted as-is
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const VIDEO_EXT: Record<string, string> = { "video/mp4": "mp4", "video/webm": "webm" };
 // Only keys we generated ourselves are accepted back from the browser.
@@ -59,6 +60,8 @@ export async function saveSettings(_prev: SettingsState, formData: FormData): Pr
   const storage = getStorage();
   let logoKey = existing?.logoKey ?? null;
   let heroVideoKey = existing?.heroVideoKey ?? null;
+  let heroImageKey = existing?.heroImageKey ?? null;
+  let heroImageAnimated = existing?.heroImageAnimated ?? false;
   const toDelete: string[] = [];
 
   const logo = formData.get("logo");
@@ -100,10 +103,48 @@ export async function saveSettings(_prev: SettingsState, formData: FormData): Pr
     heroVideoKey = null;
   }
 
-  const data = { ...parsed.data, logoKey, heroVideoKey, logoBackdrop: formData.get("logoBackdrop") === "on", allowServerUploads: formData.get("allowServerUploads") === "on", requireRegistrationCode: formData.get("requireRegistrationCode") === "on" };
+  // Hero picture / GIF. A background is either a picture or a video, so a new one replaces the other.
+  const heroImage = formData.get("heroImage");
+  let newImage = false;
+  if (heroImage instanceof File && heroImage.size > 0) {
+    const isGif = heroImage.type === "image/gif";
+    if (!isGif && !IMAGE_TYPES.includes(heroImage.type)) return { error: "ภาพพื้นหลังรองรับ PNG, JPG, WebP หรือ GIF" };
+    if (heroImage.size > MAX_HERO_IMAGE_BYTES) return { error: "ไฟล์ภาพต้องไม่เกิน 4 MB (GIF ที่ใหญ่กว่านี้ให้บีบอัดก่อน หรือใช้วิดีโอ MP4 แทน)" };
+    if (uploadedKey || (video instanceof File && video.size > 0)) return { error: "เลือกพื้นหลังอย่างเดียว: ภาพ/GIF หรือวิดีโอ" };
+    const bytes = Buffer.from(await heroImage.arrayBuffer());
+    if (isGif && bytes.subarray(0, 3).toString("latin1") !== "GIF") return { error: "ไฟล์ไม่ใช่ GIF ที่ถูกต้อง" };
+    let processed: { data: Buffer; animated: boolean };
+    try {
+      processed = await processHeroImage(bytes, { animated: isGif });
+    } catch {
+      return { error: "ไฟล์ภาพเสีย อ่านไม่ได้ หรือ GIF มีเฟรมมากเกินไป" };
+    }
+    const key = `site/hero-img-${randomUUID()}.webp`;
+    await storage.put(key, processed.data, "image/webp");
+    if (heroImageKey) toDelete.push(heroImageKey);
+    heroImageKey = key;
+    heroImageAnimated = processed.animated;
+    newImage = true;
+  } else if (formData.get("removeHeroImage") && heroImageKey) {
+    toDelete.push(heroImageKey);
+    heroImageKey = null;
+    heroImageAnimated = false;
+  }
+  const newVideo = heroVideoKey !== null && heroVideoKey !== (existing?.heroVideoKey ?? null);
+  if (newImage && heroVideoKey) {
+    toDelete.push(heroVideoKey);
+    heroVideoKey = null;
+  } else if (newVideo && heroImageKey) {
+    toDelete.push(heroImageKey);
+    heroImageKey = null;
+    heroImageAnimated = false;
+  }
+
+  const data = { ...parsed.data, logoKey, heroVideoKey, heroImageKey, heroImageAnimated, logoBackdrop: formData.get("logoBackdrop") === "on", allowServerUploads: formData.get("allowServerUploads") === "on", requireRegistrationCode: formData.get("requireRegistrationCode") === "on" };
   await db.siteSetting.upsert({ where: { id: "main" }, update: data, create: { id: "main", ...data } });
   await Promise.all(toDelete.map((k) => storage.delete(k)));
 
   revalidatePath("/", "layout");
+  revalidateTag("faq"); // the chat shows the site logo
   return { saved: true };
 }

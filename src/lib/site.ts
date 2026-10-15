@@ -8,6 +8,8 @@ export type SiteInfo = {
   logoUrl: string | null;
   logoBackdrop: boolean;
   heroVideoUrl: string | null;
+  heroImageUrl: string | null;
+  heroImageAnimated: boolean;
   heroBgColor: string;
   overlayOpacity: number;
   fadeSeconds: number;
@@ -27,6 +29,8 @@ export async function getSiteInfo(): Promise<SiteInfo> {
     logoUrl: fileUrl(s?.logoKey ?? null),
     logoBackdrop: s?.logoBackdrop ?? false,
     heroVideoUrl: fileUrl(s?.heroVideoKey ?? null),
+    heroImageUrl: fileUrl(s?.heroImageKey ?? null),
+    heroImageAnimated: s?.heroImageAnimated ?? false,
     heroBgColor: s?.heroBgColor ?? "#0B2A6F",
     overlayOpacity: s?.overlayOpacity ?? 45,
     fadeSeconds: s?.fadeSeconds ?? 1.5,

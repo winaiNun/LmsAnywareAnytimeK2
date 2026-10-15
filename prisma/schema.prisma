@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   url       = env("DATABASE_URL") // app connection (pooled on serverless hosts)
   directUrl = env("DIRECT_URL") // direct connection, used by prisma migrate
 }
@@ -30,50 +30,50 @@ enum CreatorStatus {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String?  @unique
-  username     String?  @unique // log in without an e-mail (students)
-  name         String // full display name (prefix + first + last as typed)
-  memberType   MemberType @default(GENERAL)
-  prefix       String? // คำนำหน้า
-  firstName    String?
-  lastName     String?
-  phone        String?
-  schoolId     String? // teachers / students pick their school from the directory
-  memberSchool School?  @relation("SchoolMembers", fields: [schoolId], references: [id], onDelete: SetNull)
-  organization String? // supervisors / general: home agency
-  position     String? // ตำแหน่ง/วิทยฐานะ
-  gradeLevel   String? // students: ชั้น
-  creatorStatus CreatorStatus @default(NONE)
-  creatorReason String?
-  devices       TrustedDevice[]
-  mediaCreated  Media[]         @relation("MediaCreator")
-  mediaLikes    MediaLike[]
-  reviewerAreas AreaReviewer[]
+  id                 String            @id @default(cuid())
+  email              String?           @unique
+  username           String?           @unique // log in without an e-mail (students)
+  name               String // full display name (prefix + first + last as typed)
+  memberType         MemberType        @default(GENERAL)
+  prefix             String? // คำนำหน้า
+  firstName          String?
+  lastName           String?
+  phone              String?
+  schoolId           String? // teachers / students pick their school from the directory
+  memberSchool       School?           @relation("SchoolMembers", fields: [schoolId], references: [id], onDelete: SetNull)
+  organization       String? // supervisors / general: home agency
+  position           String? // ตำแหน่ง/วิทยฐานะ
+  gradeLevel         String? // students: ชั้น
+  creatorStatus      CreatorStatus     @default(NONE)
+  creatorReason      String?
+  devices            TrustedDevice[]
+  mediaCreated       Media[]           @relation("MediaCreator")
+  mediaLikes         MediaLike[]
+  reviewerAreas      AreaReviewer[]
   registrationCodeId String? // the sign-up code this member used (for the per-code member list)
   registrationCode   RegistrationCode? @relation("CodeUsers", fields: [registrationCodeId], references: [id], onDelete: SetNull)
   // profile picture: either an uploaded, already-cropped square (avatarKey) or a public Google Drive file
   // shown through Drive's thumbnail with a stored circular crop window (centre cx/cy 0..1 of the image, zoom >= 1)
-  avatarKey     String?
-  avatarDriveId String?
-  avatarCx      Float     @default(0.5)
-  avatarCy      Float     @default(0.5)
-  avatarZoom    Float     @default(1)
-  avatarAspect  Float     @default(1) // width / height of the Drive thumbnail
-  passwordHash String
-  role         Role     @default(STUDENT)
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  avatarKey          String?
+  avatarDriveId      String?
+  avatarCx           Float             @default(0.5)
+  avatarCy           Float             @default(0.5)
+  avatarZoom         Float             @default(1)
+  avatarAspect       Float             @default(1) // width / height of the Drive thumbnail
+  passwordHash       String
+  role               Role              @default(STUDENT)
+  active             Boolean           @default(true)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
-  enrollments Enrollment[]
-  coursesCreated Course[] @relation("CourseCreator")
-  quizAttempts   QuizAttempt[]    @relation("QuizAttempts")
-  lessonProgress LessonProgress[] @relation("LessonProgress")
-  banners     Banner[]     @relation("BannerCreator")
-  school      School?      @relation("SchoolAccount") // set when this account manages a school
-  mustChangePassword Boolean @default(false) // temporary password issued by an admin/import
-  certificates Certificate[] @relation("UserCertificates")
+  enrollments        Enrollment[]
+  coursesCreated     Course[]         @relation("CourseCreator")
+  quizAttempts       QuizAttempt[]    @relation("QuizAttempts")
+  lessonProgress     LessonProgress[] @relation("LessonProgress")
+  banners            Banner[]         @relation("BannerCreator")
+  school             School?          @relation("SchoolAccount") // set when this account manages a school
+  mustChangePassword Boolean          @default(false) // temporary password issued by an admin/import
+  certificates       Certificate[]    @relation("UserCertificates")
 }
 
 /// Admin-issued sign-up code. Redeemed atomically (see src/lib/registration.ts) so a code with 1 use left
@@ -165,26 +165,26 @@ model EducationLevel {
   sortOrder Int     @default(0)
   active    Boolean @default(true)
 
-  media MediaLevel[]
+  media   MediaLevel[]
   courses CourseLevel[]
 }
 
 model Media {
-  id          String      @id @default(cuid())
-  title       String
-  description String      @default("")
-  authorName  String? // free-text credit when an admin posts on someone else's behalf
-  areaId      String
-  area        LearningArea @relation(fields: [areaId], references: [id], onDelete: Restrict)
-  typeId      String?
-  type        MediaType?  @relation(fields: [typeId], references: [id], onDelete: SetNull)
-  levels      MediaLevel[]
-  tags        String[]
+  id           String       @id @default(cuid())
+  title        String
+  description  String       @default("")
+  authorName   String? // free-text credit when an admin posts on someone else's behalf
+  areaId       String
+  area         LearningArea @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  typeId       String?
+  type         MediaType?   @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  levels       MediaLevel[]
+  tags         String[]
   // cover: an uploaded 16:9 WebP, or a public Drive file shown through its thumbnail (focus point = where to crop)
   coverKey     String?
   coverDriveId String?
-  coverFx      Float   @default(0.5)
-  coverFy      Float   @default(0.5)
+  coverFx      Float        @default(0.5)
+  coverFy      Float        @default(0.5)
 
   status       MediaStatus @default(DRAFT)
   reviewNote   String?
@@ -203,10 +203,10 @@ model Media {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items MediaItem[]
+  items        MediaItem[]
   lessonBlocks LessonBlock[]
-  likes MediaLike[]
-  views MediaViewDaily[]
+  likes        MediaLike[]
+  views        MediaViewDaily[]
 
   @@index([status, publishedAt])
   @@index([areaId, status])
@@ -318,20 +318,20 @@ enum ProgressStatus {
 }
 
 model Course {
-  id          String   @id @default(cuid())
-  title       String
-  description String   @default("")
-  areaId      String
-  area        LearningArea @relation(fields: [areaId], references: [id], onDelete: Restrict)
-  levels      CourseLevel[]
+  id             String        @id @default(cuid())
+  title          String
+  description    String        @default("")
+  areaId         String
+  area           LearningArea  @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  levels         CourseLevel[]
   // cover: an uploaded 16:9 WebP, or a public Drive file shown through its thumbnail (focus point = where to crop)
-  coverKey     String?
-  coverDriveId String?
-  coverFx      Float   @default(0.5)
-  coverFy      Float   @default(0.5)
+  coverKey       String?
+  coverDriveId   String?
+  coverFx        Float         @default(0.5)
+  coverFy        Float         @default(0.5)
   instructorName String?
-  hours        Float?
-  enrollOpen   Boolean @default(true)
+  hours          Float?
+  enrollOpen     Boolean       @default(true)
 
   status       CourseStatus @default(DRAFT)
   reviewNote   String?
@@ -340,16 +340,16 @@ model Course {
   publishedAt  DateTime?
 
   createdById String
-  createdBy   User   @relation("CourseCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdBy   User     @relation("CourseCreator", fields: [createdById], references: [id], onDelete: Restrict)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  sections    CourseSection[]
-  lessons     Lesson[]
-  quizzes     Quiz[]
-  enrollments Enrollment[]
+  sections           CourseSection[]
+  lessons            Lesson[]
+  quizzes            Quiz[]
+  enrollments        Enrollment[]
   certificateDesigns CertificateDesign[]
-  certificates Certificate[] @relation("CourseCertificates")
+  certificates       Certificate[]       @relation("CourseCertificates")
 
   @@index([status, publishedAt])
   @@index([areaId, status])
@@ -366,27 +366,27 @@ model CourseLevel {
 }
 
 model CourseSection {
-  id        String @id @default(cuid())
+  id        String   @id @default(cuid())
   courseId  String
-  course    Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   title     String
-  sortOrder Int    @default(0)
+  sortOrder Int      @default(0)
   lessons   Lesson[]
 
   @@index([courseId, sortOrder])
 }
 
 model Lesson {
-  id         String  @id @default(cuid())
+  id         String         @id @default(cuid())
   courseId   String
-  course     Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course     Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
   sectionId  String?
   section    CourseSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
   title      String
-  summary    String  @default("")
+  summary    String         @default("")
   position   Int // order inside the course
-  unlockRule LessonRule @default(OPEN)
-  required   Boolean @default(true) // counts toward finishing the course
+  unlockRule LessonRule     @default(OPEN)
+  required   Boolean        @default(true) // counts toward finishing the course
 
   blocks   LessonBlock[]
   progress LessonProgress[]
@@ -395,35 +395,35 @@ model Lesson {
 }
 
 model LessonBlock {
-  id         String    @id @default(cuid())
-  lessonId   String
-  lesson     Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  kind       BlockKind
-  sortOrder  Int       @default(0)
-  label      String    @default("")
-  url        String? // VIDEO / LINK (the link as typed, checked by the media link parser)
-  mediaId    String?
-  media      Media?    @relation(fields: [mediaId], references: [id], onDelete: SetNull)
-  text       String? // TEXT
-  quizId     String?
-  quiz       Quiz?     @relation(fields: [quizId], references: [id], onDelete: SetNull)
-  required   Boolean   @default(false) // QUIZ only: must be passed to finish the lesson (an "unlock question")
+  id        String    @id @default(cuid())
+  lessonId  String
+  lesson    Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  kind      BlockKind
+  sortOrder Int       @default(0)
+  label     String    @default("")
+  url       String? // VIDEO / LINK (the link as typed, checked by the media link parser)
+  mediaId   String?
+  media     Media?    @relation(fields: [mediaId], references: [id], onDelete: SetNull)
+  text      String? // TEXT
+  quizId    String?
+  quiz      Quiz?     @relation(fields: [quizId], references: [id], onDelete: SetNull)
+  required  Boolean   @default(false) // QUIZ only: must be passed to finish the lesson (an "unlock question")
 
   @@index([lessonId, sortOrder])
 }
 
 model Quiz {
-  id               String  @id @default(cuid())
+  id               String       @id @default(cuid())
   courseId         String
-  course           Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course           Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
   title            String
-  passPercent      Int     @default(60)
+  passPercent      Int          @default(60)
   maxAttempts      Int? // null = unlimited
   timeLimitMin     Int? // null = no limit
-  shuffleQuestions Boolean @default(false)
-  shuffleChoices   Boolean @default(true)
+  shuffleQuestions Boolean      @default(false)
+  shuffleChoices   Boolean      @default(true)
   showAnswers      AnswerReveal @default(AFTER_PASS)
-  createdAt        DateTime @default(now())
+  createdAt        DateTime     @default(now())
 
   questions Question[]
   attempts  QuizAttempt[]
@@ -470,54 +470,54 @@ model QuizAttempt {
 model LessonProgress {
   userId      String
   lessonId    String
-  user        User     @relation("LessonProgress", fields: [userId], references: [id], onDelete: Cascade)
-  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user        User           @relation("LessonProgress", fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   status      ProgressStatus @default(NONE)
-  confirmed   Boolean  @default(false) // "I have studied this lesson"
-  startedAt   DateTime @default(now())
+  confirmed   Boolean        @default(false) // "I have studied this lesson"
+  startedAt   DateTime       @default(now())
   completedAt DateTime?
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime       @updatedAt
 
   @@id([userId, lessonId])
 }
 
 model Enrollment {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   userId       String
   courseId     String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  progress     Int      @default(0) // 0-100, share of the required lessons that are done
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course       Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress     Int       @default(0) // 0-100, share of the required lessons that are done
   completedAt  DateTime?
   lastLessonId String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@unique([userId, courseId])
 }
 
 // ---------- Site content ----------
 model Banner {
-  id         String    @id @default(cuid())
-  title      String
-  subtitle   String?
-  imageKey   String? // storage key, e.g. banners/<uuid>.webp
-  linkUrl    String?
-  buttonText String?
-  bgColor    String    @default("#EAF0FF")
-  showText   Boolean   @default(true) // overlay title/subtitle/button on the image
-  active     Boolean   @default(true)
-  sortOrder  Int       @default(0)
-  startAt    DateTime?
-  endAt      DateTime?
-  newTab     Boolean   @default(false) // open the link in a new tab (always true for external links)
-  sourceUrl  String? // public Google Drive link the image was taken from (a snapshot is stored)
-  pinned     Boolean   @default(false) // admin-only: pinned slides always come first
-  published  Boolean   @default(true) // approved by an admin; slides made by others start as false
+  id          String    @id @default(cuid())
+  title       String
+  subtitle    String?
+  imageKey    String? // storage key, e.g. banners/<uuid>.webp
+  linkUrl     String?
+  buttonText  String?
+  bgColor     String    @default("#EAF0FF")
+  showText    Boolean   @default(true) // overlay title/subtitle/button on the image
+  active      Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  startAt     DateTime?
+  endAt       DateTime?
+  newTab      Boolean   @default(false) // open the link in a new tab (always true for external links)
+  sourceUrl   String? // public Google Drive link the image was taken from (a snapshot is stored)
+  pinned      Boolean   @default(false) // admin-only: pinned slides always come first
+  published   Boolean   @default(true) // approved by an admin; slides made by others start as false
   createdById String?
-  createdBy  User?     @relation("BannerCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdBy   User?     @relation("BannerCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([active, sortOrder])
 }
@@ -525,88 +525,91 @@ model Banner {
 // One row (id = "main"): identity of this deployment/district. Another district
 // gets its own database (or, later, its own row keyed by area).
 model SiteSetting {
-  id             String   @id @default("main")
-  systemName     String   @default("Anyware Anytime")
-  areaName       String   @default("")
-  tagline        String   @default("")
-  logoKey        String?
-  logoBackdrop   Boolean  @default(false) // white rounded plate behind the hero logo
-  heroVideoKey   String?
-  heroBgColor    String   @default("#0B2A6F") // behind / under the video
-  overlayOpacity Int      @default(45) // 0-90, dark layer over the video
-  fadeSeconds    Float    @default(1.5) // video fade in/out at each loop
+  id                      String   @id @default("main")
+  systemName              String   @default("Anyware Anytime")
+  areaName                String   @default("")
+  tagline                 String   @default("")
+  logoKey                 String?
+  logoBackdrop            Boolean  @default(false) // white rounded plate behind the hero logo
+  heroVideoKey            String?
+  heroImageKey            String? // still or animated (GIF converted to animated WebP) hero background; exclusive with heroVideoKey
+  heroImageAnimated       Boolean  @default(false)
+  faqEnabled              Boolean  @default(true) // floating FAQ chat on the public pages
+  heroBgColor             String   @default("#0B2A6F") // behind / under the video
+  overlayOpacity          Int      @default(45) // 0-90, dark layer over the video
+  fadeSeconds             Float    @default(1.5) // video fade in/out at each loop
   // recommended-slides slideshow look
-  slideRadius    Int      @default(0) // corner radius px, 0-32 (ignored when full width)
-  slideEffect    String   @default("slide") // slide | fade | zoom | wipe | blur
-  slideInterval  Float    @default(5) // seconds per slide
-  slideLayout    String   @default("contained") // contained | full
-  slideAutoplay  Boolean  @default(true)
-  slideArrows    Boolean  @default(true)
-  slideRandom    Boolean  @default(false) // use every effect, picked at random for each change
-  slideShuffle   Boolean  @default(false) // shuffle slide order on each page load (pinned stay first)
-  requireRegistrationCode Boolean @default(true) // sign-up only with an admin-issued code (turn off to allow open sign-up)
-  allowServerUploads Boolean @default(false) // may members upload images to our storage? (off until there is a server; Drive links work without)
+  slideRadius             Int      @default(0) // corner radius px, 0-32 (ignored when full width)
+  slideEffect             String   @default("slide") // slide | fade | zoom | wipe | blur
+  slideInterval           Float    @default(5) // seconds per slide
+  slideLayout             String   @default("contained") // contained | full
+  slideAutoplay           Boolean  @default(true)
+  slideArrows             Boolean  @default(true)
+  slideRandom             Boolean  @default(false) // use every effect, picked at random for each change
+  slideShuffle            Boolean  @default(false) // shuffle slide order on each page load (pinned stay first)
+  requireRegistrationCode Boolean  @default(true) // sign-up only with an admin-issued code (turn off to allow open sign-up)
+  allowServerUploads      Boolean  @default(false) // may members upload images to our storage? (off until there is a server; Drive links work without)
   // footer / contact page
-  contactAddress String?
-  contactPhone   String?
-  contactEmail   String?
-  facebookUrl    String?
-  youtubeUrl     String?
-  lineUrl        String?
+  contactAddress          String?
+  contactPhone            String?
+  contactEmail            String?
+  facebookUrl             String?
+  youtubeUrl              String?
+  lineUrl                 String?
   // visitor counter
-  counterSince   DateTime @default(now()) // "counting since" date shown in the footer (editable)
-  counterBase    Int      @default(0) // starting number (e.g. carried over from an older site)
-  showVisits     Boolean  @default(true)
-  texts          Json     @default("{}") // admin-edited menu names and page headings (key -> text); missing key = built-in default
-  updatedAt      DateTime @updatedAt
+  counterSince            DateTime @default(now()) // "counting since" date shown in the footer (editable)
+  counterBase             Int      @default(0) // starting number (e.g. carried over from an older site)
+  showVisits              Boolean  @default(true)
+  texts                   Json     @default("{}") // admin-edited menu names and page headings (key -> text); missing key = built-in default
+  updatedAt               DateTime @updatedAt
 }
 
 // Home page blocks below the hero. A row only exists once an admin edits/moves it;
 // missing rows fall back to the defaults in src/lib/sections.ts.
 model HomeSection {
-  key        String   @id // recommended | categories | media | courses
-  title      String
-  subtitle   String   @default("")
-  visible    Boolean  @default(true)
-  sortOrder  Int      @default(0)
-  align      String   @default("left") // left | center | right (heading position)
-  titleSize  String   @default("md") // sm | md | lg
-  titleColor String   @default("#1E1E1E")
-  bgColor    String? // solid colour, or gradient start
-  bgMode      String  @default("none") // none | solid | gradient | image
-  bgColor2    String? // gradient end
-  bgDirection String  @default("to right")
-  bgImageKey  String? // site/section-<uuid>.webp
-  bgOverlay   Int     @default(0) // 0-80, dark layer over a background image
-  headingStyle String @default("accent") // plain | accent | icon | center
+  key          String   @id // recommended | categories | media | courses
+  title        String
+  subtitle     String   @default("")
+  visible      Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  align        String   @default("left") // left | center | right (heading position)
+  titleSize    String   @default("md") // sm | md | lg
+  titleColor   String   @default("#1E1E1E")
+  bgColor      String? // solid colour, or gradient start
+  bgMode       String   @default("none") // none | solid | gradient | image
+  bgColor2     String? // gradient end
+  bgDirection  String   @default("to right")
+  bgImageKey   String? // site/section-<uuid>.webp
+  bgOverlay    Int      @default(0) // 0-80, dark layer over a background image
+  headingStyle String   @default("accent") // plain | accent | icon | center
   eyebrow      String? // small label above the title: null = the default for this block, "" = none
   accentColor  String? // colour of the label / accent line (null = the brand blue)
   showMore     Boolean? // the "see all" button in the heading: null = the default for this block
-  updatedAt  DateTime @updatedAt
+  updatedAt    DateTime @updatedAt
 }
 
 // ---------- School directory (Anywhere Anytime sites of the district) ----------
 model School {
-  id            String    @id @default(cuid())
-  code          String    @unique // รหัสโรงเรียน (8 digits)
-  name          String
-  district      String // อำเภอ
-  center        String // ศูนย์เครือข่าย
-  email         String? // login e-mail of the school account (kept here for the admin list)
-  siteUrl       String? // link to the school's Anywhere Anytime site
-  cardSourceUrl String? // Google Drive link of the school's card image
-  cardKey       String? // stored WebP: schools/<code>-<rand>.webp (public prefix)
-  cardStatus    String    @default("none") // none | ok | failed
-  cardError     String?
-  cardFetchedAt DateTime?
-  active        Boolean   @default(true)
-  accountId     String?   @unique
-  account       User?     @relation("SchoolAccount", fields: [accountId], references: [id], onDelete: SetNull)
-  members       User[]    @relation("SchoolMembers")
+  id                String             @id @default(cuid())
+  code              String             @unique // รหัสโรงเรียน (8 digits)
+  name              String
+  district          String // อำเภอ
+  center            String // ศูนย์เครือข่าย
+  email             String? // login e-mail of the school account (kept here for the admin list)
+  siteUrl           String? // link to the school's Anywhere Anytime site
+  cardSourceUrl     String? // Google Drive link of the school's card image
+  cardKey           String? // stored WebP: schools/<code>-<rand>.webp (public prefix)
+  cardStatus        String             @default("none") // none | ok | failed
+  cardError         String?
+  cardFetchedAt     DateTime?
+  active            Boolean            @default(true)
+  accountId         String?            @unique
+  account           User?              @relation("SchoolAccount", fields: [accountId], references: [id], onDelete: SetNull)
+  members           User[]             @relation("SchoolMembers")
   registrationCodes RegistrationCode[] @relation("CodeSchool")
-  updatedById   String? // last editor (admin or the school itself)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  updatedById       String? // last editor (admin or the school itself)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
   @@index([district, center])
 }
@@ -672,7 +675,6 @@ model SitePage {
   updatedAt DateTime @updatedAt
 }
 
-
 // ---------- Certificates ----------
 enum CertificateStatus {
   PENDING // finished the course, waiting for the district to give it a number
@@ -687,16 +689,16 @@ enum CertificateNumberMode {
 
 /// A running number series ("0001/2569"). One series can serve many courses/designs, so several work groups share one register.
 model CertificateSerial {
-  id          String  @id @default(cuid())
+  id          String                @id @default(cuid())
   name        String
-  pattern     String  @default("{no}/{year}") // {no} = running number, {year} = พ.ศ.
-  padding     Int     @default(4)
-  nextNo      Int     @default(1)
-  resetYearly Boolean @default(true)
+  pattern     String                @default("{no}/{year}") // {no} = running number, {year} = พ.ศ.
+  padding     Int                   @default(4)
+  nextNo      Int                   @default(1)
+  resetYearly Boolean               @default(true)
   lastYear    Int? // พ.ศ. of the last number given (drives the yearly reset)
   mode        CertificateNumberMode @default(MANUAL)
   endNo       Int? // last number of the range the district gave us; null = no limit
-  createdAt   DateTime @default(now())
+  createdAt   DateTime              @default(now())
 
   designs      CertificateDesign[]
   certificates Certificate[]
@@ -715,21 +717,21 @@ model CertificateFont {
 
 /// One certificate layout of a course: the template picture + where each text goes. A course may have several (chosen by score).
 model CertificateDesign {
-  id          String  @id @default(cuid())
-  courseId    String
-  course      Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  name        String
-  position    Int     @default(0)
-  isDefault   Boolean @default(false)
-  minScore    Int? // used for learners whose quiz average reaches this; null = anyone who finishes
+  id           String             @id @default(cuid())
+  courseId     String
+  course       Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  name         String
+  position     Int                @default(0)
+  isDefault    Boolean            @default(false)
+  minScore     Int? // used for learners whose quiz average reaches this; null = anyone who finishes
   imageDriveId String?
-  imageW      Int     @default(0)
-  imageH      Int     @default(0)
-  fields      Json    @default("[]")
-  serialId    String? // null = no number needed, issued the moment the course is finished
-  serial      CertificateSerial? @relation(fields: [serialId], references: [id], onDelete: Restrict)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  imageW       Int                @default(0)
+  imageH       Int                @default(0)
+  fields       Json               @default("[]")
+  serialId     String? // null = no number needed, issued the moment the course is finished
+  serial       CertificateSerial? @relation(fields: [serialId], references: [id], onDelete: Restrict)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 
   certificates Certificate[]
 
@@ -737,28 +739,57 @@ model CertificateDesign {
 }
 
 model Certificate {
-  id          String  @id @default(cuid())
-  courseId    String
-  course      Course  @relation("CourseCertificates", fields: [courseId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User    @relation("UserCertificates", fields: [userId], references: [id], onDelete: Cascade)
-  designId    String
-  design      CertificateDesign @relation(fields: [designId], references: [id], onDelete: Restrict)
-  serialId    String?
-  serial      CertificateSerial? @relation(fields: [serialId], references: [id], onDelete: Restrict)
-  number      String?
-  status      CertificateStatus @default(PENDING)
-  verifyCode  String  @unique
-  completedAt DateTime
+  id           String             @id @default(cuid())
+  courseId     String
+  course       Course             @relation("CourseCertificates", fields: [courseId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User               @relation("UserCertificates", fields: [userId], references: [id], onDelete: Cascade)
+  designId     String
+  design       CertificateDesign  @relation(fields: [designId], references: [id], onDelete: Restrict)
+  serialId     String?
+  serial       CertificateSerial? @relation(fields: [serialId], references: [id], onDelete: Restrict)
+  number       String?
+  status       CertificateStatus  @default(PENDING)
+  verifyCode   String             @unique
+  completedAt  DateTime
   scorePercent Int?
   nameSnapshot String? // frozen when issued
-  issuedAt    DateTime?
-  issuedById  String?
-  revokedAt   DateTime?
-  revokeNote  String?
-  createdAt   DateTime @default(now())
+  issuedAt     DateTime?
+  issuedById   String?
+  revokedAt    DateTime?
+  revokeNote   String?
+  createdAt    DateTime           @default(now())
 
   @@unique([courseId, userId])
   @@unique([serialId, number])
   @@index([courseId, status])
+}
+
+/// Question/answer pairs the public FAQ chat answers from. Written by the admin; matching happens in memory.
+model FaqItem {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String // the small safe page markup (see page-markup.ts)
+  keywords  String   @default("") // extra words/synonyms people type, comma or space separated
+  pinned    Boolean  @default(false) // shown as a starter button when the chat opens
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  hitCount  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active, sortOrder])
+}
+
+/// Questions the chat could not answer, one row per distinct (normalised) question with a counter. No visitor identity is stored.
+model FaqUnanswered {
+  id      String   @id @default(cuid())
+  norm    String   @unique
+  sample  String
+  count   Int      @default(1)
+  status  String   @default("OPEN") // OPEN | DISMISSED | ANSWERED
+  firstAt DateTime @default(now())
+  lastAt  DateTime @default(now())
+
+  @@index([status, count])
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { saveSettings, type SettingsState } from "./actions";
+import CropImageField from "@/components/admin/crop-image-field";
 import VideoField from "./video-field";
 
 type Initial = {
@@ -15,9 +16,17 @@ type Initial = {
   logoUrl: string | null;
   logoBackdrop: boolean;
   heroVideoUrl: string | null;
+  heroImageUrl: string | null;
+  heroImageAnimated: boolean;
   allowServerUploads: boolean;
   requireRegistrationCode: boolean;
 };
+
+const HERO_ASPECTS = [
+  { label: "16:9 (แนะนำ)", value: 16 / 9 },
+  { label: "21:9 กว้าง", value: 21 / 9 },
+  { label: "4:3", value: 4 / 3 },
+];
 
 const input = "min-h-11 w-full rounded-lg border border-neutral-300 bg-white px-3";
 
@@ -35,6 +44,7 @@ export default function SettingsForm({ initial }: { initial: Initial }) {
   const [overlay, setOverlay] = useState(initial.overlayOpacity);
   const [fade, setFade] = useState(initial.fadeSeconds);
   const [uploading, setUploading] = useState(false);
+  const [removeImage, setRemoveImage] = useState(false);
 
   return (
     <form action={action} className="space-y-6 rounded-2xl border border-neutral-200 bg-white p-6">
@@ -89,19 +99,48 @@ export default function SettingsForm({ initial }: { initial: Initial }) {
         )}
       </fieldset>
 
+      <fieldset className="space-y-3 rounded-xl border border-neutral-200 p-4">
+        <legend className="px-1 text-sm font-medium">พื้นหลังแบนเนอร์: ภาพ / GIF หรือ วิดีโอ (เลือกอย่างใดอย่างหนึ่ง)</legend>
+        <p className="text-xs text-neutral-500">อัปโหลดอันใหม่จะแทนที่อันเดิมโดยอัตโนมัติ ถ้าไม่ใส่อะไรเลยจะเป็นพื้นสีพร้อมแสงเคลื่อนไหวช้าๆ</p>
+
+        <CropImageField
+          name="heroImage"
+          label="ภาพพื้นหลัง (PNG, JPG, WebP หรือ GIF)"
+          aspects={HERO_ASPECTS}
+          currentUrl={removeImage ? null : initial.heroImageUrl}
+          maxWidth={1920}
+          recommendedWidth={1920}
+          minWidth={1600}
+          safeZone
+          allowGif
+        />
+        <div className="space-y-1 rounded-lg bg-neutral-50 p-3 text-xs text-neutral-600">
+          <p><strong>ขนาดที่แนะนำ:</strong> ภาพนิ่ง <strong>1920×1080 px (16:9)</strong> ขั้นต่ำกว้าง 1600 px · แบนเนอร์เต็มความกว้างและสูง 460–580 px จึงเห็นเฉพาะแถบกลางภาพบนคอมพิวเตอร์ และเห็นเฉพาะส่วนกลางบนมือถือ — วางสิ่งสำคัญไว้กลางภาพ (กรอบ “พื้นที่ปลอดภัย”) และเลี่ยงตัวหนังสือในภาพ เพราะมีชื่อระบบวางทับอยู่แล้ว</p>
+          <p><strong>ภาพนิ่ง:</strong> เลือกไฟล์แล้วครอบ/ซูมได้ ระบบย่อเป็น WebP กว้างไม่เกิน 1920 px ให้เบาโดยอัตโนมัติ</p>
+          <p><strong>GIF เคลื่อนไหว:</strong> ไม่เกิน 4 MB · แนะนำกว้าง 1280 px ความยาวไม่เกิน ~10 วินาที · เลือก GIF แล้ว<strong>จะไม่เปิดเครื่องมือครอบ</strong> (การครอบจะทำให้ภาพหยุดนิ่ง) ให้ครอบ/ย่อไฟล์ก่อนอัปโหลด เช่นที่ ezgif.com · ระบบแปลงเป็น WebP เคลื่อนไหวให้ตอนบันทึก ไฟล์เล็กลงมากและเล่นวนเองบนทุกเบราว์เซอร์ · ผู้ที่ตั้งค่า “ลดการเคลื่อนไหว” ในเครื่องจะเห็นเป็นสีพื้นแทน</p>
+          <p>GIF ที่ยาวหรือภาพละเอียดมากจะหนักกว่าวิดีโอ ถ้าต้องการภาพเคลื่อนไหวนานๆ แนะนำใช้วิดีโอ MP4 ด้านล่างแทน</p>
+        </div>
+        {initial.heroImageUrl && (
+          <label className="flex min-h-9 items-center gap-2 text-sm">
+            <input type="checkbox" name="removeHeroImage" checked={removeImage} onChange={(e) => setRemoveImage(e.target.checked)} className="h-4 w-4" />
+            ลบภาพพื้นหลังปัจจุบัน{initial.heroImageAnimated ? " (เป็นภาพเคลื่อนไหว)" : ""}
+          </label>
+        )}
+      </fieldset>
+
       <VideoField currentUrl={initial.heroVideoUrl} onBusyChange={setUploading} />
 
       <div className="grid gap-5 sm:grid-cols-3">
         <label className="block space-y-1">
-          <span className="text-sm font-medium">สีพื้นหลัง (ใต้วิดีโอ)</span>
+          <span className="text-sm font-medium">สีพื้นหลัง (ใต้ภาพ/วิดีโอ)</span>
           <input type="color" name="heroBgColor" defaultValue={initial.heroBgColor} className="h-11 w-full rounded-lg border border-neutral-300 bg-white p-1" />
         </label>
         <label className="block space-y-1">
-          <span className="text-sm font-medium">ความมืดทับวิดีโอ: {overlay}%</span>
+          <span className="text-sm font-medium">ความมืดทับพื้นหลัง: {overlay}%</span>
           <input type="range" name="overlayOpacity" min={0} max={90} step={5} value={overlay} onChange={(e) => setOverlay(+e.target.value)} className="w-full" />
         </label>
         <label className="block space-y-1">
-          <span className="text-sm font-medium">เฟดวิดีโอเข้า/ออก: {fade} วินาที</span>
+          <span className="text-sm font-medium">เฟดวิดีโอเข้า/ออก (เฉพาะวิดีโอ): {fade} วินาที</span>
           <input type="range" name="fadeSeconds" min={0} max={5} step={0.5} value={fade} onChange={(e) => setFade(+e.target.value)} className="w-full" />
           <span className="block text-xs text-neutral-500">0 = ไม่เฟด</span>
         </label>

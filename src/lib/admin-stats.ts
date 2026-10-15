@@ -25,7 +25,7 @@ export async function getDashboard(now: Date = new Date()) {
     mediaStatus, mediaTotals, views30, daily, areas, pendingList, topIds,
     schoolTotal, schoolActive, schoolActivated, schoolNoCard, schoolNoLink, districtRows,
     codes, codeUsers30, creatorPending, reviewerAreas, pendingByArea, recent,
-    visitStats, visitDaily, courseStatus, enrollTotal, completeTotal,
+    visitStats, visitDaily, courseStatus, enrollTotal, completeTotal, faqOpen,
   ] = await Promise.all([
     db.siteSetting.findUnique({ where: { id: "main" }, select: { requireRegistrationCode: true, allowServerUploads: true } }),
     db.user.count(),
@@ -55,6 +55,7 @@ export async function getDashboard(now: Date = new Date()) {
     db.course.groupBy({ by: ["status"], _count: { _all: true } }),
     db.enrollment.count({ where: { course: { status: "PUBLISHED" } } }),
     db.enrollment.count({ where: { completedAt: { not: null }, course: { status: "PUBLISHED" } } }),
+    db.faqUnanswered.count({ where: { status: "OPEN" } }),
   ]);
 
   // ---- members
@@ -90,6 +91,7 @@ export async function getDashboard(now: Date = new Date()) {
   const pending = status("PENDING");
   if (pending > 0) alerts.push({ level: "warn", text: `มีสื่อรออนุมัติ ${pending} ชิ้น${pendingOldestDays > 0 ? ` (ชิ้นที่รอนานสุด ${pendingOldestDays} วัน)` : ""}`, href: "/admin/media?status=PENDING", action: "ตรวจสื่อ" });
   if (coursesPending > 0) alerts.push({ level: "warn", text: `มีคอร์สรออนุมัติ ${coursesPending} คอร์ส`, href: "/admin/courses?status=PENDING", action: "ตรวจคอร์ส" });
+  if (faqOpen > 0) alerts.push({ level: "info", text: `มีคำถามในแชตถามตอบที่ยังตอบไม่ได้ ${faqOpen} ข้อ`, href: "/admin/faq?tab=unanswered", action: "เพิ่มคำตอบ" });
   if (creatorPending > 0) alerts.push({ level: "warn", text: `มีคำขอเป็นผู้สร้างคอร์ส ${creatorPending} รายการรอพิจารณา`, href: "/admin/users?creator=pending", action: "พิจารณา" });
   if ((site?.requireRegistrationCode ?? true) && valid.length === 0) alerts.push({ level: "danger", text: "ไม่มีรหัสสมัครที่ใช้งานได้ — ผู้สมัครใหม่จะสมัครไม่ได้", href: "/admin/registration-codes", action: "สร้างรหัส" });
   if (expiring.length > 0) alerts.push({ level: "info", text: `รหัสสมัคร ${expiring.length} รหัสจะหมดอายุภายใน 7 วัน`, href: "/admin/registration-codes", action: "ดูรหัส" });

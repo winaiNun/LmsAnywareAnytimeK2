@@ -22,6 +22,7 @@ const ICONS: Record<string, string> = {
   close: "M6 6l12 12M18 6 6 18",
   link: "M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7",
   award: "M12 14.5a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM8.5 13.7 7 22l5-3 5 3-1.5-8.3",
+  chat: "M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 4v-4A2.5 2.5 0 0 1 4 13.5v-7zM8.5 9.5h7M8.5 12.5h4",
   page: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5",
 };
 
@@ -37,6 +38,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/admin/sections", label: "เซกชันหน้าแรก", icon: "layout" },
       { href: "/admin/schools", label: "โรงเรียน", icon: "school" },
       { href: "/admin/resources", label: "แหล่งสื่อภายนอก", icon: "link" },
+      { href: "/admin/faq", label: "ถามตอบ (FAQ)", icon: "chat" },
       { href: "/admin/banners", label: "สไลด์แนะนำ", icon: "banner", teacher: true },
     ],
   },

@@ -19,6 +19,12 @@ type Props = {
   onLocalChoose?: () => void;
   /** Lets a parent open the crop dialog with a file it obtained elsewhere (e.g. a Drive thumbnail). */
   handleRef?: React.MutableRefObject<CropHandle | null>;
+  /**
+   * Accept GIFs. They skip the crop dialog (a canvas would freeze the animation) and are posted
+   * as-is; the server converts them to a smaller animated WebP.
+   */
+  allowGif?: boolean;
+  maxGifBytes?: number;
 };
 
 export type CropHandle = { openFile: (file: File) => void };
@@ -30,7 +36,7 @@ const kb = (n: number) => (n < 1024 * 1024 ? `${Math.round(n / 1024)} KB` : `${(
  * ratio. The result is drawn on a canvas at a capped width and re-encoded as WebP, so only a
  * small standard file is uploaded (the server re-validates and re-encodes it anyway).
  */
-export default function CropImageField({ name, label, aspects, currentUrl, maxWidth = 1920, recommendedWidth, minWidth, safeZone = false, onPreview, onLocalChoose, handleRef }: Props) {
+export default function CropImageField({ name, label, aspects, currentUrl, maxWidth = 1920, recommendedWidth, minWidth, safeZone = false, onPreview, onLocalChoose, handleRef, allowGif = false, maxGifBytes = 4 * 1024 * 1024 }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const viewRef = useRef<HTMLDivElement>(null);
   const chooserRef = useRef<HTMLInputElement>(null);
@@ -91,6 +97,30 @@ export default function CropImageField({ name, label, aspects, currentUrl, maxWi
     img.onerror = () => {
       URL.revokeObjectURL(url);
       alert("เปิดไฟล์รูปนี้ไม่ได้ กรุณาเลือกไฟล์ PNG, JPG หรือ WebP");
+    };
+    img.src = url;
+  }
+
+  function acceptGif(file: File) {
+    if (file.size > maxGifBytes) {
+      alert(`ไฟล์ GIF ใหญ่ ${kb(file.size)} เกิน ${kb(maxGifBytes)} กรุณาบีบอัดก่อน (เช่น ลดขนาดภาพ/ความยาว/จำนวนสี) หรือใช้วิดีโอ MP4 แทน`);
+      if (chooserRef.current) chooserRef.current.value = "";
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      if (resultRef.current) resultRef.current.files = dt.files;
+      if (result) URL.revokeObjectURL(result.url);
+      setResult({ url, info: `GIF ${img.naturalWidth}×${img.naturalHeight} px · ${kb(file.size)} — ไม่ครอบ เพื่อให้ยังเคลื่อนไหว ระบบจะแปลงเป็น WebP เคลื่อนไหวให้ตอนบันทึก` });
+      onPreview?.(url);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      alert("เปิดไฟล์ GIF นี้ไม่ได้");
+      if (chooserRef.current) chooserRef.current.value = "";
     };
     img.src = url;
   }
@@ -172,20 +202,21 @@ export default function CropImageField({ name, label, aspects, currentUrl, maxWi
           <input
             ref={chooserRef}
             type="file"
-            accept="image/png,image/jpeg,image/webp"
+            accept={allowGif ? "image/png,image/jpeg,image/webp,image/gif" : "image/png,image/jpeg,image/webp"}
             aria-label={`${label} — เลือกไฟล์`}
             className="block text-sm"
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) {
                 onLocalChoose?.();
-                open(f);
+                if (allowGif && f.type === "image/gif") acceptGif(f);
+                else open(f);
               }
             }}
           />
           {result ? (
             <p className="text-xs text-green-700">
-              ครอบแล้ว: {result.info} (WebP){" "}
+              {result.info.startsWith("GIF") ? "เลือกแล้ว" : "ครอบแล้ว"}: {result.info}{result.info.startsWith("GIF") ? "" : " (WebP)"}{" "}
               <button type="button" onClick={clear} className="underline">ยกเลิกรูปใหม่</button>
             </p>
           ) : (

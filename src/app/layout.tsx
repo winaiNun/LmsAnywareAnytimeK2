@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import FloatingTools from "@/components/floating-tools-server";
 import Pwa from "@/components/pwa";
 import SiteFooter from "@/components/site-footer";
 import VisitBeacon from "@/components/visit-beacon";
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {children}
         <SiteFooter />
         <VisitBeacon />
+        <FloatingTools />
         <Pwa />
       </body>
     </html>

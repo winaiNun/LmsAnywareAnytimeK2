@@ -2,7 +2,7 @@
 import type { SiteInfo } from "@/lib/site";
 import HeroVideo from "./hero-video";
 
-/** Full-width identity banner: logo, system name, district, over a fading video. */
+/** Full-width identity banner: logo, system name, district, over a picture, GIF or fading video. */
 export default function SiteHero({ site }: { site: SiteInfo }) {
   const logoAlt = `โลโก้ ${site.systemName}`;
 
@@ -12,7 +12,14 @@ export default function SiteHero({ site }: { site: SiteInfo }) {
       className="relative flex min-h-[460px] w-full items-center justify-center overflow-hidden px-4 pb-16 pt-28 text-center text-white sm:min-h-[580px]"
       style={{ backgroundColor: site.heroBgColor }}
     >
-      {site.heroVideoUrl ? <HeroVideo src={site.heroVideoUrl} fadeSeconds={site.fadeSeconds} /> : <div className="hero-aurora absolute inset-0" />}
+      {site.heroImageUrl ? (
+        // Animated pictures hide under "reduce motion" (an <img> cannot be paused), leaving the solid hero colour.
+        <img src={site.heroImageUrl} alt="" aria-hidden fetchPriority="high" className={`absolute inset-0 h-full w-full object-cover ${site.heroImageAnimated ? "motion-reduce:hidden" : ""}`} />
+      ) : site.heroVideoUrl ? (
+        <HeroVideo src={site.heroVideoUrl} fadeSeconds={site.fadeSeconds} />
+      ) : (
+        <div className="hero-aurora absolute inset-0" />
+      )}
       <div className="absolute inset-0 bg-black" style={{ opacity: site.overlayOpacity / 100 }} />
 
       <div className="relative flex max-w-3xl flex-col items-center gap-5 [text-shadow:0_2px_12px_rgba(0,0,0,0.35)]">

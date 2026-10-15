@@ -56,3 +56,22 @@ export async function processAvatar(input: Buffer, size = 512) {
     .webp({ quality: 85 })
     .toBuffer();
 }
+
+/**
+ * Hero background picture. A still (already cropped in the browser) is only standardised. A GIF is
+ * not cropped in the browser (a canvas would freeze it), so it is converted here to an animated
+ * WebP: same motion, a fraction of the size, and every browser plays it from a plain <img>.
+ */
+export async function processHeroImage(input: Buffer, { animated, maxWidth = 1920 }: { animated: boolean; maxWidth?: number }) {
+  if (!animated) {
+    return { data: await sharp(input, { failOn: "error" }).rotate().resize({ width: maxWidth, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer(), animated: false };
+  }
+  const meta = await sharp(input, { failOn: "error", animated: true }).metadata();
+  const pages = meta.pages ?? 1;
+  if (pages > 400) throw new Error("Too many frames");
+  const data = await sharp(input, { failOn: "error", animated: true })
+    .resize({ width: Math.min(maxWidth, 1280), withoutEnlargement: true }) // animated frames are heavy, cap lower than stills
+    .webp({ quality: 70, effort: 4 })
+    .toBuffer();
+  return { data, animated: pages > 1 };
+}
