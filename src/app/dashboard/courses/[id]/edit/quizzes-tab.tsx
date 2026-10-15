@@ -26,7 +26,7 @@ export default function QuizzesTab({ courseId, quizzes }: { courseId: string; qu
 
   return (
     <section className="space-y-4">
-      <p className="rounded-xl bg-brand-soft/60 p-3 text-sm text-neutral-700">แบบทดสอบ/แบบฝึกหัดสร้างที่นี่ก่อน แล้วไปใส่ในบทเรียนด้วยส่วนเนื้อหาชนิด “แบบทดสอบ” ระบบตรวจคะแนนให้เองทั้งหมด (ปรนัย ถูก/ผิด เติมคำ ตัวเลข จับคู่ เรียงลำดับ จัดหมวดหมู่ เติมช่องว่างในประโยค)</p>
+      <p className="rounded-xl bg-brand-soft/60 p-3 text-sm text-neutral-700"><Link href="/dashboard/courses/guide" className="float-right ml-3 text-brand hover:underline">คู่มือ →</Link>แบบทดสอบ/แบบฝึกหัดสร้างที่นี่ก่อน แล้วไปใส่ในบทเรียนด้วยส่วนเนื้อหาชนิด “แบบทดสอบ” ระบบตรวจคะแนนให้เองทั้งหมด (ปรนัย ถูก/ผิด เติมคำ ตัวเลข จับคู่ เรียงลำดับ จัดหมวดหมู่ เติมช่องว่างในประโยค)</p>
       {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p>}
       {quizzes.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-8 text-center text-neutral-600">ยังไม่มีแบบทดสอบ</div>

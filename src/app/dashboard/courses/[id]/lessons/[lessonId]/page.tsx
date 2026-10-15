@@ -38,7 +38,7 @@ export default async function EditLessonPage({ params }: { params: { id: string;
         courseId={params.id}
         lessonId={lesson.id}
         quizzes={lesson.course.quizzes}
-        blocks={lesson.blocks.map((b) => ({ id: b.id, kind: b.kind, label: b.label, url: b.url ?? "", mediaId: b.mediaId ?? "", mediaTitle: b.media?.title ?? "", text: b.text ?? "", quizId: b.quizId ?? "", required: b.required }))}
+        blocks={lesson.blocks.map((b) => ({ id: b.id, kind: b.kind, label: b.label, url: b.url ?? "", mediaId: b.mediaId ?? "", mediaTitle: b.media?.title ?? "", text: b.text ?? "", html: b.html ?? "", quizId: b.quizId ?? "", required: b.required }))}
       />
       <div className="flex justify-between gap-3">
         {index > 0 ? <Link href={`/dashboard/courses/${params.id}/lessons/${all[index - 1].id}`} className="flex min-h-11 items-center rounded-lg border border-neutral-300 px-4 text-sm">← บทก่อนหน้า</Link> : <span />}

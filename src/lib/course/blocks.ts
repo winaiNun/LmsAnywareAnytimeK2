@@ -5,15 +5,19 @@
 import { isParsed, parseMediaLink } from "@/lib/embed";
 import type { BlockKind } from "./rules";
 
-export const BLOCK_KINDS: BlockKind[] = ["VIDEO", "LINK", "MEDIA", "TEXT", "QUIZ"];
+export const BLOCK_KINDS: BlockKind[] = ["VIDEO", "LINK", "MEDIA", "TEXT", "HTML", "QUIZ"];
 export const BLOCK_LABEL: Record<BlockKind, string> = {
   VIDEO: "วิดีโอ YouTube (นับการดู)",
   LINK: "ลิงก์สื่อ (Drive, Docs, Apps Script, Canva ฯลฯ)",
   MEDIA: "สื่อจากคลังสื่อ",
   TEXT: "ข้อความอธิบาย",
+  HTML: "HTML ฝังในบท (แอป/สื่อโต้ตอบ)",
   QUIZ: "แบบทดสอบ / แบบฝึกหัด",
 };
 export const MAX_TEXT = 20000;
+/** A pasted HTML block: kept small on purpose (it lives in the database and is read only when the frame opens). */
+export const MAX_BLOCK_HTML_BYTES = 200 * 1024;
+export const MAX_HTML_BLOCKS_PER_LESSON = 3;
 
 export type BlockInput = {
   kind: BlockKind;
@@ -21,6 +25,7 @@ export type BlockInput = {
   url?: string | null;
   mediaId?: string | null;
   text?: string | null;
+  html?: string | null;
   quizId?: string | null;
   required?: boolean;
 };
@@ -31,6 +36,7 @@ export type CleanBlock = {
   url: string | null;
   mediaId: string | null;
   text: string | null;
+  html: string | null;
   quizId: string | null;
   required: boolean;
 };
@@ -70,7 +76,7 @@ export function parseVideoLink(raw: string): { ok: true; url: string; videoId: s
 
 /** Check one block as typed in the editor and return the clean row to store. Does not look at the database. */
 export function cleanBlock(input: BlockInput): { ok: true; block: CleanBlock } | { ok: false; error: string } {
-  const base = { label: (input.label ?? "").trim().slice(0, 80), url: null as string | null, mediaId: null as string | null, text: null as string | null, quizId: null as string | null, required: input.kind === "QUIZ" && !!input.required };
+  const base = { label: (input.label ?? "").trim().slice(0, 80), url: null as string | null, mediaId: null as string | null, text: null as string | null, html: null as string | null, quizId: null as string | null, required: input.kind === "QUIZ" && !!input.required };
   switch (input.kind) {
     case "VIDEO": {
       const v = parseVideoLink(input.url ?? "");
@@ -91,6 +97,13 @@ export function cleanBlock(input: BlockInput): { ok: true; block: CleanBlock } |
       if (!text) return { ok: false, error: "กรุณาพิมพ์ข้อความ" };
       if (text.length > MAX_TEXT) return { ok: false, error: `ข้อความยาวเกิน ${MAX_TEXT.toLocaleString("th-TH")} ตัวอักษร` };
       return { ok: true, block: { ...base, kind: "TEXT", text } };
+    }
+    case "HTML": {
+      const html = (input.html ?? "").trim();
+      if (!html) return { ok: false, error: "กรุณาวางโค้ด HTML" };
+      const bytes = new TextEncoder().encode(html).length;
+      if (bytes > MAX_BLOCK_HTML_BYTES) return { ok: false, error: `HTML ใหญ่เกิน ${MAX_BLOCK_HTML_BYTES / 1024} KB (ตอนนี้ ${Math.ceil(bytes / 1024)} KB) — ลดขนาดรูปที่ฝังในโค้ด หรือโฮสต์รูปไว้ที่อื่น` };
+      return { ok: true, block: { ...base, kind: "HTML", html } };
     }
     case "QUIZ": {
       if (!input.quizId) return { ok: false, error: "กรุณาเลือกแบบทดสอบ" };

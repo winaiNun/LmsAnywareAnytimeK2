@@ -27,7 +27,7 @@ export default function MediaViewer({ item, mediaId }: { item: ViewItem; mediaId
     <div className="flex flex-wrap gap-2">
       {item.openUrl && (
         <a href={item.openUrl} target="_blank" rel="noopener noreferrer" onClick={count} className={btn}>
-          {item.frameSrc ? "เปิดในแท็บใหม่" : "เปิดลิงก์"} <Glyph name="external-link" size={16} />
+          {item.frameSrc ? "เปิดหน้าใหม่เต็มจอ" : "เปิดลิงก์"} <Glyph name="external-link" size={16} />
         </a>
       )}
       {item.downloadUrl && (
@@ -36,7 +36,7 @@ export default function MediaViewer({ item, mediaId }: { item: ViewItem; mediaId
         </a>
       )}
       {item.frameSrc && canFull && (
-        <button type="button" onClick={() => box.current?.requestFullscreen?.().catch(() => {})} className={btn}><Glyph name="maximize" size={16} />เต็มจอ</button>
+        <button type="button" onClick={() => box.current?.requestFullscreen?.().catch(() => {})} className={btn}><Glyph name="maximize" size={16} />เต็มจอในหน้านี้</button>
       )}
     </div>
   );

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import MediaForm from "@/app/dashboard/media/media-form";
-import { formValuesOf, getFormOptions, loadFullMedia } from "@/lib/media-data";
+import { formValuesOf, getFormOptions, loadEditMedia } from "@/lib/media-data";
 import { isAdmin, requireManagerPage } from "@/lib/permissions";
 import { storageIsDurable } from "@/lib/schools";
 import { getSiteInfo } from "@/lib/site";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminEditMediaPage({ params }: { params: { id: string } }) {
   const me = await requireManagerPage();
   if (!isAdmin(me.role)) return <p className="p-6">เฉพาะผู้ดูแลระบบเท่านั้น</p>;
-  const [media, opts, site] = await Promise.all([loadFullMedia(params.id), getFormOptions(), getSiteInfo()]);
+  const [media, opts, site] = await Promise.all([loadEditMedia(params.id), getFormOptions(), getSiteInfo()]);
   if (!media) notFound();
   return (
     <div className="space-y-4">

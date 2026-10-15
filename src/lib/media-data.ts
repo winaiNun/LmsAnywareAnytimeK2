@@ -102,7 +102,8 @@ export const fullInclude = {
   area: true,
   type: true,
   levels: { include: { level: { select: { id: true, name: true } } } },
-  items: { orderBy: { sortOrder: "asc" as const } },
+  // No html body here: a pasted HTML app (up to 500 KB) is framed from its own route, so the detail pages never need to read it.
+  items: { orderBy: { sortOrder: "asc" as const }, select: { id: true, mediaId: true, kind: true, label: true, url: true, storageKey: true, mimeType: true, sizeBytes: true, sortOrder: true } },
   createdBy: { select: cardSelect.createdBy.select },
 } satisfies Prisma.MediaInclude;
 
@@ -110,8 +111,13 @@ export type FullMedia = Prisma.MediaGetPayload<{ include: typeof fullInclude }>;
 
 export const loadFullMedia = (id: string) => db.media.findUnique({ where: { id }, include: fullInclude });
 
+/** The edit forms DO need the html text of an HTML item, so they load the whole row. */
+export const editInclude = { ...fullInclude, items: { orderBy: { sortOrder: "asc" as const } } } satisfies Prisma.MediaInclude;
+export type EditMedia = Prisma.MediaGetPayload<{ include: typeof editInclude }>;
+export const loadEditMedia = (id: string) => db.media.findUnique({ where: { id }, include: editInclude });
+
 /** Stored row -> the values the edit form starts with. */
-export function formValuesOf(m: FullMedia): import("@/app/dashboard/media/media-form").MediaFormValues {
+export function formValuesOf(m: EditMedia): import("@/app/dashboard/media/media-form").MediaFormValues {
   return {
     id: m.id,
     title: m.title,

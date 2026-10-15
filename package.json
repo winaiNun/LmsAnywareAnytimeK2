@@ -23,7 +23,7 @@
     "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "test:dates": "tsx scripts/test-dates.ts",
     "test:drive": "tsx scripts/test-drive.ts",
-    "test": "npm run test:dates && npm run test:drive && npm run test:schools && npm run test:members && npm run test:embed && npm run test:media && npm run test:site && npm run test:course && npm run test:cert && npm run test:quizimport && npm run test:heroimage && npm run test:faq",
+    "test": "npm run test:dates && npm run test:drive && npm run test:schools && npm run test:members && npm run test:embed && npm run test:media && npm run test:site && npm run test:course && npm run test:cert && npm run test:quizimport && npm run test:heroimage && npm run test:faq && npm run test:quiztiming",
     "test:schools": "tsx scripts/test-schools.ts",
     "test:members": "tsx scripts/test-members.ts && tsx scripts/test-users-import.ts",
     "test:embed": "tsx scripts/test-embed.ts",
@@ -34,6 +34,7 @@
     "test:quizimport": "tsx scripts/test-quiz-import.ts",
     "test:heroimage": "tsx scripts/test-hero-image.ts",
     "test:faq": "tsx scripts/test-faq.ts",
+    "test:quiztiming": "tsx scripts/test-quiz-timing.ts",
     "smoke:quizimport": "tsx --env-file=.env scripts/smoke-quiz-import.ts",
     "smoke:cert": "tsx --env-file=.env scripts/smoke-certificate-pages.ts",
     "test:db": "tsx --env-file=.env scripts/test-course-db.ts && tsx --env-file=.env scripts/test-course-learn-db.ts && tsx --env-file=.env scripts/test-course-learners-db.ts && tsx --env-file=.env scripts/test-certificate-db.ts && tsx --env-file=.env scripts/test-quiz-import-db.ts && tsx --env-file=.env scripts/test-site-stats-db.ts && tsx --env-file=.env scripts/test-rate-limit-db.ts && tsx --env-file=.env scripts/test-registration-db.ts && tsx --env-file=.env scripts/test-users-import-db.ts && tsx --env-file=.env scripts/test-media-db.ts && tsx --env-file=.env scripts/test-media-counters-db.ts && tsx --env-file=.env scripts/test-faq-db.ts"

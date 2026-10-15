@@ -8,7 +8,7 @@ import { formatThaiDate } from "@/lib/thai-date";
 /** Title, owner, description and every item of one media (shared by the public page, review pages and admin). */
 export default function MediaDetailBody({ media, countMediaId, actions }: { media: FullMedia; countMediaId: string | null; actions?: React.ReactNode }) {
   const owner = ownerOf(media);
-  const items = media.items.map(toViewItem);
+  const items = media.items.map((i) => toViewItem({ ...i, html: null }));
   const [main, ...rest] = items;
 
   return (

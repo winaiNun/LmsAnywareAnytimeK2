@@ -290,6 +290,7 @@ enum BlockKind {
   LINK // any link the media link parser understands (Drive, Docs, Apps Script, Canva, ...)
   MEDIA // an item of the media library (published ones only)
   TEXT // explanation text (the safe page markup)
+  HTML // a pasted HTML app / interactive page, shown in a sandboxed frame (<= 200 KB, see lib/course/blocks.ts)
   QUIZ
 }
 
@@ -405,6 +406,7 @@ model LessonBlock {
   mediaId   String?
   media     Media?    @relation(fields: [mediaId], references: [id], onDelete: SetNull)
   text      String? // TEXT
+  html      String? // HTML only. Never selected by the lesson page query: the frame loads it from its own route
   quizId    String?
   quiz      Quiz?     @relation(fields: [quizId], references: [id], onDelete: SetNull)
   required  Boolean   @default(false) // QUIZ only: must be passed to finish the lesson (an "unlock question")

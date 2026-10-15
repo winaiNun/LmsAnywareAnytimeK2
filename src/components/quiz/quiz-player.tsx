@@ -6,6 +6,7 @@ import { Spinner } from "@/components/icons";
 import type { PublicQuestion } from "@/lib/course/quiz/present";
 import type { QuizOutcome } from "@/lib/course/quiz/reveal";
 import { TYPE_LABEL } from "@/lib/course/quiz/schemas";
+import { warnLevel, type WarnLevel } from "@/lib/course/quiz/timing";
 import AnswerInput, { initialAnswer } from "./answer-inputs";
 
 const STATUS: Record<string, [string, string]> = {
@@ -17,14 +18,16 @@ const STATUS: Record<string, [string, string]> = {
 
 /**
  * Shows the questions of one attempt, collects the answers and hands them to `onSubmit` (the server grades them).
- * Shared by the learners' quiz and the author's "try it" preview. `deadline` (ISO time) shows a countdown and
- * hands in automatically when it runs out.
+ * Shared by the learners' quiz and the author's "try it" preview. `secondsLeft` (counted by the server, so a wrong
+ * device clock cannot change it) shows a countdown, warns before the end and hands in automatically when it runs out.
  */
-export default function QuizPlayer({ questions, onSubmit, onRetry, deadline, retryLabel = "ทำอีกครั้ง", canRetry = true }: {
+export default function QuizPlayer({ questions, onSubmit, onRetry, secondsLeft, totalSeconds, retryLabel = "ทำอีกครั้ง", canRetry = true }: {
   questions: PublicQuestion[];
   onSubmit: (answers: Record<string, unknown>) => Promise<{ outcome: QuizOutcome } | { error: string }>;
   onRetry?: () => void;
-  deadline?: string | null;
+  secondsLeft?: number | null;
+  /** the whole time limit, used to decide whether short quizzes need an "almost over" warning (defaults to secondsLeft) */
+  totalSeconds?: number | null;
   retryLabel?: string;
   canRetry?: boolean;
 }) {
@@ -32,6 +35,8 @@ export default function QuizPlayer({ questions, onSubmit, onRetry, deadline, ret
   const [outcome, setOutcome] = useState<QuizOutcome | null>(null);
   const [error, setError] = useState("");
   const [left, setLeft] = useState<number | null>(null);
+  const [announce, setAnnounce] = useState("");
+  const lastLevel = useRef<WarnLevel>("none");
   const [pending, start] = useTransition();
   const done = useRef(false);
 
@@ -47,19 +52,31 @@ export default function QuizPlayer({ questions, onSubmit, onRetry, deadline, ret
     });
   }
 
+  // The end is fixed once, on the monotonic clock (performance.now), from the seconds the server said were left.
   useEffect(() => {
-    if (!deadline) return;
-    const end = new Date(deadline).getTime();
+    if (secondsLeft == null) return;
+    const end = performance.now() + secondsLeft * 1000;
     const tick = () => {
-      const s = Math.max(0, Math.round((end - Date.now()) / 1000));
+      const s = Math.max(0, Math.ceil((end - performance.now()) / 1000));
       setLeft(s);
+      const level = warnLevel(s, totalSeconds ?? secondsLeft);
+      if (level !== lastLevel.current) {
+        lastLevel.current = level;
+        if (level === "5min") setAnnounce("เหลือเวลาอีก 5 นาที");
+        if (level === "1min") setAnnounce("เหลือเวลาไม่ถึง 1 นาที");
+      }
       if (s === 0) submit();
     };
     tick();
     const t = setInterval(tick, 1000);
-    return () => clearInterval(t);
-  }, [deadline]); // eslint-disable-line react-hooks/exhaustive-deps
+    document.addEventListener("visibilitychange", tick); // a phone that slept catches up at once
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [secondsLeft]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const level = left === null || secondsLeft == null ? "none" : warnLevel(left, totalSeconds ?? secondsLeft);
   const answered = (q: PublicQuestion) => JSON.stringify(answers[q.id]) !== JSON.stringify(initialAnswer(q)) || q.type === "ORDER";
 
   return (
@@ -71,7 +88,19 @@ export default function QuizPlayer({ questions, onSubmit, onRetry, deadline, ret
           {onRetry && canRetry && <button type="button" onClick={onRetry} className="mt-3 min-h-11 rounded-lg border border-neutral-400 bg-white px-5 font-semibold">{retryLabel}</button>}
         </div>
       )}
-      {left !== null && !outcome && <p role="timer" aria-live="off" className={`sticky top-16 z-10 rounded-xl px-4 py-2 text-center font-semibold shadow-sm ${left <= 60 ? "bg-red-600 text-white" : "bg-white text-neutral-800"}`}>เวลาที่เหลือ {Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")}</p>}
+      {left !== null && !outcome && (
+        <>
+          <p
+            role="timer"
+            aria-live="off"
+            className={`sticky top-16 z-10 rounded-xl px-4 py-2 text-center font-semibold shadow-sm ${level === "1min" ? "animate-pulse bg-red-600 text-white motion-reduce:animate-none" : level === "5min" ? "bg-amber-100 text-amber-900" : "bg-white text-neutral-800"}`}
+          >
+            เวลาที่เหลือ {Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")}
+            {level !== "none" && <span className="ml-2 text-sm font-medium">· ใกล้หมดเวลา</span>}
+          </p>
+          <p role="status" aria-live="polite" className="sr-only">{announce}</p>
+        </>
+      )}
 
       <ol className="space-y-4">
         {questions.map((q, i) => {

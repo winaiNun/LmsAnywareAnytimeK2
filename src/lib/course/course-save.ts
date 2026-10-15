@@ -16,7 +16,7 @@ import { storageIsDurable } from "@/lib/schools";
 import { getSiteInfo } from "@/lib/site";
 import { getStorage } from "@/lib/storage";
 import { DAILY_COURSE_LIMIT, MAX_BLOCKS_PER_LESSON, MAX_LESSONS, MAX_QUESTIONS_PER_QUIZ, canCreateCourse, canEditCourse, courseReadiness, courseStatusAfterSave, type CourseActor, type CourseStatus } from "./access";
-import { cleanBlock, type BlockInput } from "./blocks";
+import { MAX_HTML_BLOCKS_PER_LESSON, cleanBlock, type BlockInput } from "./blocks";
 import { parseQuestion, QUESTION_TYPES } from "./quiz/schemas";
 
 export type Res<T extends object = object> = ({ ok: true } & T) | { error: string };
@@ -295,6 +295,7 @@ export async function addBlockAs(actor: CourseActor, lessonId: string, input: Bl
   const refErr = await checkRefs(ctx.lesson.courseId, c.block);
   if (refErr) return { error: refErr };
   if ((await db.lessonBlock.count({ where: { lessonId } })) >= MAX_BLOCKS_PER_LESSON) return { error: `บทเรียนหนึ่งมีเนื้อหาได้ไม่เกิน ${MAX_BLOCKS_PER_LESSON} ส่วน` };
+  if (c.block.kind === "HTML" && (await db.lessonBlock.count({ where: { lessonId, kind: "HTML" } })) >= MAX_HTML_BLOCKS_PER_LESSON) return { error: `บทเรียนหนึ่งมีบล็อก HTML ได้ไม่เกิน ${MAX_HTML_BLOCKS_PER_LESSON} ส่วน (ฐานข้อมูลเก็บเนื้อหา HTML ทั้งหมด) — รวมไว้ในบล็อกเดียว หรือแยกเป็นอีกบท` };
   const last = await db.lessonBlock.aggregate({ where: { lessonId }, _max: { sortOrder: true } });
   const b = await db.lessonBlock.create({ data: { ...c.block, lessonId, sortOrder: (last._max.sortOrder ?? 0) + 1 }, select: { id: true } });
   await touch(actor, ctx.lesson.courseId, ctx.course.status);

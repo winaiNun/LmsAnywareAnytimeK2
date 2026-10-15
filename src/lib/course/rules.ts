@@ -3,7 +3,7 @@
  * Pure functions over plain facts so they can be unit-tested; the server loads the facts and enforces the answer.
  */
 export type LessonRule = "OPEN" | "AFTER_PREVIOUS";
-export type BlockKind = "VIDEO" | "LINK" | "MEDIA" | "TEXT" | "QUIZ";
+export type BlockKind = "VIDEO" | "LINK" | "MEDIA" | "TEXT" | "HTML" | "QUIZ";
 
 export type BlockFacts = { id: string; kind: BlockKind; required: boolean; quizId: string | null };
 export type LessonFacts = { id: string; unlockRule: LessonRule; required: boolean; blocks: BlockFacts[] };

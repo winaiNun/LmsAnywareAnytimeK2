@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { getFormOptions } from "@/lib/media-data";
 import { storageIsDurable } from "@/lib/schools";
 import { getSiteInfo } from "@/lib/site";
+import { getSiteTexts } from "@/lib/site-texts-server";
 import CourseInfoForm from "../../course-info-form";
 import ContentEditor from "./content-editor";
 import CertificateTab from "./certificate-tab";
@@ -43,13 +44,16 @@ export default async function EditCoursePage({ params, searchParams }: { params:
   const tab = TABS.some((t) => t.key === searchParams.tab) ? (searchParams.tab as (typeof TABS)[number]["key"]) : "info";
   const [label, tone] = COURSE_STATUS_LABEL[course.status];
   const admin = actor.role === "ADMIN";
-  const [{ areas, levels }, site, problems] = await Promise.all([getFormOptions(), getSiteInfo(), tab === "submit" ? readinessOf(course.id) : Promise.resolve([] as string[])]);
+  const [{ areas, levels }, site, texts, problems] = await Promise.all([getFormOptions(), getSiteInfo(), getSiteTexts(), tab === "submit" ? readinessOf(course.id) : Promise.resolve([] as string[])]);
   const base = `/dashboard/courses/${course.id}/edit`;
 
   return (
     <main className="mx-auto max-w-3xl space-y-5 p-4 pb-28 sm:p-6">
       <div>
-        <Link href="/dashboard/courses" className="text-sm text-brand">← คอร์สของฉัน</Link>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Link href="/dashboard/courses" className="text-sm text-brand">← คอร์สของฉัน</Link>
+          <Link href="/dashboard/courses/guide" className="text-sm text-brand hover:underline">{texts["guide.creator"]} →</Link>
+        </div>
         <h1 className="flex flex-wrap items-center gap-3 text-2xl font-bold"><span className="min-w-0 break-words">{course.title}</span><span className={`rounded-full px-3 py-1 text-xs font-medium ${tone}`}>{label}</span></h1>
         {searchParams.created && <p role="status" className="mt-2 rounded-xl bg-green-50 p-3 text-sm font-medium text-green-800">สร้างคอร์สแล้ว — เพิ่มบทเรียนด้านล่างได้เลย</p>}
       </div>

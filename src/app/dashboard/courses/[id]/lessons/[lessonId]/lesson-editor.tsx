@@ -5,19 +5,19 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Glyph from "@/components/glyph";
 import { Spinner } from "@/components/icons";
 import SitePageBody from "@/components/site-page-body";
-import { BLOCK_KINDS, BLOCK_LABEL, MAX_TEXT, cleanBlock, youtubeVideoId } from "@/lib/course/blocks";
+import { BLOCK_KINDS, BLOCK_LABEL, MAX_BLOCK_HTML_BYTES, MAX_HTML_BLOCKS_PER_LESSON, MAX_TEXT, cleanBlock, youtubeVideoId } from "@/lib/course/blocks";
 import { MAX_BLOCKS_PER_LESSON } from "@/lib/course/access";
 import type { BlockKind } from "@/lib/course/rules";
 import { isParsed, parseMediaLink } from "@/lib/embed";
 import { addBlock, deleteBlock, moveBlock, searchMediaForCourse, updateBlock, updateLesson } from "../../../actions";
 
 export type LessonValues = { id: string; title: string; summary: string; unlockRule: "OPEN" | "AFTER_PREVIOUS"; required: boolean; sectionTitle: string };
-export type BlockValues = { id: string; kind: BlockKind; label: string; url: string; mediaId: string; mediaTitle: string; text: string; quizId: string; required: boolean };
+export type BlockValues = { id: string; kind: BlockKind; label: string; url: string; mediaId: string; mediaTitle: string; text: string; html: string; quizId: string; required: boolean };
 type QuizOption = { id: string; title: string };
 
 const input = "min-h-11 w-full rounded-lg border border-neutral-300 bg-white px-3";
 const iconBtn = "flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-300 text-neutral-600 hover:bg-neutral-50 disabled:opacity-30";
-const blank = (kind: BlockKind): BlockValues => ({ id: "", kind, label: "", url: "", mediaId: "", mediaTitle: "", text: "", quizId: "", required: kind === "QUIZ" });
+const blank = (kind: BlockKind): BlockValues => ({ id: "", kind, label: "", url: "", mediaId: "", mediaTitle: "", text: "", html: "", quizId: "", required: kind === "QUIZ" });
 
 // ------------------------------------------------------------------------------------------------ lesson settings
 export function LessonSettings({ courseId, lesson, sections }: { courseId: string; lesson: LessonValues; sections: string[] }) {
@@ -117,7 +117,7 @@ function BlockCard({ courseId, lessonId, initial, quizzes, index, count, isNew, 
   const [msg, setMsg] = useState("");
   const [pending, start] = useTransition();
 
-  const payload = () => ({ kind: b.kind, label: b.label, url: b.url, mediaId: b.mediaId || null, text: b.text, quizId: b.quizId || null, required: b.kind === "QUIZ" && b.required });
+  const payload = () => ({ kind: b.kind, label: b.label, url: b.url, mediaId: b.mediaId || null, text: b.text, html: b.html, quizId: b.quizId || null, required: b.kind === "QUIZ" && b.required });
 
   function save() {
     setError("");
@@ -174,6 +174,7 @@ function BlockCard({ courseId, lessonId, initial, quizzes, index, count, isNew, 
           <BlockPreview b={b} />
         </div>
       )}
+      {b.kind === "HTML" && <HtmlField value={b.html} onChange={(html) => setB({ ...b, html })} />}
       {b.kind === "QUIZ" && (
         <label className="block space-y-1"><span className="text-sm font-medium">เลือกแบบทดสอบ *</span>
           <select value={b.quizId} onChange={(e) => setB({ ...b, quizId: e.target.value })} className={input}>
@@ -200,6 +201,33 @@ function BlockCard({ courseId, lessonId, initial, quizzes, index, count, isNew, 
   );
 }
 
+/** Paste an HTML page / app. A preview runs only when asked (not on every keystroke), in the same kind of sandbox the learners get. */
+function HtmlField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [preview, setPreview] = useState<string | null>(null);
+  const bytes = new TextEncoder().encode(value).length;
+  const over = bytes > MAX_BLOCK_HTML_BYTES;
+  const kb = (n: number) => `${(n / 1024).toFixed(n < 10240 ? 1 : 0)} KB`;
+  return (
+    <div className="space-y-2">
+      <label className="block space-y-1"><span className="text-sm font-medium">โค้ด HTML *</span>
+        <textarea value={value} onChange={(e) => { onChange(e.target.value); setPreview(null); }} rows={10} spellCheck={false} aria-label="โค้ด HTML" placeholder={"<!doctype html>\n<html>…</html>"} className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 font-mono text-sm" />
+      </label>
+      <p className={`text-xs ${over ? "font-medium text-red-600" : "text-neutral-500"}`}>{kb(bytes)} / {kb(MAX_BLOCK_HTML_BYTES)} · ใส่ได้ไม่เกิน {MAX_HTML_BLOCKS_PER_LESSON} บล็อกต่อบท</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" disabled={!value.trim() || over} onClick={() => setPreview(value)} className="min-h-10 rounded-lg border border-brand px-4 text-sm font-medium text-brand disabled:opacity-40">ดูตัวอย่าง (รันโค้ด)</button>
+        {preview !== null && <button type="button" onClick={() => setPreview(null)} className="min-h-10 rounded-lg border border-neutral-300 px-4 text-sm">ปิดตัวอย่าง</button>}
+      </div>
+      {preview !== null && <iframe title="ตัวอย่าง HTML" srcDoc={preview} sandbox="allow-scripts allow-popups allow-modals" className="h-[420px] w-full rounded-lg border border-neutral-300 bg-white" />}
+      <ul className="list-disc space-y-1 pl-5 text-xs text-neutral-500">
+        <li>วางได้ทั้งหน้า (รวม <code>&lt;style&gt;</code> และ <code>&lt;script&gt;</code>) เหมาะกับสื่อโต้ตอบ เกม แผนภาพ เครื่องคิดเลข</li>
+        <li>รันในกล่องปิด: โค้ดมองไม่เห็นบัญชีหรือข้อมูลของผู้เรียน ส่งฟอร์มหรือพาไปหน้าอื่นไม่ได้ · ผู้เรียนมีปุ่ม “เปิดหน้าใหม่เต็มจอ” และ “เต็มจอในหน้านี้”</li>
+        <li>รูป/ฟอนต์/สคริปต์จากเว็บภายนอกโหลดได้ แต่ควรใช้แหล่งที่เชื่อถือและอย่ารวมโฆษณาหรือโค้ดเก็บข้อมูลผู้เรียน — ผู้ตรวจเห็นโค้ดทั้งหมดก่อนอนุมัติ</li>
+        <li>ระบบไม่รับคะแนนจากโค้ดนี้ ถ้าต้องวัดผลให้ใช้แบบทดสอบของระบบ</li>
+      </ul>
+    </div>
+  );
+}
+
 // ------------------------------------------------------------------------------------------------ the list of blocks
 export function BlocksEditor({ courseId, lessonId, blocks, quizzes }: { courseId: string; lessonId: string; blocks: BlockValues[]; quizzes: QuizOption[] }) {
   const [adding, setAdding] = useState<BlockKind | null>(null);
@@ -209,7 +237,7 @@ export function BlocksEditor({ courseId, lessonId, blocks, quizzes }: { courseId
     <section className="space-y-3">
       <h2 className="font-semibold">เนื้อหาในบทเรียน</h2>
       {blocks.length === 0 && !adding && <p className="rounded-2xl border border-dashed border-neutral-300 bg-white p-6 text-center text-neutral-600">ยังไม่มีเนื้อหา — เลือกชนิดที่ต้องการเพิ่มด้านล่าง</p>}
-      {blocks.map((b, i) => <BlockCard key={`${b.id}-${JSON.stringify([b.url, b.text, b.required, b.label, b.quizId, b.mediaId])}`} courseId={courseId} lessonId={lessonId} initial={b} quizzes={quizzes} index={i} count={blocks.length} isNew={false} onDone={() => {}} />)}
+      {blocks.map((b, i) => <BlockCard key={`${b.id}-${JSON.stringify([b.url, b.text, b.html, b.required, b.label, b.quizId, b.mediaId])}`} courseId={courseId} lessonId={lessonId} initial={b} quizzes={quizzes} index={i} count={blocks.length} isNew={false} onDone={() => {}} />)}
       {adding && <BlockCard key={`new-${adding}`} courseId={courseId} lessonId={lessonId} initial={blank(adding)} quizzes={quizzes} index={blocks.length} count={blocks.length + 1} isNew onDone={() => setAdding(null)} />}
       {!adding && (
         <div className="rounded-2xl bg-white p-4 shadow-sm">

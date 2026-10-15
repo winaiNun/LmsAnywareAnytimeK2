@@ -15,7 +15,7 @@ import { accessLesson, loadCourseState, quizStatusFor, reasonText, touchLessonAs
 import { getCourseActor } from "@/lib/course/course-server";
 import { isLessonUnlocked, needsConfirm } from "@/lib/course/rules";
 import { db } from "@/lib/db";
-import { toViewItem } from "@/lib/media-view";
+import { toViewItem, type ViewItem } from "@/lib/media-view";
 import { plainText } from "@/lib/site-texts";
 import { getSiteTexts } from "@/lib/site-texts-server";
 
@@ -59,7 +59,7 @@ export default async function LearnPage({ params }: { params: { id: string; less
         orderBy: { sortOrder: "asc" },
         select: {
           id: true, kind: true, label: true, url: true, text: true, required: true,
-          media: { select: { id: true, title: true, status: true, items: { orderBy: { sortOrder: "asc" }, select: { id: true, kind: true, label: true, url: true, storageKey: true, mimeType: true, sizeBytes: true, html: true } } } },
+          media: { select: { id: true, title: true, status: true, items: { orderBy: { sortOrder: "asc" }, select: { id: true, kind: true, label: true, url: true, storageKey: true, mimeType: true, sizeBytes: true } } } }, // no html body here: an HTML app is framed from its own route, so up to 500 KB per item is not read on every view
           quiz: { select: { id: true, title: true, passPercent: true, maxAttempts: true, timeLimitMin: true, _count: { select: { questions: true } } } },
         },
       },
@@ -82,13 +82,16 @@ export default async function LearnPage({ params }: { params: { id: string; less
     let view: React.ReactNode = null;
     if (b.kind === "VIDEO") {
       const videoId = youtubeVideoId(b.url);
-      view = videoId
+      const start = youtubeStart(b.url);
+      // the same viewer as every other embed: the frame, "open in a new page" (YouTube itself) and "full screen here"
+      const video: ViewItem | null = videoId
+        ? { id: b.id, kind: "YOUTUBE", kindLabel: "วิดีโอ YouTube", label: b.label || "วิดีโอประกอบบทเรียน", provider: "YouTube", frameSrc: `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&start=${start}`, shape: "video", openUrl: `https://www.youtube.com/watch?v=${videoId}${start > 0 ? `&t=${start}s` : ""}`, downloadUrl: null, isHtml: false, sizeBytes: null }
+        : null;
+      view = video
         ? (
           <div className="space-y-2">
             {b.label && <p className="font-semibold">{b.label}</p>}
-            <div className="aspect-video w-full overflow-hidden rounded-xl bg-black">
-              <iframe src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&start=${youtubeStart(b.url)}`} title={b.label || "วิดีโอประกอบบทเรียน"} loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="h-full w-full border-0" />
-            </div>
+            <MediaViewer item={video} mediaId={null} />
           </div>
         )
         : <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">วิดีโอนี้ไม่ใช่ลิงก์ YouTube ที่เปิดได้ — แจ้งผู้สอน</p>;
@@ -102,9 +105,14 @@ export default async function LearnPage({ params }: { params: { id: string; less
         : (
           <div className="space-y-3">
             <p className="font-semibold">{b.label || m.title}</p>
-            {m.items.map((it) => <div key={it.id} className="space-y-2">{it.label && m.items.length > 1 && <p className="text-sm font-medium">{it.label}</p>}<MediaViewer item={toViewItem(it)} mediaId={null} /></div>)}
+            {m.items.map((it) => <div key={it.id} className="space-y-2">{it.label && m.items.length > 1 && <p className="text-sm font-medium">{it.label}</p>}<MediaViewer item={toViewItem({ ...it, html: null })} mediaId={null} /></div>)}
           </div>
         );
+    } else if (b.kind === "HTML") {
+      // framed from its own route (sandboxed, and only for people who may open this lesson); the HTML itself is not loaded here
+      const src = `/courses/${course.id}/html/${b.id}`;
+      const item: ViewItem = { id: b.id, kind: "HTML", kindLabel: "HTML", label: b.label || "เนื้อหา HTML", provider: "HTML", frameSrc: src, shape: "tall", openUrl: src, downloadUrl: null, isHtml: true, sizeBytes: null };
+      view = <div className="space-y-2">{b.label && <p className="font-semibold">{b.label}</p>}<MediaViewer item={item} mediaId={null} /></div>;
     } else if (b.kind === "TEXT") {
       view = <div className="rounded-2xl border border-neutral-200 bg-white p-4 sm:p-5">{b.label && <p className="mb-2 font-semibold">{b.label}</p>}<SitePageBody body={b.text ?? ""} /></div>;
     } else if (b.kind === "QUIZ" && b.quiz) {

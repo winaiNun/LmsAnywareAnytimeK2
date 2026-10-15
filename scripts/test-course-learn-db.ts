@@ -136,7 +136,21 @@ async function main() {
     assert.notEqual(t3.attemptId, t2, "the expired attempt was closed and a fresh one started");
     assert.equal(t3.attemptNo, 5, "the abandoned attempt counted as the fourth");
     fails(await submitAttemptAs(studentU.id, t2, {}), "ส่งคำตอบของครั้งนี้ไปแล้ว");
-    console.log("course learn db: 7 groups passed");
+    // 8) secondsLeft is counted on the server: about the whole limit at the start, less once time has passed, null without a limit
+    ok(await updateQuizAs(admin, quiz, { title: "zz-learn แบบทดสอบ", passPercent: 50, maxAttempts: 9, timeLimitMin: 10, shuffleQuestions: false, shuffleChoices: false, showAnswers: "AFTER_PASS" }));
+    const w1 = ok(await startAttemptAs(studentU.id, quiz));
+    assert.ok(w1.secondsLeft !== null && w1.secondsLeft <= 600 && w1.secondsLeft >= 595, `fresh attempt has about 600 s, got ${w1.secondsLeft}`);
+    await db.quizAttempt.update({ where: { id: w1.attemptId }, data: { startedAt: new Date(Date.now() - 4 * 60000) } });
+    const w2 = ok(await startAttemptAs(studentU.id, quiz)); // resumes the same attempt
+    assert.equal(w2.attemptId, w1.attemptId);
+    assert.ok(w2.secondsLeft !== null && w2.secondsLeft <= 360 && w2.secondsLeft >= 355, `resumed attempt has about 360 s, got ${w2.secondsLeft}`);
+    const status8 = await quizStatusFor(studentU.id, quiz, 9, 10);
+    assert.ok(status8.open && status8.open.secondsLeft !== null && status8.open.secondsLeft <= 360 && status8.open.secondsLeft >= 355, "status reports the same remaining time");
+    ok(await submitAttemptAs(studentU.id, w1.attemptId, {}));
+    ok(await updateQuizAs(admin, quiz, { title: "zz-learn แบบทดสอบ", passPercent: 50, maxAttempts: 9, timeLimitMin: null, shuffleQuestions: false, shuffleChoices: false, showAnswers: "AFTER_PASS" }));
+    const w3 = ok(await startAttemptAs(studentU.id, quiz));
+    assert.equal(w3.secondsLeft, null, "no limit, no countdown");
+    console.log("course learn db: 8 groups passed");
   } finally {
     await db.course.deleteMany({ where: { title: { startsWith: "zz-learn" } } });
     await db.user.deleteMany({ where: { username: { startsWith: "zz.learn." } } });

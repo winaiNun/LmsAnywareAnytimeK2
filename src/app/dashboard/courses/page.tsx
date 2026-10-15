@@ -41,7 +41,10 @@ export default async function MyCoursesPage({ searchParams }: { searchParams: { 
           <h1 className="text-2xl font-bold"><Lines text={texts["mycourses.title"]} /></h1>
           <p className="text-sm text-neutral-500"><Lines text={texts["mycourses.subtitle"]} /></p>
         </div>
-        <Link href="/dashboard/courses/new" className="flex min-h-11 items-center rounded-lg bg-brand px-5 text-sm font-semibold text-white">+ สร้างคอร์ส</Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/dashboard/courses/guide" className="flex min-h-11 items-center rounded-lg border border-brand px-4 text-sm font-medium text-brand hover:bg-brand-soft">{texts["guide.creator"]}</Link>
+          <Link href="/dashboard/courses/new" className="flex min-h-11 items-center rounded-lg bg-brand px-5 text-sm font-semibold text-white">+ สร้างคอร์ส</Link>
+        </div>
       </div>
 
       {searchParams.saved && SAVED[searchParams.saved] && <p role="status" className="rounded-xl bg-green-50 p-3 text-sm font-medium text-green-800">{SAVED[searchParams.saved]}</p>}

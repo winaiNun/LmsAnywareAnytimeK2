@@ -14,7 +14,7 @@ type Info = { id: string; title: string; passPercent: number; maxAttempts: numbe
 /** A quiz inside a lesson: shows the rules and the learner's record, starts an attempt, and grades it on the server. */
 export default function QuizBlock({ courseId, quiz, status, required }: { courseId: string; quiz: Info; status: QuizStatus; required: boolean }) {
   const router = useRouter();
-  const [run, setRun] = useState<{ attemptId: string; questions: PublicQuestion[]; deadline: string | null } | null>(null);
+  const [run, setRun] = useState<{ attemptId: string; questions: PublicQuestion[]; secondsLeft: number | null } | null>(null);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const left = quiz.maxAttempts === null ? null : Math.max(0, quiz.maxAttempts - status.attempts);
@@ -24,7 +24,7 @@ export default function QuizBlock({ courseId, quiz, status, required }: { course
     start(async () => {
       const r = await startQuiz(quiz.id);
       if ("error" in r) return setError(r.error);
-      setRun({ attemptId: r.attemptId, questions: r.questions, deadline: r.deadline });
+      setRun({ attemptId: r.attemptId, questions: r.questions, secondsLeft: r.secondsLeft });
     });
   }
 
@@ -35,7 +35,8 @@ export default function QuizBlock({ courseId, quiz, status, required }: { course
         <QuizPlayer
           key={run.attemptId}
           questions={run.questions}
-          deadline={run.deadline}
+          secondsLeft={run.secondsLeft}
+          totalSeconds={quiz.timeLimitMin ? quiz.timeLimitMin * 60 : null}
           onSubmit={async (answers) => {
             const r = await submitQuiz(courseId, run.attemptId, answers);
             if ("error" in r) return { error: r.error };
@@ -70,7 +71,14 @@ export default function QuizBlock({ courseId, quiz, status, required }: { course
       ) : (
         <button type="button" onClick={begin} disabled={pending} className="flex min-h-12 items-center gap-2 rounded-xl bg-brand px-7 font-semibold text-white hover:bg-brand-dark disabled:opacity-60">{pending && <Spinner className="h-4 w-4" />}{status.open ? "ทำต่อ" : status.attempts > 0 ? "ทำอีกครั้ง" : "เริ่มทำแบบทดสอบ"}</button>
       )}
-      {quiz.timeLimitMin && !status.open && <p className="text-xs text-neutral-500">เวลาเริ่มนับเมื่อกด “เริ่มทำแบบทดสอบ” ถ้าหมดเวลา คำตอบที่ยังไม่ส่งจะไม่ถูกนับ</p>}
+      {status.open?.secondsLeft != null && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">คุณมีแบบทดสอบที่ทำค้างอยู่ เวลาเดินอยู่ เหลืออีกประมาณ {Math.max(1, Math.ceil(status.open.secondsLeft / 60))} นาที — กด “ทำต่อ” เพื่อทำให้เสร็จ</p>
+      )}
+      {quiz.timeLimitMin && !status.open && (
+        <p className="text-xs leading-relaxed text-neutral-500">
+          เวลาเริ่มนับเมื่อกด “เริ่มทำแบบทดสอบ” และ<strong>เดินต่อแม้ปิดหน้านี้หรืออินเทอร์เน็ตหลุด</strong> ถ้าหมดเวลาโดยยังไม่ส่ง จะนับเป็นหนึ่งครั้งที่ทำแล้ว และคำตอบที่ยังไม่ส่งจะไม่ถูกนับ ควรเตรียมให้พร้อมก่อนเริ่ม
+        </p>
+      )}
     </section>
   );
 }

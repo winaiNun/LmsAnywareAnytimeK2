@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { canEditMedia } from "@/lib/media-access";
-import { formValuesOf, getFormOptions, loadFullMedia, STATUS_LABEL } from "@/lib/media-data";
+import { formValuesOf, getFormOptions, loadEditMedia, STATUS_LABEL } from "@/lib/media-data";
 import { getActor } from "@/lib/media-server";
 import { storageIsDurable } from "@/lib/schools";
 import { getSiteInfo } from "@/lib/site";
@@ -13,7 +13,7 @@ export const metadata = { title: "แก้ไขสื่อ" };
 export default async function EditMediaPage({ params }: { params: { id: string } }) {
   const actor = await getActor();
   if (!actor) redirect(`/login?callbackUrl=/dashboard/media/${params.id}`);
-  const media = await loadFullMedia(params.id);
+  const media = await loadEditMedia(params.id);
   if (!media || !canEditMedia(actor, media)) notFound();
   const [{ areas, types, levels }, site] = await Promise.all([getFormOptions(), getSiteInfo()]);
   const [label, tone] = STATUS_LABEL[media.status];

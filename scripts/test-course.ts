@@ -347,6 +347,14 @@ t("block input is cleaned per kind", () => {
   assert.equal(cleanBlock({ kind: "TEXT", text: "  " }).ok, false);
   assert.equal(cleanBlock({ kind: "TEXT", text: "ก".repeat(20001) }).ok, false);
   assert.ok(cleanBlock({ kind: "TEXT", text: "สวัสดี" }).ok);
+  // HTML block: needs code, is trimmed, capped at 200 KB (bytes, not characters: Thai is 3 bytes a character)
+  assert.equal(cleanBlock({ kind: "HTML", html: "   " }).ok, false);
+  assert.equal(cleanBlock({ kind: "HTML" }).ok, false);
+  const h = cleanBlock({ kind: "HTML", html: "  <p>สวัสดี</p> ", required: true });
+  assert.ok(h.ok && h.block.html === "<p>สวัสดี</p>" && h.block.required === false && h.block.text === null && h.block.url === null);
+  assert.ok(cleanBlock({ kind: "HTML", html: "a".repeat(200 * 1024) }).ok);
+  assert.equal(cleanBlock({ kind: "HTML", html: "a".repeat(200 * 1024 + 1) }).ok, false);
+  assert.equal(cleanBlock({ kind: "HTML", html: "ก".repeat(70000) }).ok, false, "70,000 Thai characters are ~210 KB");
   assert.equal(cleanBlock({ kind: "MEDIA" }).ok, false);
   assert.equal(cleanBlock({ kind: "QUIZ" }).ok, false);
   const q = cleanBlock({ kind: "QUIZ", quizId: "z1", required: true });

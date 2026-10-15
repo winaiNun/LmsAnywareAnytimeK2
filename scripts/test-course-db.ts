@@ -104,6 +104,22 @@ async function main() {
     for (let i = 0; i < 17; i++) ok(await addBlockAs(teacher, l1, { kind: "TEXT", text: `ข้อความ ${i}` }));
     fails(await addBlockAs(teacher, l1, { kind: "TEXT", text: "เกินลิมิต" }), "ไม่เกิน 20");
 
+    // 3b) HTML blocks: stored as given, capped in size and per lesson, kind can not change; removed again so later groups see the same lessons
+    const html = "<!doctype html><html><body><h1>แอป</h1><script>document.title='x'</script></body></html>";
+    const h1 = ok(await addBlockAs(teacher, l2, { kind: "HTML", label: "แอป", html })).id;
+    assert.equal((await db.lessonBlock.findUniqueOrThrow({ where: { id: h1 } })).html, html);
+    fails(await addBlockAs(teacher, l2, { kind: "HTML", html: "   " }), "วางโค้ด HTML");
+    fails(await addBlockAs(teacher, l2, { kind: "HTML", html: "x".repeat(200 * 1024 + 1) }), "ใหญ่เกิน 200 KB");
+    fails(await addBlockAs(other, l2, { kind: "HTML", html }), "ไม่มีสิทธิ์");
+    const h2 = ok(await addBlockAs(teacher, l2, { kind: "HTML", html })).id;
+    const h3 = ok(await addBlockAs(teacher, l2, { kind: "HTML", html })).id;
+    fails(await addBlockAs(teacher, l2, { kind: "HTML", html }), "ไม่เกิน 3");
+    ok(await updateBlockAs(teacher, h1, { kind: "HTML", html: html + "<!-- v2 -->" }));
+    assert.ok((await db.lessonBlock.findUniqueOrThrow({ where: { id: h1 } })).html?.endsWith("<!-- v2 -->"));
+    fails(await updateBlockAs(teacher, h1, { kind: "TEXT", text: "เปลี่ยนชนิด" }), "เปลี่ยนชนิด");
+    const extra = ok(await addBlockAs(teacher, l2, { kind: "TEXT", text: "ข้อความไม่นับรวมเพดาน HTML" })).id;
+    await db.lessonBlock.deleteMany({ where: { id: { in: [h1, h2, h3, extra] } } }); // only the ones made here: the quiz block above stays
+
     // 4) quiz settings and questions
     ok(await updateQuizAs(teacher, quiz, { title: "แบบทดสอบ", passPercent: 70, maxAttempts: 3, timeLimitMin: null, shuffleQuestions: true, shuffleChoices: true, showAnswers: "AFTER_PASS" }));
     fails(await updateQuizAs(teacher, quiz, { title: "x", passPercent: 0, maxAttempts: null, timeLimitMin: null, shuffleQuestions: false, shuffleChoices: false, showAnswers: "NEVER" }), "1–100");

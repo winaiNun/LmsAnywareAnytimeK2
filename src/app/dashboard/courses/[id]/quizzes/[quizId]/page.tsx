@@ -30,13 +30,13 @@ export default async function EditQuizPage({ params }: { params: { id: string; q
         <Link href={`/dashboard/courses/${params.id}/edit?tab=quizzes`} className="text-sm text-brand">← {quiz.course.title}</Link>
         <h1 className="text-2xl font-bold">{quiz.title}</h1>
       </div>
-      <QuizSettings courseId={params.id} quiz={{ id: quiz.id, title: quiz.title, passPercent: quiz.passPercent, maxAttempts: quiz.maxAttempts, timeLimitMin: quiz.timeLimitMin, shuffleQuestions: quiz.shuffleQuestions, shuffleChoices: quiz.shuffleChoices, showAnswers: quiz.showAnswers }} />
+      <QuizSettings courseId={params.id} questions={quiz.questions.map((q) => ({ type: q.type, config: q.config, explanation: q.explanation }))} quiz={{ id: quiz.id, title: quiz.title, passPercent: quiz.passPercent, maxAttempts: quiz.maxAttempts, timeLimitMin: quiz.timeLimitMin, shuffleQuestions: quiz.shuffleQuestions, shuffleChoices: quiz.shuffleChoices, showAnswers: quiz.showAnswers }} />
       <Questions
         courseId={params.id}
         quizId={quiz.id}
         questions={quiz.questions.map((q) => ({ id: q.id, type: q.type, points: q.points, prompt: q.prompt, imageUrl: q.imageUrl ?? "", explanation: q.explanation, config: q.config, answerKey: q.answerKey }))}
       />
-      <TryIt key={tryable.map((q) => q.id).join()} courseId={params.id} quizId={quiz.id} questions={tryable} />
+      <TryIt key={tryable.map((q) => q.id).join()} courseId={params.id} quizId={quiz.id} questions={tryable} timeLimitMin={quiz.timeLimitMin} />
     </main>
   );
 }

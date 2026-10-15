@@ -12,6 +12,7 @@ import { courseProgress, doneLessonIds, isLessonDone, isLessonUnlocked, needsCon
 import { gradeQuiz, type QuestionRow } from "./quiz/grade";
 import { presentQuiz, type PublicQuestion } from "./quiz/present";
 import { buildOutcome, type QuizOutcome } from "./quiz/reveal";
+import { remainingSeconds } from "./quiz/timing";
 
 type Res<T extends object = object> = ({ ok: true } & T) | { error: string };
 
@@ -134,7 +135,7 @@ async function quizAccess(userId: string, quizId: string): Promise<Res<QuizConte
   return { error: reasonText(lastReason) };
 }
 
-export type QuizStatus = { attempts: number; maxAttempts: number | null; best: number | null; passed: boolean; open: { id: string; deadline: string | null } | null };
+export type QuizStatus = { attempts: number; maxAttempts: number | null; best: number | null; passed: boolean; open: { id: string; deadline: string | null; secondsLeft: number | null } | null };
 
 export async function quizStatusFor(userId: string, quizId: string, maxAttempts: number | null, timeLimitMin: number | null): Promise<QuizStatus> {
   const rows = await db.quizAttempt.findMany({ where: { userId, quizId }, select: { id: true, percent: true, passed: true, submittedAt: true, startedAt: true } });
@@ -145,12 +146,13 @@ export async function quizStatusFor(userId: string, quizId: string, maxAttempts:
     maxAttempts,
     best: submitted.length ? Math.max(...submitted.map((r) => r.percent)) : null,
     passed: submitted.some((r) => r.passed),
-    open: open ? { id: open.id, deadline: timeLimitMin ? new Date(open.startedAt.getTime() + timeLimitMin * 60000).toISOString() : null } : null,
+    // secondsLeft is counted on the server so a learner's wrong device clock cannot shorten or stretch the countdown
+    open: open ? { id: open.id, deadline: timeLimitMin ? new Date(open.startedAt.getTime() + timeLimitMin * 60000).toISOString() : null, secondsLeft: remainingSeconds(open.startedAt, timeLimitMin) } : null,
   };
 }
 
 /** Start (or resume) an attempt. The questions come back without their answer keys. */
-export async function startAttemptAs(userId: string, quizId: string): Promise<Res<{ attemptId: string; questions: PublicQuestion[]; deadline: string | null; attemptNo: number }>> {
+export async function startAttemptAs(userId: string, quizId: string): Promise<Res<{ attemptId: string; questions: PublicQuestion[]; deadline: string | null; secondsLeft: number | null; attemptNo: number }>> {
   const ctx = await quizAccess(userId, quizId);
   if ("error" in ctx) return ctx;
   const { quiz } = ctx;
@@ -171,11 +173,11 @@ export async function startAttemptAs(userId: string, quizId: string): Promise<Re
   const used = attempts.filter((a) => a.submittedAt).length;
   const present = (seed: number) => presentQuiz(questions, { seed, shuffleQuestions: quiz.shuffleQuestions, shuffleChoices: quiz.shuffleChoices });
   if (open) {
-    return { ok: true, attemptId: open.id, questions: present(open.seed), deadline: quiz.timeLimitMin ? new Date(open.startedAt.getTime() + quiz.timeLimitMin * 60000).toISOString() : null, attemptNo: used + 1 };
+    return { ok: true, attemptId: open.id, questions: present(open.seed), deadline: quiz.timeLimitMin ? new Date(open.startedAt.getTime() + quiz.timeLimitMin * 60000).toISOString() : null, secondsLeft: remainingSeconds(open.startedAt, quiz.timeLimitMin), attemptNo: used + 1 };
   }
   if (quiz.maxAttempts !== null && used >= quiz.maxAttempts) return { error: `ทำแบบทดสอบนี้ครบ ${quiz.maxAttempts} ครั้งแล้ว` };
   const attempt = await db.quizAttempt.create({ data: { quizId, userId, seed: randomInt(1, 2 ** 31 - 1) } });
-  return { ok: true, attemptId: attempt.id, questions: present(attempt.seed), deadline: quiz.timeLimitMin ? new Date(attempt.startedAt.getTime() + quiz.timeLimitMin * 60000).toISOString() : null, attemptNo: used + 1 };
+  return { ok: true, attemptId: attempt.id, questions: present(attempt.seed), deadline: quiz.timeLimitMin ? new Date(attempt.startedAt.getTime() + quiz.timeLimitMin * 60000).toISOString() : null, secondsLeft: remainingSeconds(attempt.startedAt, quiz.timeLimitMin), attemptNo: used + 1 };
 }
 
 /** Grade an attempt on the server. The answers can be handed in once; the result tells the learner what the quiz allows. */

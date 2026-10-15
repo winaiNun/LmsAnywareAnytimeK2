@@ -4,8 +4,9 @@
  * "## " = heading, "- " = list item, [text](https://...) = link (https, "/path", mailto: and tel: only).
  */
 import { db } from "@/lib/db";
+import { CREATOR_GUIDE_BODY, CREATOR_GUIDE_TITLE } from "@/lib/course/guide";
 
-export const PAGE_SLUGS = ["about", "contact", "privacy", "terms", "help"] as const;
+export const PAGE_SLUGS = ["about", "contact", "privacy", "terms", "help", "creator-guide"] as const;
 export type PageSlug = (typeof PAGE_SLUGS)[number];
 export const isPageSlug = (v: string): v is PageSlug => (PAGE_SLUGS as readonly string[]).includes(v);
 
@@ -15,6 +16,7 @@ export const PAGE_META: Record<PageSlug, { path: string; label: string }> = {
   privacy: { path: "/privacy", label: "นโยบายความเป็นส่วนตัว" },
   terms: { path: "/terms", label: "เงื่อนไขการใช้งาน" },
   help: { path: "/help", label: "วิธีใช้งาน" },
+  "creator-guide": { path: "/dashboard/courses/guide", label: "คู่มือผู้สร้างคอร์ส (เห็นเฉพาะผู้สร้างคอร์ส)" },
 };
 
 export const DEFAULT_PAGES: Record<PageSlug, { title: string; body: string }> = {
@@ -103,6 +105,7 @@ export const DEFAULT_PAGES: Record<PageSlug, { title: string; body: string }> = 
 ## ติดตั้งเป็นแอปบนมือถือ
 กดปุ่ม "ติดตั้งแอป" ที่มุมล่าง หรือเลือก "เพิ่มไปยังหน้าจอโฮม" ในเมนูของเบราว์เซอร์`,
   },
+  "creator-guide": { title: CREATOR_GUIDE_TITLE, body: CREATOR_GUIDE_BODY },
 };
 
 export async function getPage(slug: PageSlug): Promise<{ title: string; body: string; custom: boolean }> {

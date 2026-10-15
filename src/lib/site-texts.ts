@@ -37,6 +37,7 @@ export const TEXT_DEFS: TextDef[] = [
   { key: "faq.related", group: "pages", label: "แชตถามตอบ: หัวข้อ “คำถามที่เกี่ยวข้อง”", def: "คำถามที่เกี่ยวข้อง", max: 60 },
   { key: "faq.fallback", group: "pages", label: "แชตถามตอบ: ข้อความเมื่อไม่พบคำตอบ", def: "ขออภัย ยังไม่มีคำตอบสำหรับเรื่องนี้ ระบบบันทึกคำถามไว้ให้ผู้ดูแลแล้ว ลองเลือกคำถามด้านล่าง หรือติดต่อผู้ดูแลระบบ", max: 240, long: true },
   { key: "faq.contact", group: "pages", label: "แชตถามตอบ: ลิงก์ไปหน้าติดต่อ", def: "ติดต่อผู้ดูแลระบบ", max: 40 },
+  { key: "guide.creator", group: "pages", label: "ลิงก์ในหน้าสร้างคอร์ส: คู่มือผู้สร้างคอร์ส", def: "คู่มือผู้สร้างคอร์ส", max: 40 },
   { key: "library.title", group: "pages", label: "หน้าคลังสื่อ: หัวข้อ", def: "คลังสื่อการเรียนรู้", max: 80 },
   { key: "library.subtitle", group: "pages", label: "หน้าคลังสื่อ: คำอธิบาย (ต่อท้ายจำนวนรายการ)", def: "คลิกเพื่อเปิดใช้งานหรือดาวน์โหลดได้ทันที ไม่ต้องเข้าสู่ระบบ", max: 200, long: true },
   { key: "schools.title", group: "pages", label: "หน้าทำเนียบโรงเรียน: หัวข้อ", def: "ทำเนียบ Anywhere Anytime ของโรงเรียน", max: 80 },

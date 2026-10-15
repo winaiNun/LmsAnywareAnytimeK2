@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import Glyph from "@/components/glyph";
 import { Spinner } from "@/components/icons";
 import { emptyState, stateFromQuestion, stateToQuestion, syncBlanks, type EditorState } from "@/lib/course/quiz/editor-model";
+import { TYPE_HELP } from "@/lib/course/quiz/help";
 import { QUESTION_TYPES, TYPE_LABEL, parseQuestion, type QuestionType } from "@/lib/course/quiz/schemas";
 import { saveQuestion } from "../../../actions";
 
@@ -18,9 +20,16 @@ const small = "min-h-10 rounded-lg border border-neutral-300 px-3 text-sm hover:
 export function TypePicker({ onPick }: { onPick: (t: QuestionType) => void }) {
   return (
     <div className="rounded-2xl bg-white p-4 shadow-sm">
-      <p className="mb-2 text-sm font-medium">เพิ่มคำถาม — เลือกชนิด</p>
-      <div className="flex flex-wrap gap-2">
-        {QUESTION_TYPES.map((t) => <button key={t} type="button" onClick={() => onPick(t)} className="min-h-11 rounded-full border border-brand/40 bg-brand-soft px-4 text-sm font-semibold text-brand">+ {TYPE_LABEL[t]}</button>)}
+      <p className="mb-1 text-sm font-medium">เพิ่มคำถาม — เลือกชนิด</p>
+      <p className="mb-3 text-xs text-neutral-500">ไม่แน่ใจว่าใช้ชนิดไหน? ดูคำอธิบายและตัวอย่างในแต่ละการ์ด หรืออ่าน <Link href="/dashboard/courses/guide" className="text-brand underline">คู่มือผู้สร้างคอร์ส</Link></p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {QUESTION_TYPES.map((t) => (
+          <button key={t} type="button" onClick={() => onPick(t)} className="rounded-xl border border-brand/30 bg-brand-soft/40 p-3 text-left transition hover:border-brand hover:bg-brand-soft">
+            <span className="block text-sm font-semibold text-brand">+ {TYPE_LABEL[t]}</span>
+            <span className="mt-0.5 block text-xs leading-snug text-neutral-700">{TYPE_HELP[t].summary}</span>
+            <span className="mt-1 block text-xs leading-snug text-neutral-500">เหมาะกับ: {TYPE_HELP[t].goodFor}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -208,6 +217,11 @@ export default function QuestionEditor({ courseId, quizId, type, initial, onClos
         <h3 className="font-semibold">{initial ? "แก้ไขคำถาม" : "คำถามใหม่"} — {TYPE_LABEL[state.type]}</h3>
         <button type="button" onClick={onClose} className="min-h-10 rounded-lg border border-neutral-300 px-3 text-sm">ปิด</button>
       </div>
+      <details className="rounded-lg bg-brand-soft/50 p-3 text-sm">
+        <summary className="cursor-pointer font-medium text-brand">เคล็ดลับสำหรับ “{TYPE_LABEL[state.type]}”</summary>
+        <p className="mt-2 text-neutral-700"><strong>ตัวอย่าง:</strong> {TYPE_HELP[state.type].example}</p>
+        <ul className="mt-1 list-disc space-y-1 pl-5 text-neutral-600">{TYPE_HELP[state.type].tips.map((t) => <li key={t}>{t}</li>)}</ul>
+      </details>
       <label className="block space-y-1"><span className="text-sm font-medium">คำถาม *</span><textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} maxLength={2000} className={area} /></label>
       <label className="block space-y-1"><span className="text-sm font-medium">ลิงก์รูปประกอบคำถาม (ไม่บังคับ)</span><input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} inputMode="url" autoCapitalize="none" placeholder="https://drive.google.com/file/d/…/view หรือที่อยู่รูป https://…" className={input} />
         <span className="block text-xs text-neutral-500">ใช้ลิงก์รูปจาก Google Drive (แชร์ “ทุกคนที่มีลิงก์”) ภาพกว้างไม่เกิน 1200 px ไฟล์ไม่เกิน 1 MB</span>
