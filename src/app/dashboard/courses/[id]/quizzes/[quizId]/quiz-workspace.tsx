@@ -3,12 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import Glyph from "@/components/glyph";
+import { MAX_QUESTIONS_PER_QUIZ } from "@/lib/course/access";
 import { Spinner } from "@/components/icons";
 import QuizPlayer from "@/components/quiz/quiz-player";
 import type { PublicQuestion } from "@/lib/course/quiz/present";
 import { TYPE_LABEL, parseQuestion, type QuestionType } from "@/lib/course/quiz/schemas";
 import { deleteQuestion, moveQuestion, previewQuiz, updateQuiz } from "../../../actions";
 import QuestionEditor, { TypePicker, type QuestionValues } from "./question-editor";
+import QuizImport from "./quiz-import";
 
 export type QuizValues = { id: string; title: string; passPercent: number; maxAttempts: number | null; timeLimitMin: number | null; shuffleQuestions: boolean; shuffleChoices: boolean; showAnswers: "NEVER" | "AFTER_PASS" | "EACH_ATTEMPT" };
 
@@ -97,6 +99,7 @@ export function Questions({ courseId, quizId, questions }: { courseId: string; q
           );
         })}
       </ol>
+      <QuizImport courseId={courseId} quizId={quizId} room={Math.max(0, MAX_QUESTIONS_PER_QUIZ - questions.length)} />
       {newType ? <QuestionEditor key={newType} courseId={courseId} quizId={quizId} type={newType} initial={null} onClose={() => setNewType(null)} /> : <TypePicker onPick={(t) => { setEditing(null); setNewType(t); }} />}
     </section>
   );

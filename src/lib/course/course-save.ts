@@ -439,6 +439,43 @@ export async function saveQuestionAs(actor: CourseActor, quizId: string, questio
   return { ok: true, id };
 }
 
+/**
+ * Add many multiple-choice questions at once (the Excel import). Every question goes through the same checks as one saved
+ * by hand (`questionSchema`, `parseQuestion`, `cleanImage`); the ones that fail are skipped and reported, the rest are added
+ * after the questions already there, in one transaction. Counts as ONE edit for the hourly limit.
+ */
+export async function importQuestionsAs(actor: CourseActor, quizId: string, inputs: unknown): Promise<Res<{ imported: number; skipped: { index: number; error: string }[] }>> {
+  const ctx = await quizContext(actor, quizId);
+  if ("error" in ctx) return ctx;
+  if (!Array.isArray(inputs) || inputs.length === 0) return { error: "ไม่มีคำถามให้นำเข้า" };
+  if (inputs.length > MAX_QUESTIONS_PER_QUIZ) return { error: `นำเข้าได้ครั้งละไม่เกิน ${MAX_QUESTIONS_PER_QUIZ} ข้อ` };
+  const existing = await db.question.count({ where: { quizId } });
+  if (existing + inputs.length > MAX_QUESTIONS_PER_QUIZ) return { error: `แบบทดสอบนี้มีคำถามอยู่แล้ว ${existing} ข้อ นำเข้าเพิ่มได้อีกไม่เกิน ${MAX_QUESTIONS_PER_QUIZ - existing} ข้อ (สูงสุด ${MAX_QUESTIONS_PER_QUIZ} ข้อต่อแบบทดสอบ)` };
+  if (tooMany(actor)) return { error: "แก้ไขบ่อยเกินไป กรุณารอสักครู่" };
+
+  const skipped: { index: number; error: string }[] = [];
+  const rows: { type: "SINGLE" | "MULTI"; points: number; prompt: string; imageUrl: string | null; explanation: string; config: object; answerKey: object }[] = [];
+  inputs.forEach((raw, index) => {
+    const p = questionSchema.safeParse(raw);
+    if (!p.success) return skipped.push({ index, error: p.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" });
+    if (p.data.type !== "SINGLE" && p.data.type !== "MULTI") return skipped.push({ index, error: "นำเข้าได้เฉพาะข้อสอบปรนัย" });
+    const q = parseQuestion(p.data.type, p.data.config, p.data.answerKey);
+    if (!q.ok) return skipped.push({ index, error: q.error });
+    const img = cleanImage(p.data.imageUrl);
+    if (!img.ok) return skipped.push({ index, error: img.error });
+    rows.push({ type: p.data.type, points: p.data.points, prompt: p.data.prompt, imageUrl: img.url, explanation: p.data.explanation, config: q.value.config as object, answerKey: q.value.answerKey as object });
+  });
+  if (rows.length === 0) return { error: skipped[0]?.error ?? "ไม่มีคำถามที่นำเข้าได้" };
+
+  await db.$transaction(async (tx) => {
+    const last = await tx.question.aggregate({ where: { quizId }, _max: { sortOrder: true } });
+    const base = last._max.sortOrder ?? 0;
+    await tx.question.createMany({ data: rows.map((r, i) => ({ ...r, quizId, sortOrder: base + i + 1 })) });
+  });
+  await touch(actor, ctx.quiz.courseId, ctx.course.status);
+  return { ok: true, imported: rows.length, skipped };
+}
+
 export async function deleteQuestionAs(actor: CourseActor, questionId: string): Promise<Res> {
   const q = await db.question.findUnique({ where: { id: questionId }, select: { id: true, quizId: true } });
   if (!q) return NOT_FOUND;

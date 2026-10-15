@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { canEditCourse, type CourseActor } from "@/lib/course/access";
+import { MAX_QUESTIONS_PER_QUIZ, canEditCourse, type CourseActor } from "@/lib/course/access";
+import { QUIZ_SHEET_NAME, parseQuizSheet, type ImportRow } from "@/lib/course/quiz/import";
+import { readSpreadsheet } from "@/lib/excel";
 import { gradeQuiz, type QuestionRow } from "@/lib/course/quiz/grade";
 import { buildOutcome, type QuizOutcome } from "@/lib/course/quiz/reveal";
 import type { BlockInput } from "@/lib/course/blocks";
@@ -112,4 +114,34 @@ export async function previewQuiz(courseId: string, quizId: string, answers: Rec
   const rows = quiz.questions as unknown as QuestionRow[];
   const result = gradeQuiz(rows, answers as never, quiz.passPercent);
   return { outcome: buildOutcome(rows, result, quiz.passPercent, true) };
+}
+
+// ---- Excel import of multiple-choice questions: 1) read + check the file (nothing saved)  2) save what is valid ----
+
+export type QuestionImportPreview =
+  | { ok: false; error: string }
+  | { ok: true; fileName: string; rows: ImportRow[]; exampleRows: number; valid: number; invalid: number; room: number };
+
+export async function previewQuestionImport(courseId: string, quizId: string, formData: FormData): Promise<QuestionImportPreview> {
+  const actor = await getCourseActor();
+  if (!actor) return { ok: false, ...NOT_SIGNED_IN };
+  const { db } = await import("@/lib/db");
+  const quiz = await db.quiz.findFirst({ where: { id: quizId, courseId }, select: { course: { select: { createdById: true, areaId: true } }, _count: { select: { questions: true } } } });
+  if (!quiz || !canEditCourse(actor, quiz.course)) return { ok: false, error: "ไม่มีสิทธิ์แก้ไขแบบทดสอบนี้" };
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "กรุณาเลือกไฟล์ .xlsx หรือ .csv" };
+  let rows: string[][];
+  try {
+    rows = (await readSpreadsheet(Buffer.from(await file.arrayBuffer()), file.name, QUIZ_SHEET_NAME)).rows;
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "อ่านไฟล์ไม่ได้" };
+  }
+  const parsed = parseQuizSheet(rows);
+  if (!parsed.ok) return parsed;
+  if (parsed.rows.length > 300) return { ok: false, error: "ไฟล์มีข้อสอบมากเกิน 300 แถว — แบ่งเป็นหลายไฟล์ (แบบทดสอบหนึ่งชุดมีได้ไม่เกิน 100 ข้อ)" };
+  return { ok: true, fileName: file.name, rows: parsed.rows, exampleRows: parsed.exampleRows, valid: parsed.valid, invalid: parsed.invalid, room: Math.max(0, MAX_QUESTIONS_PER_QUIZ - quiz._count.questions) };
+}
+
+export async function importQuestions(courseId: string, quizId: string, inputs: unknown) {
+  return run(courseId, (a) => save.importQuestionsAs(a, quizId, inputs));
 }

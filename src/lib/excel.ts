@@ -29,7 +29,8 @@ function cellText(v: ExcelJS.CellValue): string {
 /** ZIP signature: every .xlsx starts with "PK". Stops a renamed random file early. */
 const isZip = (buf: Buffer) => buf.length > 4 && buf[0] === 0x50 && buf[1] === 0x4b;
 
-export async function readSpreadsheet(buf: Buffer, fileName: string): Promise<Sheet> {
+/** `preferSheet`: read the tab with this name when the workbook has it (templates keep a "how to" tab next to the data tab); otherwise the first tab with data. */
+export async function readSpreadsheet(buf: Buffer, fileName: string, preferSheet?: string): Promise<Sheet> {
   if (buf.length === 0) throw new Error("ไฟล์ว่างเปล่า");
   if (buf.length > MAX_UPLOAD_BYTES) throw new Error("ไฟล์ใหญ่เกิน 5 MB");
 
@@ -51,7 +52,7 @@ export async function readSpreadsheet(buf: Buffer, fileName: string): Promise<Sh
     throw new Error("อ่านไฟล์ไม่ได้ — ไฟล์เสียหรือไม่ใช่ไฟล์ Excel/CSV ที่ถูกต้อง");
   }
 
-  const ws = wb.worksheets.find((w) => w.rowCount > 0);
+  const ws = (preferSheet ? wb.worksheets.find((w) => w.name === preferSheet && w.rowCount > 0) : undefined) ?? wb.worksheets.find((w) => w.rowCount > 0);
   if (!ws) throw new Error("ไม่พบข้อมูลในไฟล์");
   if (ws.rowCount > MAX_ROWS + 1) throw new Error(`มีข้อมูลเกิน ${MAX_ROWS} แถว ให้แบ่งไฟล์ก่อนนำเข้า`);
 
