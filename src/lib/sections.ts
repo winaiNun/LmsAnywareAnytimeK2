@@ -4,7 +4,7 @@ import { fileUrl } from "@/lib/site";
 
 export { ALIGNS, SIZES, BG_MODES, HEADING_ALIGN, HEADING_SIZE } from "@/lib/section-styles";
 
-export const SECTION_KEYS = ["recommended", "areas", "latest", "popular", "courses", "schools", "resources"] as const;
+export const SECTION_KEYS = ["recommended", "news", "areas", "latest", "popular", "courses", "schools", "resources"] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 
 export type HomeSectionConfig = {
@@ -52,6 +52,7 @@ const base: Omit<Defaults, "kind" | "title"> = {
 
 const DEFAULTS: Record<SectionKey, Defaults> = {
   recommended: { ...base, eyebrow: "แนะนำ", icon: "sparkles", kind: "สไลด์แนะนำคอร์ส/สื่อ", title: "แนะนำสำหรับคุณ" },
+  news: { ...base, eyebrow: "ข่าวสาร", icon: "newspaper", moreHref: "/news", kind: "ข่าวสารและประชาสัมพันธ์ (แถบหัวข้อ)", title: "ข่าวสารและประชาสัมพันธ์", subtitle: "ติดตามข่าวและประกาศล่าสุด" },
   areas: { ...base, eyebrow: "กลุ่มสาระ", icon: "book-open", moreHref: "/library", moreDefault: false, kind: "กลุ่มสาระ (เมนู)", title: "เลือกสำรวจตามกลุ่มสาระ", subtitle: "แตะกลุ่มสาระเพื่อดูสื่อทั้งหมด" },
   latest: { ...base, eyebrow: "มาใหม่", icon: "sparkles", moreHref: "/library?sort=latest", kind: "สื่อล่าสุด (สไลด์แนวข้าง)", title: "สื่อล่าสุด" },
   popular: { ...base, eyebrow: "ยอดนิยม", icon: "heart", moreHref: "/library?sort=views", kind: "สื่อที่ถูกดูมากที่สุด (สไลด์แนวข้าง)", title: "ดูมากที่สุด", subtitle: "สื่อที่ถูกเปิดดูมากในช่วง 30 วันที่ผ่านมา" },

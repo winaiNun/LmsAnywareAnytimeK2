@@ -6,6 +6,8 @@ import Glyph, { IconTile } from "@/components/glyph";
 import MediaCard from "@/components/media-card";
 import MediaRail, { RAIL_ITEM } from "@/components/media-rail";
 import CenterGrid from "@/components/center-grid";
+import NewsSection from "@/components/news/news-section";
+import StatCards from "@/components/stat-cards";
 import ResourceCard from "@/components/resource-card";
 import SchoolCard from "@/components/school-card";
 import SiteHero from "@/components/site-hero";
@@ -19,11 +21,15 @@ import { getHomeSections, type HomeSectionConfig } from "@/lib/sections";
 import { countPublicSchools, getRandomSchools } from "@/lib/schools";
 import { resourceImageOf } from "@/lib/resource-image";
 import { getSiteInfo } from "@/lib/site";
+import { getNewsPage, getNewsTabs, withTimeout } from "@/lib/news/data";
+import { getStatCards } from "@/lib/stats/data";
+import { getSiteTexts } from "@/lib/site-texts-server";
 
 export const dynamic = "force-dynamic";
 
 /** One home-page block: full-width background, centered content, styled heading. */
-function Block({ cfg, anchor, bleed = false, alt = false, children }: { cfg: HomeSectionConfig; anchor?: string; bleed?: boolean; alt?: boolean; children: React.ReactNode }) {
+// moreBelow: the block draws its own "see all" button at the bottom (the news block), so the heading does not
+function Block({ cfg, anchor, bleed = false, alt = false, moreBelow = false, children }: { cfg: HomeSectionConfig; anchor?: string; bleed?: boolean; alt?: boolean; moreBelow?: boolean; children: React.ReactNode }) {
   const bg = sectionBackground({ mode: cfg.bgMode, color: cfg.bgColor, color2: cfg.bgColor2, direction: cfg.bgDirection, imageUrl: cfg.bgImageUrl, overlay: cfg.bgOverlay });
   return (
     <section
@@ -44,7 +50,7 @@ function Block({ cfg, anchor, bleed = false, alt = false, children }: { cfg: Hom
           align={cfg.align}
           size={cfg.titleSize}
           titleColor={cfg.titleColor}
-          moreHref={cfg.moreHref}
+          moreHref={moreBelow ? null : cfg.moreHref}
           icon={cfg.icon}
           onDark={bg.tone === "light"}
         />
@@ -56,8 +62,19 @@ function Block({ cfg, anchor, bleed = false, alt = false, children }: { cfg: Hom
   );
 }
 
+/**
+ * The news tabs and, when it is ready within 2.5 s (it is almost always cached), the first page of the first tab. If a feed is slow
+ * the page does not wait: the block starts with a loading frame and the browser asks /api/news itself.
+ */
+async function loadNews() {
+  const tabs = await getNewsTabs();
+  if (tabs.length === 0) return null;
+  const initial = await withTimeout(getNewsPage(tabs[0].id, 1), 2500).catch(() => null);
+  return { tabs: tabs.map((t) => ({ id: t.id, name: t.name, pageSize: t.pageSize })), initial };
+}
+
 export default async function HomePage() {
-  const [site, sections, banners, slideshow, courses, schools, schoolTotal, areas, latest, popular, resources] = await Promise.all([
+  const [site, sections, banners, slideshow, courses, schools, schoolTotal, areas, latest, popular, resources, news, texts, stats] = await Promise.all([
     getSiteInfo(),
     getHomeSections(),
     getActiveBanners(),
@@ -69,6 +86,9 @@ export default async function HomePage() {
     latestMedia(12),
     popularMedia(12),
     db.resourceLink.findMany({ where: { active: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], take: 6 }),
+    loadNews().catch(() => null), // a failing news block must never take the home page down
+    getSiteTexts(),
+    getStatCards().catch(() => []), // a failing count must never take the home page down
   ]);
 
   const content: Record<string, React.ReactNode> = {
@@ -121,20 +141,24 @@ export default async function HomePage() {
           </div>
         </div>
       ),
+    news: !!news && !(news.tabs.length === 1 && news.initial && news.initial.total === 0) && (
+      <NewsSection tabs={news.tabs} initial={news.initial} moreHref={sections.find((x) => x.key === "news")?.moreHref ?? null} texts={{ empty: texts["news.empty"], sourceError: texts["news.sourceError"], tabsLabel: "หัวข้อข่าว", more: texts["news.more"] }} />
+    ),
     resources: resources.length > 0 && (
       <CenterGrid variant="resources" items={resources.map((r) => ({ key: r.id, node: <ResourceCard r={{ ...r, image: resourceImageOf(r) }} /> }))} />
     ),
   };
-  const anchors: Record<string, string> = { areas: "areas", latest: "latest", popular: "popular", courses: "courses", schools: "schools", resources: "resources" };
+  const anchors: Record<string, string> = { news: "news", areas: "areas", latest: "latest", popular: "popular", courses: "courses", schools: "schools", resources: "resources" };
 
   return (
     <>
       <SiteNavbar />
       <SiteHero site={site} />
+      <StatCards cards={stats} regionLabel={texts["stats.regionLabel"]} />
       {sections
         .filter((s) => s.visible && content[s.key])
         .map((s, i) => (
-          <Block key={s.key} cfg={s} anchor={anchors[s.key]} alt={i % 2 === 1} bleed={s.key === "recommended" && slideshow.layout === "full"}>
+          <Block key={s.key} cfg={s} anchor={anchors[s.key]} alt={i % 2 === 1} bleed={s.key === "recommended" && slideshow.layout === "full"} moreBelow={s.key === "news"}>
             {content[s.key]}
           </Block>
         ))}

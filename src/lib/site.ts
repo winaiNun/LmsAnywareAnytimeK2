@@ -15,6 +15,8 @@ export type SiteInfo = {
   fadeSeconds: number;
   allowServerUploads: boolean;
   requireRegistrationCode: boolean;
+  heroGlobe: boolean;
+  heroGlobeStrength: number;
 };
 
 /** URL for a stored file: straight from the CDN/public bucket when configured, else via /api/files. */
@@ -36,6 +38,8 @@ export async function getSiteInfo(): Promise<SiteInfo> {
     fadeSeconds: s?.fadeSeconds ?? 1.5,
     allowServerUploads: s?.allowServerUploads ?? false,
     requireRegistrationCode: s?.requireRegistrationCode ?? true,
+    heroGlobe: s?.heroGlobe ?? true,
+    heroGlobeStrength: s?.heroGlobeStrength ?? 100,
   };
 }
 

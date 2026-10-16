@@ -11,6 +11,7 @@ const QUICK = [
   { href: "/", label: "หน้าแรก" },
   { href: "/library", label: "คลังสื่อการเรียนรู้" },
   { href: "/courses", label: "คอร์สเรียน" },
+  { href: "/news", label: "ข่าวสาร" },
   { href: "/schools", label: "ทำเนียบโรงเรียน" },
   { href: "/resources", label: "แหล่งสื่อภายนอก" },
   { href: "/about", label: "เกี่ยวกับระบบ" },

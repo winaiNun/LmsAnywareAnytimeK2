@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/", key: "nav.home" },
   { href: "/library", key: "nav.library" },
   { href: "/courses", key: "nav.courses" },
+  { href: "/news", key: "nav.news" },
   { href: "/schools", key: "nav.schools" },
   { href: "/about", key: "nav.about" },
 ];
@@ -72,7 +73,7 @@ export default function NavbarClient({ user, name, areaName, logoUrl, areas, tex
           </nav>
 
           {/* phones: the hamburger holds everything the bottom tabs do not */}
-          <NavDrawer user={user} areas={areas} aboutLabel={plainText(texts["nav.about"])} />
+          <NavDrawer user={user} areas={areas} aboutLabel={plainText(texts["nav.about"])} newsLabel={plainText(texts["nav.news"])} />
 
           {/* desktop account area; on phones this lives in the bottom tab bar */}
           <div className="hidden items-center gap-2 md:flex">

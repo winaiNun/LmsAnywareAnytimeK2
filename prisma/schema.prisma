@@ -537,6 +537,8 @@ model SiteSetting {
   heroImageKey            String? // still or animated (GIF converted to animated WebP) hero background; exclusive with heroVideoKey
   heroImageAnimated       Boolean  @default(false)
   faqEnabled              Boolean  @default(true) // floating FAQ chat on the public pages
+  heroGlobe               Boolean  @default(true) // animated dot-globe over the home banner (follows the pointer)
+  heroGlobeStrength       Int      @default(100) // 20-100: how strong the globe looks (its opacity, in %)
   heroBgColor             String   @default("#0B2A6F") // behind / under the video
   overlayOpacity          Int      @default(45) // 0-90, dark layer over the video
   fadeSeconds             Float    @default(1.5) // video fade in/out at each loop
@@ -794,4 +796,55 @@ model FaqUnanswered {
   lastAt  DateTime @default(now())
 
   @@index([status, count])
+}
+
+/// A tab of the home-page news section (and of /news), e.g. "ข่าวประชาสัมพันธ์", "นโยบาย". Managed by the admin.
+model NewsTab {
+  id        String     @id @default(cuid())
+  name      String
+  sortOrder Int        @default(0)
+  active    Boolean    @default(true)
+  pageSize  Int        @default(8) // news per page in this tab (3-30)
+  createdAt DateTime   @default(now())
+  items     NewsItem[]
+
+  @@index([active, sortOrder])
+}
+
+enum NewsItemKind {
+  LINK // a title + an outside link, typed by the admin
+  FEED // an RSS / Atom feed read on the server (never stored: cached by Next)
+}
+
+model NewsItem {
+  id           String       @id @default(cuid())
+  tabId        String
+  tab          NewsTab      @relation(fields: [tabId], references: [id], onDelete: Cascade)
+  kind         NewsItemKind
+  title        String // LINK: the headline. FEED: the source name shown on its entries
+  url          String // LINK: the page. FEED: the feed address
+  note         String? // LINK: one short line under the headline
+  publishedAt  DateTime? // LINK: shown date (empty = created date)
+  pinned       Boolean      @default(false) // LINK only: stays at the top of its tab
+  active       Boolean      @default(true)
+  feedLimit    Int          @default(20) // FEED: how many of the latest entries to take (5-50)
+  feedCacheMin Int          @default(60) // FEED: minutes the fetched entries are cached (15-360)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([tabId, active])
+}
+
+/// One card of the stat strip under the home banner. `metric` is a key of STAT_METRICS (src/lib/stats/metrics.ts); an empty
+/// label / icon means "the default of that metric". The numbers themselves are counted on the server and cached, never stored.
+model StatCard {
+  id        String   @id @default(cuid())
+  metric    String
+  label     String?
+  icon      String?
+  visible   Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([visible, sortOrder])
 }

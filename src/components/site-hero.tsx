@@ -1,9 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
 import type { SiteInfo } from "@/lib/site";
+import HeroGlobe from "./hero-globe";
 import HeroVideo from "./hero-video";
+import { getSiteTexts } from "@/lib/site-texts-server";
 
 /** Full-width identity banner: logo, system name, district, over a picture, GIF or fading video. */
-export default function SiteHero({ site }: { site: SiteInfo }) {
+export default async function SiteHero({ site }: { site: SiteInfo }) {
+  const texts = site.heroGlobe ? await getSiteTexts() : null;
   const logoAlt = `โลโก้ ${site.systemName}`;
 
   return (
@@ -21,8 +24,9 @@ export default function SiteHero({ site }: { site: SiteInfo }) {
         <div className="hero-aurora absolute inset-0" />
       )}
       <div className="absolute inset-0 bg-black" style={{ opacity: site.overlayOpacity / 100 }} />
+      {texts && <HeroGlobe pauseLabel={texts["hero.animPause"]} playLabel={texts["hero.animPlay"]} strength={site.heroGlobeStrength} />}
 
-      <div className="relative flex max-w-3xl flex-col items-center gap-5 [text-shadow:0_2px_12px_rgba(0,0,0,0.35)]">
+      <div className="relative z-10 flex max-w-3xl flex-col items-center gap-5 [text-shadow:0_2px_12px_rgba(0,0,0,0.35)]">
         {site.logoUrl &&
           (site.logoBackdrop ? (
             // Opaque logos (e.g. JPG with a white background) sit on a plate so they look intentional.

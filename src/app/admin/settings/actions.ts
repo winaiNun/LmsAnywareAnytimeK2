@@ -45,6 +45,7 @@ const schema = z.object({
   heroBgColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "สีไม่ถูกต้อง"),
   overlayOpacity: z.coerce.number().int().min(0).max(90),
   fadeSeconds: z.coerce.number().min(0).max(5),
+  heroGlobeStrength: z.coerce.number().int().min(20, "ความเข้มของลูกโลกต้อง 20–100%").max(100, "ความเข้มของลูกโลกต้อง 20–100%").default(100),
 });
 
 export type SettingsState = { error?: string; saved?: boolean } | undefined;
@@ -140,7 +141,7 @@ export async function saveSettings(_prev: SettingsState, formData: FormData): Pr
     heroImageAnimated = false;
   }
 
-  const data = { ...parsed.data, logoKey, heroVideoKey, heroImageKey, heroImageAnimated, logoBackdrop: formData.get("logoBackdrop") === "on", allowServerUploads: formData.get("allowServerUploads") === "on", requireRegistrationCode: formData.get("requireRegistrationCode") === "on" };
+  const data = { ...parsed.data, logoKey, heroVideoKey, heroImageKey, heroImageAnimated, logoBackdrop: formData.get("logoBackdrop") === "on", allowServerUploads: formData.get("allowServerUploads") === "on", requireRegistrationCode: formData.get("requireRegistrationCode") === "on", heroGlobe: formData.get("heroGlobe") === "on" };
   await db.siteSetting.upsert({ where: { id: "main" }, update: data, create: { id: "main", ...data } });
   await Promise.all(toDelete.map((k) => storage.delete(k)));
 

@@ -20,6 +20,8 @@ type Initial = {
   heroImageAnimated: boolean;
   allowServerUploads: boolean;
   requireRegistrationCode: boolean;
+  heroGlobe: boolean;
+  heroGlobeStrength: number;
 };
 
 const HERO_ASPECTS = [
@@ -43,6 +45,7 @@ export default function SettingsForm({ initial }: { initial: Initial }) {
   const [state, action] = useFormState<SettingsState, FormData>(saveSettings, undefined);
   const [overlay, setOverlay] = useState(initial.overlayOpacity);
   const [fade, setFade] = useState(initial.fadeSeconds);
+  const [strength, setStrength] = useState(initial.heroGlobeStrength);
   const [uploading, setUploading] = useState(false);
   const [removeImage, setRemoveImage] = useState(false);
 
@@ -129,6 +132,22 @@ export default function SettingsForm({ initial }: { initial: Initial }) {
       </fieldset>
 
       <VideoField currentUrl={initial.heroVideoUrl} onBusyChange={setUploading} />
+
+      <fieldset className="space-y-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+        <legend className="px-1 text-sm font-medium">แอนิเมชันในแบนเนอร์ชื่อระบบ</legend>
+        <label className="flex min-h-11 items-start gap-3 text-sm">
+          <input type="checkbox" name="heroGlobe" defaultChecked={initial.heroGlobe} className="mt-0.5 h-5 w-5 shrink-0" />
+          <span>
+            <strong>แสดงลูกโลกจุดเชื่อมเส้นที่หมุนและเอียงตามเมาส์</strong>
+            <span className="mt-1 block text-neutral-500">วาดทับพื้นหลัง (สี ภาพ GIF หรือวิดีโอ) ผู้ชมมีปุ่มหยุด/เล่นแอนิเมชันที่มุมแบนเนอร์เอง (จำค่าไว้ในเบราว์เซอร์) และผู้ที่ตั้งค่า “ลดการเคลื่อนไหว” ในเครื่องจะเห็นเป็นภาพนิ่งจนกว่าจะกดเล่นเอง · ปิดไว้ = ไม่มีแอนิเมชันและไม่มีปุ่ม</span>
+          </span>
+        </label>
+        <label className="block space-y-1 pl-8">
+          <span className="text-sm font-medium">ความเข้มของลูกโลก: {strength}%</span>
+          <input type="range" name="heroGlobeStrength" min={20} max={100} step={5} value={strength} onChange={(e) => setStrength(+e.target.value)} className="w-full max-w-md" />
+          <span className="block text-xs text-neutral-500">ลดลง = จางลง กลืนไปกับพื้นหลัง · เพิ่ม = เห็นจุดและเส้นชัดขึ้น (หลังบันทึก ดูผลที่หน้าแรก) · ถ้าพื้นหลังสว่างมากแล้วลูกโลกรบกวนตัวหนังสือ ให้ลดลงหรือเพิ่ม “ความมืดทับพื้นหลัง” ด้านล่าง</span>
+        </label>
+      </fieldset>
 
       <div className="grid gap-5 sm:grid-cols-3">
         <label className="block space-y-1">
