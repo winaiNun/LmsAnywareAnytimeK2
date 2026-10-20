@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "แดชบอร์ด" };
 
 const nf = new Intl.NumberFormat("th-TH");
-const TYPE_COLOR = { STUDENT: "#0052FF", TEACHER: "#17B26A", SUPERVISOR: "#F59E0B", GENERAL: "#7C3AED" } as const;
+const TYPE_COLOR = { STUDENT: "#0052FF", TEACHER: "#17B26A", SCHOOL_ADMIN: "#0891B2", SUPERVISOR: "#F59E0B", DISTRICT_STAFF: "#DC2626", GENERAL: "#7C3AED" } as const;
 
 function Stat({ icon, color, label, value, hint, progress }: { icon: string; color: string; label: string; value: string; hint?: React.ReactNode; progress?: number }) {
   return (

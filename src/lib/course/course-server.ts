@@ -12,10 +12,10 @@ export async function getCourseActor(): Promise<CourseActor | null> {
   if (!session) return null;
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, role: true, creatorStatus: true, active: true, reviewerAreas: { select: { areaId: true } } },
+    select: { id: true, role: true, creatorStatus: true, selfPublish: true, memberType: true, active: true, reviewerAreas: { select: { areaId: true } } },
   });
   if (!user || !user.active) return null;
-  return { id: user.id, role: user.role, creatorStatus: user.creatorStatus, reviewerAreaIds: user.reviewerAreas.map((r) => r.areaId) };
+  return { id: user.id, role: user.role, creatorStatus: user.creatorStatus, selfPublish: user.selfPublish, memberType: user.memberType, reviewerAreaIds: user.reviewerAreas.map((r) => r.areaId) };
 }
 
 export const COURSE_STATUS_LABEL: Record<string, [string, string]> = {

@@ -1,12 +1,14 @@
 import { z } from "zod";
 
-export const MEMBER_TYPES = ["STUDENT", "TEACHER", "SUPERVISOR", "GENERAL"] as const;
+export const MEMBER_TYPES = ["STUDENT", "TEACHER", "SCHOOL_ADMIN", "SUPERVISOR", "DISTRICT_STAFF", "GENERAL"] as const;
 export type MemberTypeKey = (typeof MEMBER_TYPES)[number];
 
 export const MEMBER_TYPE_LABEL: Record<MemberTypeKey, string> = {
   STUDENT: "นักเรียน",
   TEACHER: "ครู",
+  SCHOOL_ADMIN: "ผู้บริหารสถานศึกษา",
   SUPERVISOR: "ศึกษานิเทศก์",
+  DISTRICT_STAFF: "ผู้บริหาร/บุคลากรสำนักงานเขต",
   GENERAL: "บุคคลทั่วไป",
 };
 
@@ -40,8 +42,10 @@ export function composePersonName(prefix: string | null | undefined, first: stri
   return [`${p}${f}`, l].filter(Boolean).join(" ");
 }
 
-/** Teachers and students belong to a school from the directory; the others name an agency. */
-export const needsSchool = (t: MemberTypeKey) => t === "STUDENT" || t === "TEACHER";
+/** Students, teachers and school administrators belong to a school from the directory; the others name an agency. */
+export const needsSchool = (t: MemberTypeKey) => t === "STUDENT" || t === "TEACHER" || t === "SCHOOL_ADMIN";
+/** Supervisors and district office staff must say which agency they are from. */
+export const needsOrganization = (t: MemberTypeKey) => t === "SUPERVISOR" || t === "DISTRICT_STAFF";
 
 export const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{2,29}$/;
 
@@ -68,7 +72,7 @@ export const profileSchema = z
   })
   .superRefine((v, ctx) => {
     if (needsSchool(v.memberType) && !v.schoolId) ctx.addIssue({ code: "custom", path: ["schoolId"], message: "กรุณาเลือกโรงเรียน" });
-    if (v.memberType === "SUPERVISOR" && !v.organization) ctx.addIssue({ code: "custom", path: ["organization"], message: "กรุณากรอกหน่วยงาน" });
+    if (needsOrganization(v.memberType) && !v.organization) ctx.addIssue({ code: "custom", path: ["organization"], message: "กรุณากรอกหน่วยงาน" });
     if (v.phone && !/^[0-9+\-\s]{8,20}$/.test(v.phone)) ctx.addIssue({ code: "custom", path: ["phone"], message: "เบอร์โทรไม่ถูกต้อง" });
   });
 

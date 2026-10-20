@@ -86,9 +86,9 @@ export async function saveUser(id: string, _prev: UserFormState, formData: FormD
 
   await db.user.update({
     where: { id },
-    data: { ...profileData(profile.data), email: account.data.email ?? null, username: account.data.username ?? null, role: account.data.role, active },
+    data: { ...profileData(profile.data), email: account.data.email ?? null, username: account.data.username ?? null, role: account.data.role, active, selfPublish: formData.get("selfPublish") === "on" },
   });
-  await audit({ actorId: actor.id, action: "user.update", entity: "User", entityId: id, meta: { role: account.data.role, active } });
+  await audit({ actorId: actor.id, action: "user.update", entity: "User", entityId: id, meta: { role: account.data.role, active, selfPublish: formData.get("selfPublish") === "on" } });
   refresh(id);
   return { saved: true };
 }

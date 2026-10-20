@@ -88,7 +88,7 @@ export default function ImportClient() {
           <input type="file" name="file" accept=".xlsx,.csv" required className="block w-full text-sm" disabled={busy} />
         </label>
         <p className="text-xs text-neutral-500">
-          หัวคอลัมน์: ชื่อผู้ใช้/รหัสประจำตัว · อีเมล · คำนำหน้า · ชื่อ · นามสกุล · ประเภท (นักเรียน/ครู/ศึกษานิเทศก์/บุคคลทั่วไป) · โรงเรียน (ใช้รหัสโรงเรียนหรือชื่อตามทำเนียบ) · ตำแหน่ง/ชั้น · รหัสผ่าน (ไม่บังคับ) ลำดับสลับได้ มีชื่อผู้ใช้หรืออีเมลอย่างน้อยหนึ่งอย่าง{" "}
+          หัวคอลัมน์: ชื่อผู้ใช้/รหัสประจำตัว · อีเมล · คำนำหน้า · ชื่อ · นามสกุล · ประเภท (นักเรียน/ครู/ผู้บริหารสถานศึกษา/ศึกษานิเทศก์/ผู้บริหารสำนักงานเขต/บุคคลทั่วไป) · โรงเรียน (ใช้รหัสโรงเรียนหรือชื่อตามทำเนียบ) · ตำแหน่ง/ชั้น · รหัสผ่าน (ไม่บังคับ) ลำดับสลับได้ มีชื่อผู้ใช้หรืออีเมลอย่างน้อยหนึ่งอย่าง{" "}
           (<a href="/admin/users/import/template" className="text-brand underline">ดาวน์โหลดแม่แบบ</a>)
         </p>
         <button disabled={busy} className="flex min-h-11 items-center gap-2 rounded-lg bg-brand px-6 text-sm font-semibold text-white disabled:opacity-60">{busy && !progress ? <Spinner className="h-4 w-4" /> : null}ตรวจไฟล์</button>

@@ -7,6 +7,8 @@ import { pinAllowed } from "@/lib/pin";
 import { formatThaiDate } from "@/lib/thai-date";
 import Link from "next/link";
 import Avatar from "@/components/avatar";
+import CourseCard from "@/components/course-card";
+import { courseCardSelect, toCourseCard } from "@/lib/course/course-data";
 import { Icon, type IconName } from "@/components/icons";
 import AvatarEditor from "@/components/avatar-editor";
 import { avatarOf, getSiteInfo } from "@/lib/site";
@@ -36,6 +38,15 @@ export default async function DashboardPage() {
   const isReviewer = reviewerCount > 0;
   const honors = await getHonorsSettings();
   if (!user) redirect("/login");
+  // courses made for this member type that they have not joined yet
+  const forYou = (
+    await db.course.findMany({
+      where: { status: "PUBLISHED", enrollOpen: true, audienceTypes: { has: user.memberType }, enrollments: { none: { userId: user.id } } },
+      orderBy: [{ publishedAt: "desc" }],
+      take: 3,
+      select: courseCardSelect,
+    })
+  ).map(toCourseCard);
   const isStaff = user.role !== "STUDENT";
 
   const links: { href: string; label: string; icon: IconName; primary?: boolean }[] = [
@@ -72,6 +83,13 @@ export default async function DashboardPage() {
           </Link>
         ))}
       </nav>
+
+      {forYou.length > 0 && (
+        <section aria-label="คอร์สแนะนำสำหรับคุณ" className="space-y-3">
+          <h2 className="font-semibold">คอร์สแนะนำสำหรับคุณ ({MEMBER_TYPE_LABEL[user.memberType]})</h2>
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{forYou.map((c) => <li key={c.id}><CourseCard course={c} /></li>)}</ul>
+        </section>
+      )}
 
       {!isStaff && (
         <section className="space-y-3 rounded-xl bg-white p-5 shadow-sm">

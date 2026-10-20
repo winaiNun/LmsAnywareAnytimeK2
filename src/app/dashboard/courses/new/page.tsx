@@ -24,7 +24,7 @@ export default async function NewCoursePage() {
         <p className="text-sm text-neutral-500">กรอกข้อมูลพื้นฐานก่อน แล้วไปเพิ่มบทเรียนและแบบทดสอบในขั้นถัดไป</p>
       </div>
       <CourseInfoForm
-        values={{ title: "", description: "", areaId: "", levelIds: [], instructorName: "", hours: "", enrollOpen: true, coverUrl: null, coverDrive: "", coverFx: 0.5, coverFy: 0.5 }}
+        values={{ title: "", description: "", areaId: "", levelIds: [], instructorName: "", hours: "", enrollOpen: true, audienceTypes: [], audienceOnly: false, coverUrl: null, coverDrive: "", coverFx: 0.5, coverFy: 0.5 }}
         areas={areas}
         levels={levels}
         allowUpload={site.allowServerUploads && storageIsDurable()}

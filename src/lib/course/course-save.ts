@@ -54,6 +54,8 @@ const infoSchema = z.object({
   instructorName: z.string().trim().max(100).default(""),
   hours: z.number().min(0.1, "จำนวนชั่วโมงต้องมากกว่า 0").max(1000).nullable().default(null),
   enrollOpen: z.boolean().default(true),
+  audienceTypes: z.array(z.enum(["STUDENT", "TEACHER", "SCHOOL_ADMIN", "SUPERVISOR", "DISTRICT_STAFF", "GENERAL"])).max(6).default([]),
+  audienceOnly: z.boolean().default(false),
   cover: z.object({ mode: z.enum(["keep", "none", "drive", "upload"]), link: z.string().max(500).optional(), fx: z.number().min(0).max(1).default(0.5), fy: z.number().min(0).max(1).default(0.5) }).default({ mode: "keep", fx: 0.5, fy: 0.5 }),
 });
 
@@ -111,7 +113,7 @@ export async function saveCourseInfoAs(actor: CourseActor, courseId: string | nu
 
   const status = existing ? courseStatusAfterSave(actor, existing.status, false) : "DRAFT";
   const data = {
-    title: d.title, description: d.description, areaId: d.areaId, instructorName: d.instructorName || null, hours: d.hours, enrollOpen: d.enrollOpen,
+    title: d.title, description: d.description, areaId: d.areaId, instructorName: d.instructorName || null, hours: d.hours, enrollOpen: d.enrollOpen, audienceTypes: Array.from(new Set(d.audienceTypes)), audienceOnly: d.audienceOnly && d.audienceTypes.length > 0,
     coverKey, coverDriveId, coverFx, coverFy, status,
     ...(status === "PENDING" ? { reviewNote: null } : {}),
   };

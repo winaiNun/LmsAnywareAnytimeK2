@@ -1,6 +1,6 @@
 /* Run with: npm run test:course  (pure logic of the course system: permissions, rules, the quiz engine) */
 import assert from "node:assert/strict";
-import { canCreateCourse, canEditCourse, canEnroll, canLearn, canPreviewCourse, canReviewCourse, courseReadiness, courseStatusAfterSave, type CourseActor } from "../src/lib/course/access";
+import { canCreateCourse, canEditCourse, canEnroll, canLearn, isForAudience, canPreviewCourse, canReviewCourse, courseReadiness, courseStatusAfterSave, type CourseActor } from "../src/lib/course/access";
 import { courseProgress, doneLessonIds, isLessonDone, isLessonUnlocked, needsConfirm, nextLesson, type LearnerFacts, type LessonFacts } from "../src/lib/course/rules";
 import { cleanBlock, parseVideoLink, youtubeStart, youtubeVideoId } from "../src/lib/course/blocks";
 import { gradeQuestion, gradeQuiz, type QuestionRow } from "../src/lib/course/quiz/grade";
@@ -59,6 +59,34 @@ t("status after saving", () => {
   assert.equal(courseStatusAfterSave(teacher, "REJECTED", false), "DRAFT");
   assert.equal(courseStatusAfterSave(teacher, "PUBLISHED", false), "PENDING", "editing live content sends it back to the queue");
   assert.equal(courseStatusAfterSave(teacher, "PENDING", false), "PENDING");
+});
+
+t("trusted creator (selfPublish) publishes without the queue, but is not an admin", () => {
+  const director = { ...teacher, selfPublish: true };
+  assert.equal(courseStatusAfterSave(director, null, true), "PUBLISHED");
+  assert.equal(courseStatusAfterSave(director, "PUBLISHED", false), "PUBLISHED", "editing a live course keeps it live");
+  assert.equal(courseStatusAfterSave(director, null, false), "DRAFT", "saving is not publishing");
+  assert.equal(courseStatusAfterSave({ ...teacher, selfPublish: false }, null, true), "PENDING");
+  assert.equal(canReviewCourse(director, course("PENDING")), false, "no reviewing or admin powers come with it");
+  assert.equal(canEditCourse(director, { createdById: "someone-else" }), false);
+  assert.equal(canCreateCourse({ role: "STUDENT", creatorStatus: "NONE", selfPublish: true } as never), false, "the flag alone does not allow creating courses");
+});
+
+t("course audience: recommended vs only-for", () => {
+  const open = { status: "PUBLISHED" as const, enrollOpen: true };
+  const rec = { ...open, audienceTypes: ["SCHOOL_ADMIN"], audienceOnly: false };
+  const only = { ...open, audienceTypes: ["SCHOOL_ADMIN"], audienceOnly: true };
+  assert.equal(canEnroll(open, { role: "STUDENT", memberType: "TEACHER" }), true, "no audience = everyone");
+  assert.equal(canEnroll(rec, { role: "STUDENT", memberType: "TEACHER" }), true, "recommended does not block anyone");
+  assert.equal(canEnroll(only, { role: "STUDENT", memberType: "TEACHER" }), false, "restricted: other types are blocked");
+  assert.equal(canEnroll(only, { role: "STUDENT", memberType: "SCHOOL_ADMIN" }), true);
+  assert.equal(canEnroll(only, { role: "ADMIN", memberType: "TEACHER" }), true, "admins are never blocked");
+  assert.equal(canEnroll(only, null), false, "unknown member is blocked");
+  assert.equal(canEnroll({ ...only, audienceTypes: [] }, { role: "STUDENT", memberType: "TEACHER" }), true, "an empty list restricts nobody");
+  assert.equal(canEnroll({ ...only, enrollOpen: false }, { role: "ADMIN", memberType: "SCHOOL_ADMIN" }), false, "closed is closed");
+  assert.equal(isForAudience(rec, "SCHOOL_ADMIN"), true);
+  assert.equal(isForAudience(rec, "GENERAL"), false);
+  assert.equal(isForAudience({}, "GENERAL"), false);
 });
 
 t("enrol and learn", () => {

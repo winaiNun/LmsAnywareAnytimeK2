@@ -70,7 +70,7 @@ export default async function EditCoursePage({ params, searchParams }: { params:
         <CourseInfoForm
           values={{
             id: course.id, title: course.title, description: course.description, areaId: course.areaId, levelIds: course.levels.map((l) => l.levelId),
-            instructorName: course.instructorName ?? "", hours: course.hours === null ? "" : String(course.hours), enrollOpen: course.enrollOpen,
+            instructorName: course.instructorName ?? "", hours: course.hours === null ? "" : String(course.hours), enrollOpen: course.enrollOpen, audienceTypes: course.audienceTypes, audienceOnly: course.audienceOnly,
             coverUrl: coverOf(course), coverDrive: course.coverDriveId ? `https://drive.google.com/file/d/${course.coverDriveId}/view` : "", coverFx: course.coverFx, coverFy: course.coverFy,
           }}
           areas={areas}
@@ -82,7 +82,7 @@ export default async function EditCoursePage({ params, searchParams }: { params:
       {tab === "quizzes" && <QuizzesTab courseId={course.id} quizzes={course.quizzes.map((q) => ({ id: q.id, title: q.title, questionCount: q._count.questions, passPercent: q.passPercent, usedInLessons: q._count.blocks }))} />}
       {tab === "learners" && <LearnersTab courseId={course.id} q={searchParams.q ?? ""} status={asLearnerStatus(searchParams.status)} page={Math.max(1, Number(searchParams.page) || 1)} />}
       {tab === "certificate" && <CertificateTab courseId={course.id} isAdmin={admin} designId={searchParams.design} status={searchParams.status} />}
-      {tab === "submit" && <SubmitTab courseId={course.id} status={course.status} problems={problems} isAdmin={admin} reviewNote={course.reviewNote} enrollments={course._count.enrollments} />}
+      {tab === "submit" && <SubmitTab courseId={course.id} status={course.status} problems={problems} isAdmin={admin} selfPublish={!!actor.selfPublish} reviewNote={course.reviewNote} enrollments={course._count.enrollments} />}
     </main>
   );
 }

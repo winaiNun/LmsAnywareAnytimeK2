@@ -15,6 +15,7 @@ export type UserValues = {
   isSelf: boolean;
   creatorStatus: string;
   creatorReason: string;
+  selfPublish: boolean;
   profile: ProfileValues;
 };
 
@@ -57,6 +58,12 @@ export default function UserForm({ user, schools }: { user: UserValues; schools:
           {isNew && <label className="block space-y-1"><span className="text-sm font-medium">รหัสผ่าน (เว้นว่าง = สร้างให้)</span><input name="password" minLength={8} autoComplete="off" className={input} /></label>}
         </div>
         <ProfileFields values={user.profile} schools={schools} />
+        {!isNew && (
+          <label className="flex min-h-11 items-start gap-2 rounded-lg bg-neutral-50 p-3 text-sm">
+            <input type="checkbox" name="selfPublish" defaultChecked={user.selfPublish} className="mt-0.5 h-4 w-4" />
+            <span><strong>เผยแพร่คอร์สได้เอง (ไม่ผ่านคิวตรวจ)</strong><span className="block text-xs text-neutral-500">สำหรับผู้ที่ไว้วางใจ เช่น ผู้อำนวยการเขต · คอร์สของคนนี้เผยแพร่ทันทีเมื่อกดส่ง · สิทธิ์อื่นของแอดมิน (ลบ/ถอนคอร์สของคนอื่น/ตั้งค่าระบบ) ไม่ได้ไปด้วย · ต้องเป็นผู้สร้างคอร์สที่อนุมัติแล้ว</span></span>
+          </label>
+        )}
         {!isNew && <label className="flex min-h-11 items-center gap-2"><input type="checkbox" name="active" defaultChecked={user.active} className="h-4 w-4" /> เปิดใช้งานบัญชี</label>}
         {state?.error && <p role="alert" className="text-sm text-red-600">{state.error}</p>}
         {state?.saved && !isNew && <p role="status" className="text-sm text-green-700">บันทึกแล้ว</p>}

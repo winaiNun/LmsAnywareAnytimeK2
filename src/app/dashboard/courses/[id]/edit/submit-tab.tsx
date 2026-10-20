@@ -7,8 +7,9 @@ import Glyph from "@/components/glyph";
 import { deleteCourse, submitCourse, withdrawCourse } from "../../actions";
 
 /** "Ready?" checklist, send for review (admins: publish), withdraw, delete. */
-export default function SubmitTab({ courseId, status, problems, isAdmin, reviewNote, enrollments }: { courseId: string; status: string; problems: string[]; isAdmin: boolean; reviewNote: string | null; enrollments: number }) {
+export default function SubmitTab({ courseId, status, problems, isAdmin, reviewNote, enrollments, selfPublish = false }: { courseId: string; status: string; problems: string[]; isAdmin: boolean; selfPublish?: boolean; reviewNote: string | null; enrollments: number }) {
   const router = useRouter();
+  const direct = isAdmin || selfPublish; // publishes at once (no review queue)
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
@@ -46,9 +47,9 @@ export default function SubmitTab({ courseId, status, problems, isAdmin, reviewN
       {msg && <p role="status" className="rounded-xl bg-green-50 p-3 text-sm font-medium text-green-800">{msg}</p>}
 
       <div className="flex flex-wrap gap-2">
-        {status !== "PUBLISHED" || isAdmin ? (
-          <button disabled={pending || !ready || (!isAdmin && status === "PENDING")} onClick={() => run(() => submitCourse(courseId), isAdmin ? "เผยแพร่แล้ว" : "ส่งตรวจแล้ว", () => router.push(`/dashboard/courses?saved=${isAdmin ? "PUBLISHED" : "PENDING"}`))} className="min-h-12 rounded-xl bg-brand px-7 font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
-            {isAdmin ? (status === "PUBLISHED" ? "เผยแพร่ซ้ำ" : "เผยแพร่") : status === "PENDING" ? "ส่งตรวจแล้ว" : "ส่งขออนุมัติ"}
+        {status !== "PUBLISHED" || direct ? (
+          <button disabled={pending || !ready || (!direct && status === "PENDING")} onClick={() => run(() => submitCourse(courseId), direct ? "เผยแพร่แล้ว" : "ส่งตรวจแล้ว", () => router.push(`/dashboard/courses?saved=${direct ? "PUBLISHED" : "PENDING"}`))} className="min-h-12 rounded-xl bg-brand px-7 font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
+            {direct ? (status === "PUBLISHED" ? "เผยแพร่ซ้ำ" : "เผยแพร่") : status === "PENDING" ? "ส่งตรวจแล้ว" : "ส่งขออนุมัติ"}
           </button>
         ) : null}
         {status === "PENDING" && <button disabled={pending} onClick={() => run(() => withdrawCourse(courseId), "ถอนกลับเป็นร่างแล้ว")} className="min-h-12 rounded-xl border border-neutral-300 px-6 font-semibold disabled:opacity-50">ถอนกลับเป็นร่าง</button>}

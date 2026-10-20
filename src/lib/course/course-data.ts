@@ -1,6 +1,7 @@
 /** Loading courses for the public pages (server only): one select shape, one card shape, used by lists, the home page and admin. */
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { MEMBER_TYPE_LABEL, MEMBER_TYPES, type MemberTypeKey } from "@/lib/members";
 import { showsOwnerIdentity } from "@/lib/media-access";
 import { coverOf } from "./course-server";
 
@@ -19,6 +20,8 @@ export const courseCardSelect = {
   coverDriveId: true,
   coverFx: true,
   coverFy: true,
+  audienceTypes: true,
+  audienceOnly: true,
   area: { select: { id: true, slug: true, name: true, icon: true, color: true } },
   createdBy: { select: { id: true, name: true, memberType: true } },
   _count: { select: { lessons: true, enrollments: true } },
@@ -37,11 +40,17 @@ export type CourseCardData = {
   hours: number | null;
   lessons: number;
   learners: number;
+  /** Member types the course is for (Thai labels; empty = everyone) and whether it is closed to the others. */
+  audience: string[];
+  audienceOnly: boolean;
 };
 
 /** The teacher's name as shown to the public; a student creator is shown as "ผู้สอน" only (same privacy rule as media). */
 export const instructorOf = (c: Pick<CourseCardRow, "instructorName" | "createdBy">) =>
   c.instructorName?.trim() || (showsOwnerIdentity(c.createdBy.memberType) ? c.createdBy.name : "ผู้สอน");
+
+/** Thai names of the audience, in the usual member-type order. */
+export const audienceLabels = (types: readonly string[]): string[] => MEMBER_TYPES.filter((t) => types.includes(t)).map((t) => MEMBER_TYPE_LABEL[t as MemberTypeKey]);
 
 export function toCourseCard(c: CourseCardRow): CourseCardData {
   return {
@@ -55,6 +64,8 @@ export function toCourseCard(c: CourseCardRow): CourseCardData {
     hours: c.hours,
     lessons: c._count.lessons,
     learners: c._count.enrollments,
+    audience: audienceLabels(c.audienceTypes),
+    audienceOnly: c.audienceOnly && c.audienceTypes.length > 0,
   };
 }
 

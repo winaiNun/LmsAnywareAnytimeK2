@@ -19,6 +19,8 @@ enum MemberType {
   STUDENT // นักเรียน
   TEACHER // ครู
   SUPERVISOR // ศึกษานิเทศก์
+  SCHOOL_ADMIN // ผู้บริหารสถานศึกษา (ผอ./รอง ผอ.)
+  DISTRICT_STAFF // ผู้บริหาร/บุคลากรสำนักงานเขต
   GENERAL // บุคคลทั่วไป
 }
 
@@ -46,6 +48,7 @@ model User {
   gradeLevel         String? // students: ชั้น
   creatorStatus      CreatorStatus     @default(NONE)
   creatorReason      String?
+  selfPublish        Boolean           @default(false) // an admin trusts this creator: their courses are published without the review queue
   // honours page: a member appears there ONLY after choosing so (opt-in); students never do (enforced in lib/honors.ts)
   showInHonors       Boolean           @default(false)
   honorsShowPhoto    Boolean           @default(true)
@@ -339,6 +342,8 @@ model Course {
   instructorName String?
   hours          Float?
   enrollOpen     Boolean       @default(true)
+  audienceTypes  MemberType[]  @default([]) // who the course is for (empty = everyone)
+  audienceOnly   Boolean       @default(false) // true = only those member types may enrol; false = just recommended to them
 
   status       CourseStatus @default(DRAFT)
   reviewNote   String?

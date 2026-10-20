@@ -5,6 +5,7 @@ import { useRef, useState, useTransition } from "react";
 import CoverField, { type CoverValue } from "@/components/cover-field";
 import { Spinner } from "@/components/icons";
 import { saveCourseInfo } from "./actions";
+import { MEMBER_TYPES, MEMBER_TYPE_LABEL } from "@/lib/members";
 
 type Option = { id: string; name: string };
 export type CourseInfoValues = {
@@ -16,6 +17,8 @@ export type CourseInfoValues = {
   instructorName: string;
   hours: string;
   enrollOpen: boolean;
+  audienceTypes: string[];
+  audienceOnly: boolean;
   coverUrl: string | null;
   coverDrive: string;
   coverFx: number;
@@ -35,6 +38,8 @@ export default function CourseInfoForm({ values, areas, levels, allowUpload }: {
   const [instructorName, setInstructorName] = useState(values.instructorName);
   const [hours, setHours] = useState(values.hours);
   const [enrollOpen, setEnrollOpen] = useState(values.enrollOpen);
+  const [audienceTypes, setAudienceTypes] = useState(values.audienceTypes);
+  const [audienceOnly, setAudienceOnly] = useState(values.audienceOnly);
   const [cover, setCover] = useState<CoverValue>({ mode: "keep", fx: values.coverFx, fy: values.coverFy });
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -47,7 +52,7 @@ export default function CourseInfoForm({ values, areas, levels, allowUpload }: {
     const fd = new FormData(formRef.current ?? undefined);
     const h = hours.trim() ? Number(hours.replace(",", ".")) : null;
     if (h !== null && !Number.isFinite(h)) return setError("จำนวนชั่วโมงต้องเป็นตัวเลข");
-    fd.set("payload", JSON.stringify({ title, description, areaId, levelIds, instructorName, hours: h, enrollOpen, cover }));
+    fd.set("payload", JSON.stringify({ title, description, areaId, levelIds, instructorName, hours: h, enrollOpen, audienceTypes, audienceOnly: audienceOnly && audienceTypes.length > 0, cover }));
     start(async () => {
       const r = await saveCourseInfo(values.id ?? null, fd);
       if ("error" in r && r.error) { setError(r.error); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
@@ -92,6 +97,22 @@ export default function CourseInfoForm({ values, areas, levels, allowUpload }: {
         </fieldset>
         <label className={label}><span className="text-sm font-medium">ชื่อผู้สอน (ที่แสดงบนหน้าคอร์ส)</span><input value={instructorName} onChange={(e) => setInstructorName(e.target.value)} maxLength={100} placeholder="เช่น นางสมศรี ใจดี — เว้นว่างจะใช้ชื่อของคุณ" className={input} /></label>
         <label className="flex min-h-11 items-center gap-3"><input type="checkbox" checked={enrollOpen} onChange={(e) => setEnrollOpen(e.target.checked)} className="h-5 w-5" /><span>เปิดรับลงทะเบียนเรียน<span className="block text-xs text-neutral-500">ปิดได้ภายหลัง ผู้ที่ลงทะเบียนแล้วยังเรียนต่อได้</span></span></label>
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium">กลุ่มเป้าหมายของคอร์ส <span className="font-normal text-neutral-500">(ไม่เลือก = เหมาะกับทุกคน)</span></legend>
+          <div className="flex flex-wrap gap-2">
+            {MEMBER_TYPES.map((t) => (
+              <label key={t} className={`flex min-h-11 cursor-pointer items-center rounded-full border px-4 text-sm ${audienceTypes.includes(t) ? "border-brand bg-brand-soft font-semibold text-brand" : "border-neutral-300"}`}>
+                <input type="checkbox" checked={audienceTypes.includes(t)} onChange={() => setAudienceTypes((a) => (a.includes(t) ? a.filter((x) => x !== t) : [...a, t]))} className="sr-only" />{MEMBER_TYPE_LABEL[t]}
+              </label>
+            ))}
+          </div>
+          {audienceTypes.length > 0 && (
+            <div className="space-y-1.5 rounded-xl bg-neutral-50 p-3 text-sm">
+              <label className="flex min-h-10 items-start gap-3"><input type="radio" name="aud" checked={!audienceOnly} onChange={() => setAudienceOnly(false)} className="mt-1 h-4 w-4" /><span><strong>แนะนำสำหรับกลุ่มนี้</strong> — ทุกคนลงทะเบียนได้ แต่ขึ้นป้าย “แนะนำสำหรับ …” บนการ์ดและหน้าคอร์ส</span></label>
+              <label className="flex min-h-10 items-start gap-3"><input type="radio" name="aud" checked={audienceOnly} onChange={() => setAudienceOnly(true)} className="mt-1 h-4 w-4" /><span><strong>เปิดเฉพาะกลุ่มนี้</strong> — คนประเภทอื่นเห็นรายละเอียดแต่ลงทะเบียนไม่ได้ (ตรวจจากประเภทสมาชิกที่ผู้ดูแลกำหนด)</span></label>
+            </div>
+          )}
+        </fieldset>
       </section>
 
       <section className="space-y-4 rounded-2xl bg-white p-5 shadow-sm">

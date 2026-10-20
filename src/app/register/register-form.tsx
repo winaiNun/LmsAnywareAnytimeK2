@@ -7,7 +7,7 @@ import { Icon, Spinner, type IconName } from "@/components/icons";
 import Turnstile, { turnstileOn } from "@/components/turnstile";
 import SchoolPicker, { type SchoolOption } from "@/components/school-picker";
 import PrefixField from "@/components/prefix-field";
-import { MEMBER_TYPES, MEMBER_TYPE_LABEL, needsSchool, type MemberTypeKey } from "@/lib/members";
+import { MEMBER_TYPES, MEMBER_TYPE_LABEL, needsOrganization, needsSchool, type MemberTypeKey } from "@/lib/members";
 import { checkRegistrationCode } from "./actions";
 
 type Props = { requireCode: boolean; systemName: string; areaName: string; logoUrl: string | null; schools: SchoolOption[] };
@@ -15,7 +15,9 @@ type Props = { requireCode: boolean; systemName: string; areaName: string; logoU
 const TYPE_INFO: Record<MemberTypeKey, { icon: IconName; hint: string }> = {
   STUDENT: { icon: "book", hint: "เรียนรู้และอ่านสื่อ" },
   TEACHER: { icon: "school", hint: "ครูในโรงเรียน" },
+  SCHOOL_ADMIN: { icon: "award", hint: "ผอ./รอง ผอ. โรงเรียน" },
   SUPERVISOR: { icon: "shield", hint: "ศึกษานิเทศก์" },
+  DISTRICT_STAFF: { icon: "home", hint: "สำนักงานเขตพื้นที่" },
   GENERAL: { icon: "user", hint: "ผู้สนใจทั่วไป" },
 };
 const STEPS_OPEN = ["ประเภท", "ข้อมูล", "บัญชี"];
@@ -199,7 +201,7 @@ export default function RegisterForm({ requireCode, systemName, areaName, logoUr
               </div>
             )}
             {type === "STUDENT" && <label className={label}>ชั้น (เช่น ป.5, ม.2)<input name="gradeLevel" maxLength={40} className={input} /></label>}
-            {!needsSchool(type) && <label className={label}>หน่วยงาน/สังกัด{type === "SUPERVISOR" ? " *" : ""}<input name="organization" required={type === "SUPERVISOR"} maxLength={120} className={input} /></label>}
+            {!needsSchool(type) && <label className={label}>หน่วยงาน/สังกัด{needsOrganization(type) ? " *" : ""}<input name="organization" required={needsOrganization(type)} maxLength={120} className={input} /></label>}
             {type !== "STUDENT" && <label className={label}>ตำแหน่ง/วิทยฐานะ<input name="position" maxLength={120} className={input} /></label>}
             <label className={label}>เบอร์โทร<input name="phone" type="tel" inputMode="tel" maxLength={20} autoComplete="tel" className={input} /></label>
           </div>

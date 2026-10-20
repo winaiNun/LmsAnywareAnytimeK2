@@ -50,11 +50,14 @@ export async function setEnrollOpenAs(actor: CourseActor, courseId: string, open
 /** A signed-in member joins a public course that is open for sign-ups. Joining twice is harmless. */
 export async function enrollAs(userId: string, courseId: string): Promise<Res<{ already: boolean }>> {
   if (rateLimited(`enroll:${userId}`, 30, 60 * 60 * 1000)) return { error: "ลงทะเบียนบ่อยเกินไป กรุณารอสักครู่" };
-  const c = await db.course.findUnique({ where: { id: courseId }, select: { status: true, enrollOpen: true } });
-  if (!c || c.status !== "PUBLISHED") return { error: "ไม่พบคอร์สนี้" };
+  const [c, me] = await Promise.all([
+    db.course.findUnique({ where: { id: courseId }, select: { status: true, enrollOpen: true, audienceTypes: true, audienceOnly: true } }),
+    db.user.findUnique({ where: { id: userId }, select: { role: true, memberType: true, active: true } }),
+  ]);
+  if (!c || c.status !== "PUBLISHED" || !me?.active) return { error: "ไม่พบคอร์สนี้" };
   const existing = await db.enrollment.findUnique({ where: { userId_courseId: { userId, courseId } }, select: { id: true } });
   if (existing) return { ok: true, already: true };
-  if (!canEnroll(c)) return { error: "คอร์สนี้ปิดรับลงทะเบียนแล้ว" };
+  if (!canEnroll(c, me)) return { error: c.audienceOnly && c.enrollOpen ? "คอร์สนี้เปิดเฉพาะกลุ่มเป้าหมายที่กำหนดเท่านั้น" : "คอร์สนี้ปิดรับลงทะเบียนแล้ว" };
   try {
     await db.enrollment.create({ data: { userId, courseId } });
   } catch (e) {

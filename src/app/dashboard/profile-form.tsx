@@ -16,7 +16,7 @@ export function ProfileForm({ values, schools }: { values: ProfileValues; school
   return (
     <form action={action} className="space-y-4 rounded-xl bg-white p-5 shadow-sm">
       <h2 className="font-semibold">ข้อมูลส่วนตัว</h2>
-      <ProfileFields values={values} schools={schools} />
+      <ProfileFields values={values} schools={schools} lockType />
       {state?.error && <p role="alert" className="text-sm text-red-600">{state.error}</p>}
       {state?.saved && <p role="status" className="text-sm text-green-700">บันทึกแล้ว</p>}
       <Submit>บันทึกข้อมูล</Submit>

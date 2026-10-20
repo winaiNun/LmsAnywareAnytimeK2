@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import Breadcrumb from "@/components/breadcrumb";
 import Glyph from "@/components/glyph";
 import SiteNavbar from "@/components/site-navbar";
-import { canPreviewCourse } from "@/lib/course/access";
-import { courseCardSelect, instructorOf } from "@/lib/course/course-data";
+import { canEnroll, canPreviewCourse } from "@/lib/course/access";
+import { audienceLabels, courseCardSelect, instructorOf } from "@/lib/course/course-data";
 import { coverOf, getCourseActor } from "@/lib/course/course-server";
 import { db } from "@/lib/db";
 import { plainText } from "@/lib/site-texts";
@@ -40,6 +40,9 @@ export default async function CoursePage({ params }: { params: { id: string } })
   const preview = !published || (!!actor && !enrollment && actor.id === course.createdBy.id);
   const cover = coverOf(course, 1280);
   const first = course.lessons[0];
+  const audience = audienceLabels(course.audienceTypes);
+  const audienceOnly = course.audienceOnly && audience.length > 0;
+  const eligible = canEnroll({ status: course.status, enrollOpen: course.enrollOpen, audienceTypes: course.audienceTypes, audienceOnly: course.audienceOnly }, actor);
 
   return (
     <>
@@ -67,7 +70,13 @@ export default async function CoursePage({ params }: { params: { id: string } })
               <li className="inline-flex items-center gap-1.5"><Glyph name="users" size={16} />{nf.format(course._count.enrollments)} ผู้เรียน</li>
               {course.levels.length > 0 && <li>{course.levels.map((l) => l.level.name).join(" · ")}</li>}
             </ul>
-            <EnrollButton courseId={course.id} signedIn={!!actor} enrolled={!!enrollment} open={course.enrollOpen && published} continueHref={first ? `/courses/${course.id}/learn/${first.id}` : null} preview={preview} />
+            {audience.length > 0 && (
+              <p className="rounded-xl bg-brand-soft px-3 py-2 text-sm text-brand">
+                <strong>{audienceOnly ? "เปิดเฉพาะ" : "แนะนำสำหรับ"}:</strong> {audience.join(" · ")}
+                {audienceOnly && !eligible && !enrollment && published && course.enrollOpen && <span className="block text-neutral-700">ประเภทสมาชิกของคุณไม่อยู่ในกลุ่มนี้ จึงลงทะเบียนไม่ได้ (หากประเภทสมาชิกของคุณไม่ถูกต้อง ให้ติดต่อผู้ดูแลระบบ)</span>}
+              </p>
+            )}
+            <EnrollButton courseId={course.id} signedIn={!!actor} enrolled={!!enrollment} open={course.enrollOpen && published && (eligible || !!enrollment)} continueHref={first ? `/courses/${course.id}/learn/${first.id}` : null} preview={preview} />
           </div>
         </div>
 

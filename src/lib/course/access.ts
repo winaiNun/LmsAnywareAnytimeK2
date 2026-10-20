@@ -9,9 +9,11 @@ export type CourseActor = {
   id: string;
   role: string; // ADMIN | LIBRARIAN | TEACHER | STUDENT (permission role)
   creatorStatus?: string; // NONE | PENDING | APPROVED | REJECTED
+  selfPublish?: boolean; // an admin trusts this creator: courses are published without the review queue
+  memberType?: string; // STUDENT | TEACHER | SCHOOL_ADMIN | SUPERVISOR | DISTRICT_STAFF | GENERAL (for course audiences)
   reviewerAreaIds: string[];
 };
-export type CourseFacts = { createdById: string; areaId: string; status?: CourseStatus; enrollOpen?: boolean };
+export type CourseFacts = { createdById: string; areaId: string; status?: CourseStatus; enrollOpen?: boolean; audienceTypes?: string[]; audienceOnly?: boolean };
 
 export const DAILY_COURSE_LIMIT = 10; // new courses per person per day
 export const MAX_LESSONS = 200;
@@ -43,15 +45,25 @@ export const canManageCourse = (a: Pick<CourseActor, "role">) => isCourseAdmin(a
 export const canDecideCourse = (status: CourseStatus) => status === "PENDING";
 
 /** What a save does to the status. `submit` = the "send for review" (or, for admins, "publish") button. */
-export function courseStatusAfterSave(a: Pick<CourseActor, "role">, current: CourseStatus | null, submit: boolean): CourseStatus {
-  if (isCourseAdmin(a)) return submit || current === "PUBLISHED" ? "PUBLISHED" : "DRAFT";
+export function courseStatusAfterSave(a: Pick<CourseActor, "role" | "selfPublish">, current: CourseStatus | null, submit: boolean): CourseStatus {
+  if (isCourseAdmin(a) || a.selfPublish) return submit || current === "PUBLISHED" ? "PUBLISHED" : "DRAFT";
   if (submit) return "PENDING";
   // changing something that is live puts it back in the queue; the rest stays a draft
   return current === "PUBLISHED" || current === "PENDING" ? "PENDING" : "DRAFT";
 }
 
-/** Anyone signed in may enrol in a public course that is open for sign-ups. */
-export const canEnroll = (c: Pick<CourseFacts, "status" | "enrollOpen">) => c.status === "PUBLISHED" && c.enrollOpen !== false;
+/** The course is meant for certain member types (recommended) or restricted to them. */
+export const isForAudience = (c: Pick<CourseFacts, "audienceTypes">, memberType?: string | null) => !!memberType && (c.audienceTypes ?? []).includes(memberType);
+
+/**
+ * Anyone signed in may enrol in a public course that is open for sign-ups. A course marked "only for ..." (audienceOnly) is
+ * closed to other member types; its author and admins are never blocked, so they can still open and check it.
+ */
+export const canEnroll = (c: Pick<CourseFacts, "status" | "enrollOpen" | "audienceTypes" | "audienceOnly">, who?: { role?: string; memberType?: string | null } | null) => {
+  if (c.status !== "PUBLISHED" || c.enrollOpen === false) return false;
+  if (c.audienceOnly && (c.audienceTypes ?? []).length > 0 && who?.role !== "ADMIN") return isForAudience(c, who?.memberType);
+  return true;
+};
 
 /** Learners see lessons of a published course they are enrolled in; the author/admin/reviewer may preview anything. */
 export function canLearn(a: CourseActor | null, c: CourseFacts, enrolled: boolean): { ok: true; preview: boolean } | { ok: false; reason: "login" | "enroll" | "unavailable" } {

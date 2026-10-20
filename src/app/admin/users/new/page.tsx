@@ -14,7 +14,7 @@ export default async function NewUserPage() {
     <div className="space-y-4">
       <Link href="/admin/users" className="text-sm text-brand">← สมาชิกทั้งหมด</Link>
       <h1 className="text-2xl font-bold">เพิ่มผู้ใช้</h1>
-      <UserForm schools={schools} user={{ email: "", username: "", role: "STUDENT", active: true, isSelf: false, creatorStatus: "NONE", creatorReason: "", profile: emptyProfile }} />
+      <UserForm schools={schools} user={{ email: "", username: "", role: "STUDENT", active: true, isSelf: false, creatorStatus: "NONE", creatorReason: "", selfPublish: false, profile: emptyProfile }} />
     </div>
   );
 }

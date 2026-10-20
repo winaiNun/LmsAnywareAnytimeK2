@@ -20,6 +20,9 @@ export default function CourseCard({ course: c, priority = false }: { course: Co
       <div className="flex flex-1 flex-col gap-1 p-4">
         <h3 className="line-clamp-2 min-h-[2.75rem] font-semibold leading-snug group-hover:text-brand">{c.title}</h3>
         <p className="truncate text-sm text-neutral-500">{c.instructor}</p>
+        {c.audience.length > 0 && (
+          <p className="truncate text-xs font-medium text-brand" title={c.audience.join(", ")}>{c.audienceOnly ? "เฉพาะ" : "แนะนำสำหรับ"} {c.audience.join(" · ")}</p>
+        )}
         <p className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-2 text-xs text-neutral-500">
           <span className="inline-flex items-center gap-1"><Glyph name="file-text" size={13} />{c.lessons} บท</span>
           {c.hours !== null && <span className="inline-flex items-center gap-1"><Glyph name="calendar-check" size={13} />{c.hours} ชม.</span>}

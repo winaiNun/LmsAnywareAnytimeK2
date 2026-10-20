@@ -35,6 +35,7 @@ export default async function EditUserPage({ params }: { params: { id: string } 
           isSelf: u.id === me.id,
           creatorStatus: u.creatorStatus,
           creatorReason: u.creatorReason ?? "",
+          selfPublish: u.selfPublish,
           profile: {
             memberType: u.memberType,
             prefix: u.prefix ?? "",

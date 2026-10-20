@@ -20,6 +20,12 @@ t("supervisor needs an agency, general does not", () => {
   assert.equal(profileSchema.safeParse({ ...base, memberType: "SUPERVISOR", organization: "สพป.นม.2" }).success, true);
   assert.equal(profileSchema.safeParse({ ...base, memberType: "GENERAL" }).success, true);
 });
+t("school administrators belong to a school, district staff name an agency", () => {
+  assert.equal(profileSchema.safeParse({ ...base, memberType: "SCHOOL_ADMIN" }).success, false);
+  assert.equal(profileSchema.safeParse({ ...base, memberType: "SCHOOL_ADMIN", schoolId: "s1" }).success, true);
+  assert.equal(profileSchema.safeParse({ ...base, memberType: "DISTRICT_STAFF" }).success, false);
+  assert.equal(profileSchema.safeParse({ ...base, memberType: "DISTRICT_STAFF", organization: "สพป.นม.2" }).success, true);
+});
 t("names are required, phone is checked", () => {
   assert.equal(profileSchema.safeParse({ memberType: "GENERAL", firstName: "", lastName: "x" }).success, false);
   assert.equal(profileSchema.safeParse({ ...base, memberType: "GENERAL", phone: "abc" }).success, false);

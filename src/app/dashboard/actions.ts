@@ -25,7 +25,10 @@ export type ProfileState = { error?: string; saved?: boolean } | undefined;
 export async function updateProfile(_prev: ProfileState, formData: FormData): Promise<ProfileState> {
   const session = await getServerSession(authOptions);
   if (!session) return { error: "กรุณาเข้าสู่ระบบ" };
-  const parsed = profileSchema.safeParse(Object.fromEntries(formData));
+  // A member cannot change their own type (it decides student protection, course audiences and the honours page): only an admin can.
+  const me = await db.user.findUnique({ where: { id: session.user.id }, select: { memberType: true } });
+  if (!me) return { error: "ไม่พบบัญชี" };
+  const parsed = profileSchema.safeParse({ ...Object.fromEntries(formData), memberType: me.memberType });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" };
   if (parsed.data.schoolId && !(await db.school.findFirst({ where: { id: parsed.data.schoolId, active: true }, select: { id: true } }))) return { error: "ไม่พบโรงเรียนที่เลือก" };
 

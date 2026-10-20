@@ -2,7 +2,7 @@
  * Turning a spreadsheet into validated member rows (pure functions, easy to test). Reading the .xlsx/.csv
  * file itself lives in `src/lib/excel.ts`; matching against the database happens in the server action.
  */
-import { MEMBER_TYPES, USERNAME_RE, needsSchool, profileSchema, type MemberTypeKey, AUTO_PREFIXES } from "@/lib/members";
+import { MEMBER_TYPES, USERNAME_RE, needsOrganization, needsSchool, profileSchema, type MemberTypeKey, AUTO_PREFIXES } from "@/lib/members";
 
 export type UserField = "username" | "email" | "prefix" | "firstName" | "lastName" | "fullName" | "memberType" | "school" | "posGrade" | "password";
 
@@ -79,6 +79,8 @@ export function parseMemberType(raw: string): MemberTypeKey | null {
   if (!t) return null;
   if ((MEMBER_TYPES as readonly string[]).includes(raw.trim().toUpperCase())) return raw.trim().toUpperCase() as MemberTypeKey;
   if (/นักเรียน|นักศึกษา|student/.test(t)) return "STUDENT";
+  if (/สำนักงานเขต|บุคลากรเขต|ผู้บริหารเขต|เจ้าหน้าที่เขต|ผอ\.?เขต|ผู้อำนวยการเขต|districtstaff|district/.test(t)) return "DISTRICT_STAFF";
+  if (/ผู้บริหารสถานศึกษา|ผู้บริหารโรงเรียน|ผู้อำนวยการ|รองผู้อำนวยการ|ผอ\.?|รองผอ|schooladmin|principal/.test(t)) return "SCHOOL_ADMIN";
   if (/ศึกษานิเทศก์|ศน\.?$|supervisor/.test(t)) return "SUPERVISOR";
   if (/ครู|บุคลากร|teacher|staff/.test(t)) return "TEACHER";
   if (/บุคคลทั่วไป|ทั่วไป|บุคคลภายนอก|ภายนอก|general/.test(t)) return "GENERAL";
@@ -157,7 +159,7 @@ export function validateUserRows(rows: string[][], index: Partial<Record<UserFie
     const typeRaw = get(r, "memberType");
     const memberType = parseMemberType(typeRaw);
     if (!typeRaw) errors.push("ไม่ระบุประเภท");
-    else if (!memberType) errors.push(`ประเภท “${typeRaw.slice(0, 20)}” ไม่รู้จัก (ใช้: นักเรียน, ครู, ศึกษานิเทศก์, บุคคลทั่วไป)`);
+    else if (!memberType) errors.push(`ประเภท “${typeRaw.slice(0, 20)}” ไม่รู้จัก (ใช้: นักเรียน, ครู, ผู้บริหารสถานศึกษา, ศึกษานิเทศก์, ผู้บริหารสำนักงานเขต, บุคคลทั่วไป)`);
 
     const schoolText = get(r, "school");
     let schoolId: string | null = null;
@@ -172,7 +174,7 @@ export function validateUserRows(rows: string[][], index: Partial<Record<UserFie
       }
     } else if (memberType) {
       organization = schoolText || null;
-      if (memberType === "SUPERVISOR" && !organization) errors.push("ศึกษานิเทศก์ต้องระบุหน่วยงาน");
+      if (needsOrganization(memberType) && !organization) errors.push("ประเภทนี้ต้องระบุหน่วยงาน");
     }
 
     const posGrade = get(r, "posGrade") || null;

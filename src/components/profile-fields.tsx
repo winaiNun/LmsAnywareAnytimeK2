@@ -3,7 +3,7 @@
 import { useState } from "react";
 import SchoolPicker, { type SchoolOption } from "@/components/school-picker";
 import PrefixField from "@/components/prefix-field";
-import { MEMBER_TYPES, MEMBER_TYPE_LABEL, needsSchool, type MemberTypeKey } from "@/lib/members";
+import { MEMBER_TYPES, MEMBER_TYPE_LABEL, needsOrganization, needsSchool, type MemberTypeKey } from "@/lib/members";
 
 export type { SchoolOption };
 export type ProfileValues = {
@@ -23,15 +23,23 @@ export const emptyProfile: ProfileValues = { memberType: "GENERAL", prefix: "", 
 const input = "min-h-11 w-full rounded-lg border border-neutral-300 bg-white px-3";
 
 /** Member-type dependent profile inputs (names match `profileSchema`). Used by "my profile" and the admin form. */
-export default function ProfileFields({ values, schools }: { values: ProfileValues; schools: SchoolOption[] }) {
+export default function ProfileFields({ values, schools, lockType = false }: { values: ProfileValues; schools: SchoolOption[]; lockType?: boolean }) {
   const [type, setType] = useState<MemberTypeKey>(values.memberType);
   return (
     <div className="space-y-4">
       <label className="block space-y-1">
         <span className="text-sm font-medium">ประเภทสมาชิก</span>
-        <select name="memberType" value={type} onChange={(e) => setType(e.target.value as MemberTypeKey)} className={input}>
-          {MEMBER_TYPES.map((t) => <option key={t} value={t}>{MEMBER_TYPE_LABEL[t]}</option>)}
-        </select>
+        {lockType ? (
+          <>
+            <input type="hidden" name="memberType" value={type} />
+            <span className={`${input} flex items-center bg-neutral-50 text-neutral-700`}>{MEMBER_TYPE_LABEL[type]}</span>
+            <span className="block text-xs text-neutral-500">ประเภทสมาชิกกำหนดสิทธิ์และการคุ้มครองข้อมูล ผู้ใช้เปลี่ยนเองไม่ได้ หากไม่ถูกต้องให้ติดต่อผู้ดูแลระบบ</span>
+          </>
+        ) : (
+          <select name="memberType" value={type} onChange={(e) => setType(e.target.value as MemberTypeKey)} className={input}>
+            {MEMBER_TYPES.map((t) => <option key={t} value={t}>{MEMBER_TYPE_LABEL[t]}</option>)}
+          </select>
+        )}
       </label>
       <div className="grid gap-4 sm:grid-cols-3">
         <PrefixField defaultValue={values.prefix} className={input} />
@@ -41,7 +49,7 @@ export default function ProfileFields({ values, schools }: { values: ProfileValu
       {needsSchool(type) ? (
         <div className="space-y-1"><span className="text-sm font-medium">โรงเรียน *</span><SchoolPicker schools={schools} defaultValue={values.schoolId} required /></div>
       ) : (
-        <label className="block space-y-1"><span className="text-sm font-medium">หน่วยงาน/สังกัด{type === "SUPERVISOR" && " *"}</span><input name="organization" required={type === "SUPERVISOR"} maxLength={120} defaultValue={values.organization} className={input} /></label>
+        <label className="block space-y-1"><span className="text-sm font-medium">หน่วยงาน/สังกัด{needsOrganization(type) && " *"}</span><input name="organization" required={needsOrganization(type)} maxLength={120} defaultValue={values.organization} className={input} /></label>
       )}
       {type === "STUDENT" ? (
         <label className="block space-y-1"><span className="text-sm font-medium">ชั้น</span><input name="gradeLevel" maxLength={40} defaultValue={values.gradeLevel} className={input} /></label>

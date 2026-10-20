@@ -31,6 +31,13 @@ t("member type wording", () => {
   assert.equal(parseMemberType("ศึกษานิเทศก์"), "SUPERVISOR");
   assert.equal(parseMemberType("บุคคลทั่วไป"), "GENERAL");
   assert.equal(parseMemberType("teacher"), "TEACHER");
+  assert.equal(parseMemberType("ผู้บริหารสถานศึกษา"), "SCHOOL_ADMIN");
+  assert.equal(parseMemberType("ผู้อำนวยการโรงเรียน"), "SCHOOL_ADMIN");
+  assert.equal(parseMemberType("รอง ผอ."), "SCHOOL_ADMIN");
+  assert.equal(parseMemberType("ผอ.เขต"), "DISTRICT_STAFF", "district director is not a school administrator");
+  assert.equal(parseMemberType("ผู้บริหาร/บุคลากรสำนักงานเขต"), "DISTRICT_STAFF", "contains บุคลากร but is a district type");
+  assert.equal(parseMemberType("SCHOOL_ADMIN"), "SCHOOL_ADMIN");
+  assert.equal(parseMemberType("district_staff"), "DISTRICT_STAFF");
   assert.equal(parseMemberType("นักบิน"), null);
 });
 
