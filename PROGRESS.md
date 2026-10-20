@@ -357,3 +357,6 @@ src/components/             navbar, hero, carousel, admin shell/charts
 - Mockup ที่ทำไว้ (ส่วนตัว): https://claude.ai/artifact/QxWceeCqbFKMgnyja15aQR
 - แรงบันดาลใจหน้าตา: aipass.go.th (น้ำเงิน `#0052FF`, IBM Plex Sans Thai → เปลี่ยนเป็น Sarabun), เทมเพลต SkillSphere ของ Shadcn Studio (เฉพาะดูแนว ไม่ได้ซื้อ)
 - แผนแรกเริ่ม: `C:\Users\Lenovo\.claude\plans\lms-lucky-sloth.md` (บนเครื่องนี้)
+
+## 7.27 PWA ตามชื่อ/โลโก้ที่ตั้งในระบบ (20 ต.ค.)
+- `manifest.webmanifest`, ชื่อแท็บ, `apple-mobile-web-app-title`, สีธีม (= สีพื้นแบนเนอร์) สร้างจากตั้งค่าเขตพื้นที่ทุกครั้งที่ร้องขอ (`lib/pwa.ts`, `app/manifest.ts`, `generateMetadata/generateViewport` ใน `layout.tsx`) · ไอคอนติดตั้งสร้างจากโลโก้ที่อัปโหลดด้วย sharp ที่ `/pwa-icon/[192|512|maskable-192|maskable-512|apple-180]` (ไม่มีโลโก้ = ใช้ไอคอนมาตรฐานใน `public/icons`) · เขตอื่น deploy แล้วตั้งชื่อ/โลโก้ที่หลังบ้านได้เลย ไม่ต้องแก้โค้ด · แอปที่ติดตั้งไปแล้วจะอัปเดตชื่อ/ไอคอนเองตามรอบของเบราว์เซอร์ (iOS ต้องลบแล้วติดตั้งใหม่) · `short_name` ตัดที่ 12 ตัวอักษร
