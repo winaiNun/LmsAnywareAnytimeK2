@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { plainText } from "@/lib/site-texts";
 import { getStorage } from "@/lib/storage";
 
 export const MOTION_LEVELS = ["off", "light", "full"] as const;
@@ -6,9 +7,14 @@ export type MotionLevel = (typeof MOTION_LEVELS)[number];
 export const toMotionLevel = (v: unknown): MotionLevel => (MOTION_LEVELS as readonly unknown[]).includes(v) ? (v as MotionLevel) : "light";
 
 export type SiteInfo = {
+  /** One-line text for menus, titles, alt texts and the app name: the admin's "|" line breaks are already turned into spaces. */
   systemName: string;
   areaName: string;
   tagline: string;
+  /** The text as typed ("A | B" = a line break). Only for places that draw the breaks (hero, footer) and the settings form. */
+  systemNameRaw: string;
+  areaNameRaw: string;
+  taglineRaw: string;
   logoUrl: string | null;
   logoBackdrop: boolean;
   heroVideoUrl: string | null;
@@ -30,9 +36,12 @@ export const fileUrl = (key: string | null) => (key ? (getStorage().publicUrl?.(
 export async function getSiteInfo(): Promise<SiteInfo> {
   const s = await db.siteSetting.findUnique({ where: { id: "main" } });
   return {
-    systemName: s?.systemName ?? "Anyware Anytime",
-    areaName: s?.areaName ?? "",
-    tagline: s?.tagline ?? "",
+    systemName: plainText(s?.systemName ?? "Anyware Anytime"),
+    areaName: plainText(s?.areaName ?? ""),
+    tagline: plainText(s?.tagline ?? ""),
+    systemNameRaw: s?.systemName ?? "Anyware Anytime",
+    areaNameRaw: s?.areaName ?? "",
+    taglineRaw: s?.tagline ?? "",
     logoUrl: fileUrl(s?.logoKey ?? null),
     logoBackdrop: s?.logoBackdrop ?? false,
     heroVideoUrl: fileUrl(s?.heroVideoKey ?? null),

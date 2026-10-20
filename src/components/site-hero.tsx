@@ -44,13 +44,13 @@ export default async function SiteHero({ site }: { site: SiteInfo }) {
             />
           ))}
         <h1 className="text-balance text-4xl font-bold leading-tight sm:text-6xl">
-          <Lines text={site.systemName} />
+          <Lines text={site.systemNameRaw} />
         </h1>
         {/* One line always: the size follows the screen width instead of wrapping. */}
-        {site.areaName && <p className="whitespace-nowrap text-[clamp(0.7rem,3.6vw,1.875rem)] font-medium">{plainText(site.areaName)}</p>}
+        {site.areaName && <p className="whitespace-nowrap text-[clamp(0.7rem,3.6vw,1.875rem)] font-medium">{plainText(site.areaNameRaw)}</p>}
         {site.tagline && (
           <p className="text-balance text-base text-white/90 sm:text-lg">
-            <Lines text={site.tagline} />
+            <Lines text={site.taglineRaw} />
           </p>
         )}
       </div>

@@ -13,7 +13,7 @@ export const getFooterData = unstable_cache(
       getVisitStats(),
     ]);
     return {
-      site: { systemName: site.systemName, areaName: site.areaName, tagline: site.tagline, logoUrl: site.logoUrl },
+      site: { systemName: site.systemName, areaName: site.areaName, tagline: site.tagline, systemNameRaw: site.systemNameRaw, taglineRaw: site.taglineRaw, logoUrl: site.logoUrl },
       contact: { address: row?.contactAddress ?? null, phone: row?.contactPhone ?? null, email: row?.contactEmail ?? null },
       social: { facebook: row?.facebookUrl ?? null, youtube: row?.youtubeUrl ?? null, line: row?.lineUrl ?? null },
       resources,

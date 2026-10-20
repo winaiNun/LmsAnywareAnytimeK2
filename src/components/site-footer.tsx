@@ -2,6 +2,8 @@ import Link from "next/link";
 import FooterGate from "@/components/footer-gate";
 import Glyph from "@/components/glyph";
 import { getFooterData } from "@/lib/footer-data";
+import FitLines from "@/components/fit-lines";
+import Lines from "@/components/lines";
 import { plainText } from "@/lib/site-texts";
 import { getSiteTexts } from "@/lib/site-texts-server";
 import { formatThaiDate, bangkokParts } from "@/lib/thai-date";
@@ -57,8 +59,8 @@ export default async function SiteFooter() {
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#4F8BFF] via-[#0052FF] to-[#7C3AED]" aria-hidden />
 
         <div className="relative mx-auto max-w-6xl px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-12 md:pb-8">
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[auto_1fr_1.1fr_1fr] lg:gap-8">
-            <div>
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.9fr_0.9fr_1.1fr_0.9fr] lg:gap-8">
+            <div className="min-w-0">
               <Link href="/" className="inline-flex items-center gap-3" aria-label={`${site.systemName} — หน้าแรก`}>
                 {site.logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -66,10 +68,10 @@ export default async function SiteFooter() {
                 ) : (
                   <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15"><Glyph name="book-open" size={26} /></span>
                 )}
-                <span className="text-lg font-bold leading-tight">{site.systemName}</span>
+                <span className="text-lg font-bold leading-tight"><Lines text={site.systemNameRaw} /></span>
               </Link>
-              {site.areaName && <p className="mt-3 text-[13px] font-medium leading-snug text-white/90 lg:whitespace-nowrap">{site.areaName}</p>}
-              {site.tagline && <p className="mt-1 max-w-xs text-xs leading-relaxed text-white/65">{site.tagline}</p>}
+              {site.areaName && <FitLines text={site.areaName} maxPx={13} className="mt-3 font-medium text-white/90" />}
+              {site.tagline && <FitLines text={site.taglineRaw} maxPx={12} className="mt-1 text-white/65" />}
               {socials.length > 0 && (
                 <ul className="mt-5 flex gap-2.5">
                   {socials.map((s) => (

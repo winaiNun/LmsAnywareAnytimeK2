@@ -11,7 +11,7 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">ตั้งค่าเขตพื้นที่และหน้าแรก</h1>
-      <SettingsForm initial={site} />
+      <SettingsForm initial={{ ...site, systemName: site.systemNameRaw, areaName: site.areaNameRaw, tagline: site.taglineRaw }} />
     </div>
   );
 }
