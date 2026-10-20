@@ -1,11 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { audit } from "@/lib/audit";
+import { BIO_MAX } from "@/lib/honors-rank";
 import { AVATAR_OUT, MAX_ZOOM, clampCenter } from "@/lib/avatar";
 import { parseDriveFileId, driveViewUrl } from "@/lib/drive";
 import { fetchDriveImage } from "@/lib/drive-fetch";
@@ -30,6 +31,35 @@ export async function updateProfile(_prev: ProfileState, formData: FormData): Pr
 
   await db.user.update({ where: { id: session.user.id }, data: profileData(parsed.data) });
   await audit({ actorId: session.user.id, action: "user.profile-update", entity: "User", entityId: session.user.id });
+  revalidatePath("/dashboard");
+  return { saved: true };
+}
+
+const honorsSchema = z.object({ honorsBio: z.string().trim().max(BIO_MAX, `ข้อความแนะนำตัวไม่เกิน ${BIO_MAX} ตัวอักษร`).default("") });
+
+/**
+ * "Show me on the honours page": the member's own choice (opt-in). Students cannot switch it on: a minor never appears,
+ * and the page's queries also exclude them, so this is only the friendly error.
+ */
+export async function saveHonorsPrefs(_prev: ProfileState, formData: FormData): Promise<ProfileState> {
+  const session = await getServerSession(authOptions);
+  if (!session) return { error: "กรุณาเข้าสู่ระบบ" };
+  const me = await db.user.findUnique({ where: { id: session.user.id }, select: { memberType: true } });
+  if (!me) return { error: "ไม่พบบัญชี" };
+  const show = formData.get("showInHonors") === "on";
+  if (show && me.memberType === "STUDENT") return { error: "สมาชิกประเภทนักเรียนไม่แสดงในหน้าเชิดชูเพื่อคุ้มครองข้อมูลของผู้เยาว์" };
+  const parsed = honorsSchema.safeParse({ honorsBio: String(formData.get("honorsBio") ?? "") });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" };
+  await db.user.update({
+    where: { id: session.user.id },
+    // switched off: only the consent changes (the other boxes are disabled in the form, so keep what was chosen before)
+    data: show
+      ? { showInHonors: true, honorsShowPhoto: formData.get("honorsShowPhoto") === "on", honorsShowSchool: formData.get("honorsShowSchool") === "on", honorsBio: parsed.data.honorsBio || null }
+      : { showInHonors: false },
+  });
+  await audit({ actorId: session.user.id, action: "user.honors-prefs", entity: "User", entityId: session.user.id, meta: { show } });
+  revalidateTag("honors");
+  revalidatePath("/honors");
   revalidatePath("/dashboard");
   return { saved: true };
 }

@@ -2,6 +2,8 @@ import Link from "next/link";
 import FooterGate from "@/components/footer-gate";
 import Glyph from "@/components/glyph";
 import { getFooterData } from "@/lib/footer-data";
+import { plainText } from "@/lib/site-texts";
+import { getSiteTexts } from "@/lib/site-texts-server";
 import { formatThaiDate, bangkokParts } from "@/lib/thai-date";
 
 const nf = new Intl.NumberFormat("th-TH");
@@ -37,7 +39,7 @@ function Stat({ icon, label, children }: { icon: string; label: string; children
 
 /** The site footer for every public page: counters, quick links, outside sources, contact and legal links. Hidden in the back office and on sign-in/up. */
 export default async function SiteFooter() {
-  const d = await getFooterData();
+  const [d, texts] = await Promise.all([getFooterData(), getSiteTexts()]);
   const { site, contact, social, resources, stats } = d;
   const year = bangkokParts(new Date()).year + 543;
   const socials = [
@@ -84,7 +86,7 @@ export default async function SiteFooter() {
             <nav aria-label="เมนูลัด">
               <h2 className={heading}>เมนูลัด</h2>
               <ul>
-                {QUICK.map((q) => <li key={q.href}><Link href={q.href} className={link}>{q.label}</Link></li>)}
+                {[...QUICK.slice(0, 6), { href: "/honors", label: plainText(texts["nav.honors"]) }, ...QUICK.slice(6)].map((q) => <li key={q.href}><Link href={q.href} className={link}>{q.label}</Link></li>)}
               </ul>
             </nav>
 

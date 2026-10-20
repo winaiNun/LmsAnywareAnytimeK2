@@ -4,7 +4,7 @@ import { fileUrl } from "@/lib/site";
 
 export { ALIGNS, SIZES, BG_MODES, HEADING_ALIGN, HEADING_SIZE } from "@/lib/section-styles";
 
-export const SECTION_KEYS = ["recommended", "news", "areas", "latest", "popular", "courses", "schools", "resources"] as const;
+export const SECTION_KEYS = ["recommended", "news", "areas", "latest", "popular", "courses", "honors", "schools", "resources"] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 
 export type HomeSectionConfig = {
@@ -57,6 +57,7 @@ const DEFAULTS: Record<SectionKey, Defaults> = {
   latest: { ...base, eyebrow: "มาใหม่", icon: "sparkles", moreHref: "/library?sort=latest", kind: "สื่อล่าสุด (สไลด์แนวข้าง)", title: "สื่อล่าสุด" },
   popular: { ...base, eyebrow: "ยอดนิยม", icon: "heart", moreHref: "/library?sort=views", kind: "สื่อที่ถูกดูมากที่สุด (สไลด์แนวข้าง)", title: "ดูมากที่สุด", subtitle: "สื่อที่ถูกเปิดดูมากในช่วง 30 วันที่ผ่านมา" },
   courses: { ...base, eyebrow: "เรียนรู้", icon: "play-circle", moreHref: "/courses", kind: "คอร์สเรียน", title: "คอร์สเรียน" },
+  honors: { ...base, eyebrow: "เชิดชู", icon: "trophy", moreHref: "/honors", kind: "เชิดชูผู้สร้างสื่อและคอร์ส (การ์ดเลื่อนอัตโนมัติ)", title: "เชิดชูผู้สร้างสื่อและคอร์ส", subtitle: "ขอบคุณครูและบุคลากรที่ร่วมแบ่งปันความรู้" },
   schools: { ...base, eyebrow: "ทำเนียบ", icon: "users", moreHref: "/schools", moreDefault: false, kind: "ทำเนียบโรงเรียน (Anywhere Anytime)", title: "Anywhere Anytime ของโรงเรียนในเขต", subtitle: "สุ่มโรงเรียนมาให้ชมทุกครั้งที่เข้าเว็บ" },
   resources: { ...base, eyebrow: "แหล่งความรู้", icon: "globe", moreHref: "/resources", kind: "แหล่งสื่อภายนอก (ทำเนียบเว็บ)", title: "แหล่งสื่อภายนอกที่แนะนำ", subtitle: "เว็บไซต์และช่องทางที่คัดมาให้ครูและนักเรียน" },
 };

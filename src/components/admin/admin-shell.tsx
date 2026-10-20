@@ -41,6 +41,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/admin/resources", label: "แหล่งสื่อภายนอก", icon: "link" },
       { href: "/admin/news", label: "ข่าวสาร", icon: "news" },
       { href: "/admin/stat-cards", label: "ตัวเลขสรุปหน้าแรก", icon: "dashboard" },
+      { href: "/admin/honors", label: "เชิดชูผู้สร้าง", icon: "award" },
       { href: "/admin/faq", label: "ถามตอบ (FAQ)", icon: "chat" },
       { href: "/admin/banners", label: "สไลด์แนะนำ", icon: "banner", teacher: true },
     ],

@@ -17,7 +17,11 @@ import { db } from "@/lib/db";
 import { areaCounts, latestMedia, popularMedia } from "@/lib/media-list";
 import SectionHeading from "@/components/section-heading";
 import { sectionBackground } from "@/lib/section-styles";
+import HonorCard from "@/components/honor-card";
+import HonorsMarquee from "@/components/honors-marquee";
+import Lines from "@/components/lines";
 import Reveal from "@/components/reveal";
+import { getHonorsForHome } from "@/lib/honors";
 import { getHomeSections, type HomeSectionConfig } from "@/lib/sections";
 import { countPublicSchools, getRandomSchools } from "@/lib/schools";
 import { resourceImageOf } from "@/lib/resource-image";
@@ -77,7 +81,7 @@ async function loadNews() {
 }
 
 export default async function HomePage() {
-  const [site, sections, banners, slideshow, courses, schools, schoolTotal, areas, latest, popular, resources, news, texts, stats] = await Promise.all([
+  const [site, sections, banners, slideshow, courses, schools, schoolTotal, areas, latest, popular, honors, resources, news, texts, stats] = await Promise.all([
     getSiteInfo(),
     getHomeSections(),
     getActiveBanners(),
@@ -88,6 +92,7 @@ export default async function HomePage() {
     areaCounts(),
     latestMedia(12),
     popularMedia(12),
+    getHonorsForHome(12),
     db.resourceLink.findMany({ where: { active: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], take: 6 }),
     loadNews().catch(() => null), // a failing news block must never take the home page down
     getSiteTexts(),
@@ -129,6 +134,18 @@ export default async function HomePage() {
         {popular.map((c) => <li key={c.id} className={RAIL_ITEM}><MediaCard card={c} compact /></li>)}
       </MediaRail>
     ),
+    honors: honors.length > 0 && (
+      <div className="space-y-4">
+        {honors.length >= 5 ? (
+          <HonorsMarquee pauseLabel={texts["hero.animPause"]} playLabel={texts["hero.animPlay"]}>
+            {honors.map((m) => <HonorCard key={m.id} m={m} compact />)}
+          </HonorsMarquee>
+        ) : (
+          <ul className="flex flex-wrap justify-center gap-4">{honors.map((m) => <li key={m.id} className="w-56 sm:w-60"><HonorCard m={m} compact /></li>)}</ul>
+        )}
+        <p className="mx-auto max-w-2xl text-center text-sm text-neutral-600"><Lines text={texts["honors.invite"]} /></p>
+      </div>
+    ),
     courses: courses.length > 0 && (
       <CenterGrid variant="courses" items={courses.map((c) => ({ key: c.id, node: <CourseCard course={c} /> }))} />
     ),
@@ -151,7 +168,7 @@ export default async function HomePage() {
       <CenterGrid variant="resources" items={resources.map((r) => ({ key: r.id, node: <ResourceCard r={{ ...r, image: resourceImageOf(r) }} /> }))} />
     ),
   };
-  const anchors: Record<string, string> = { news: "news", areas: "areas", latest: "latest", popular: "popular", courses: "courses", schools: "schools", resources: "resources" };
+  const anchors: Record<string, string> = { news: "news", areas: "areas", latest: "latest", popular: "popular", courses: "courses", honors: "honors", schools: "schools", resources: "resources" };
 
   return (
     <>

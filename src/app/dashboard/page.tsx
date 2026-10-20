@@ -13,7 +13,9 @@ import { avatarOf, getSiteInfo } from "@/lib/site";
 import { plainText } from "@/lib/site-texts";
 import { getSiteTexts } from "@/lib/site-texts-server";
 import SignOutButton from "./sign-out-button";
-import { CreatorRequestForm, PinForm, ProfileForm } from "./profile-form";
+import { BIO_MAX } from "@/lib/honors-rank";
+import { getHonorsSettings } from "@/lib/honors";
+import { CreatorRequestForm, HonorsForm, PinForm, ProfileForm } from "./profile-form";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +34,7 @@ export default async function DashboardPage() {
     getSiteTexts(),
   ]);
   const isReviewer = reviewerCount > 0;
+  const honors = await getHonorsSettings();
   if (!user) redirect("/login");
   const isStaff = user.role !== "STUDENT";
 
@@ -87,6 +90,10 @@ export default async function DashboardPage() {
       <AvatarEditor avatar={avatarOf(user)} name={user.name} allowUpload={site.allowServerUploads} />
 
       {pinAllowed(user.role) && <PinForm devices={devices.map((d) => ({ id: d.id, label: d.label, lastUsed: formatThaiDate(d.lastUsedAt) }))} />}
+
+      {honors.enabled && user.memberType !== "STUDENT" && (
+        <HonorsForm prefs={{ show: user.showInHonors, photo: user.honorsShowPhoto, school: user.honorsShowSchool, bio: user.honorsBio ?? "", hidden: user.honorsHidden }} bioMax={BIO_MAX} />
+      )}
 
       <ProfileForm
         schools={schools}

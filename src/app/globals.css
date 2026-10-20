@@ -84,3 +84,14 @@ html[data-motion="light"] .reveal { transition-delay: 0s; }
   .reveal { transition: none; }
   .reveal:not([data-in]) { opacity: 1; transform: none; animation: none; }
 }
+
+/* Honours carousel (components/honors-marquee.tsx): right -> left, paused by hover, focus, touch or the button. */
+@keyframes honors-scroll { from { transform: translateX(0); } to { transform: translateX(calc(-50% - 0.5rem)); } }
+.honors-track { animation: honors-scroll 60s linear infinite; will-change: transform; }
+.honors-marquee:hover .honors-track,
+.honors-marquee:focus-within .honors-track,
+.honors-marquee:active .honors-track,
+.honors-marquee[data-paused] .honors-track { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .honors-track { animation: none; will-change: auto; }
+}

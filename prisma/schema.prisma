@@ -46,6 +46,12 @@ model User {
   gradeLevel         String? // students: ชั้น
   creatorStatus      CreatorStatus     @default(NONE)
   creatorReason      String?
+  // honours page: a member appears there ONLY after choosing so (opt-in); students never do (enforced in lib/honors.ts)
+  showInHonors       Boolean           @default(false)
+  honorsShowPhoto    Boolean           @default(true)
+  honorsShowSchool   Boolean           @default(true)
+  honorsBio          String? // short self-introduction shown on the honours card (<= 140 chars)
+  honorsHidden       Boolean           @default(false) // an admin took this member off the honours pages
   devices            TrustedDevice[]
   mediaCreated       Media[]           @relation("MediaCreator")
   mediaLikes         MediaLike[]
@@ -538,6 +544,8 @@ model SiteSetting {
   heroImageAnimated       Boolean  @default(false)
   faqEnabled              Boolean  @default(true) // floating FAQ chat on the public pages
   heroGlobe               Boolean  @default(true) // animated dot-globe over the home banner (follows the pointer)
+  honorsEnabled           Boolean  @default(true) // honours page + home section on/off
+  honorsMinItems          Int      @default(1) // published media + courses needed to be ranked
   motionLevel             String   @default("light") // scroll-in effects on the home page: off | light | full
   heroGlobeStrength       Int      @default(100) // 20-100: how strong the globe looks (its opacity, in %)
   heroBgColor             String   @default("#0B2A6F") // behind / under the video

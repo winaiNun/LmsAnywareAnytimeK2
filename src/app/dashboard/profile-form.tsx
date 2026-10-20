@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { readDevice, saveDevice, usePhone } from "@/lib/use-phone";
 import ProfileFields, { type ProfileValues, type SchoolOption } from "@/components/profile-fields";
-import { removeDevice, requestCreator, setPin, updateProfile, type ProfileState } from "./actions";
+import { removeDevice, requestCreator, saveHonorsPrefs, setPin, updateProfile, type ProfileState } from "./actions";
 
 function Submit({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus();
@@ -20,6 +20,38 @@ export function ProfileForm({ values, schools }: { values: ProfileValues; school
       {state?.error && <p role="alert" className="text-sm text-red-600">{state.error}</p>}
       {state?.saved && <p role="status" className="text-sm text-green-700">บันทึกแล้ว</p>}
       <Submit>บันทึกข้อมูล</Submit>
+    </form>
+  );
+}
+
+export type HonorsPrefs = { show: boolean; photo: boolean; school: boolean; bio: string; hidden: boolean };
+
+/** Opt-in to the honours page. Off by default; everything shown is chosen here, and switching off removes the member at once. */
+export function HonorsForm({ prefs, bioMax }: { prefs: HonorsPrefs; bioMax: number }) {
+  const [state, action] = useFormState<ProfileState, FormData>(saveHonorsPrefs, undefined);
+  const [on, setOn] = useState(prefs.show);
+  return (
+    <form action={action} className="space-y-3 rounded-xl bg-white p-5 shadow-sm">
+      <div>
+        <h2 className="font-semibold">การแสดงตัวตนในหน้าเชิดชูผู้สร้าง</h2>
+        <p className="text-sm text-neutral-500">ผลงานที่เผยแพร่แล้วของคุณจะถูกนับเข้าอันดับก็ต่อเมื่อคุณยินยอม ปิดได้ทุกเมื่อ และชื่อ รูป หน่วยงานจะแสดงเท่าที่คุณเลือกด้านล่างเท่านั้น (ไม่แสดงอีเมลหรือเบอร์โทร)</p>
+      </div>
+      {prefs.hidden && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">ผู้ดูแลระบบได้ซ่อนคุณออกจากหน้าเชิดชูไว้ หากมีข้อสงสัยให้ติดต่อผู้ดูแล</p>}
+      <label className="flex min-h-11 items-start gap-3 text-sm">
+        <input type="checkbox" name="showInHonors" checked={on} onChange={(e) => setOn(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0" />
+        <span><strong>ฉันยินยอมให้แสดงชื่อและผลงานของฉันในหน้าเชิดชู</strong></span>
+      </label>
+      <div className={`space-y-2 pl-8 ${on ? "" : "opacity-50"}`}>
+        <label className="flex min-h-10 items-center gap-3 text-sm"><input type="checkbox" name="honorsShowPhoto" defaultChecked={prefs.photo} disabled={!on} className="h-5 w-5" /> แสดงรูปโปรไฟล์</label>
+        <label className="flex min-h-10 items-center gap-3 text-sm"><input type="checkbox" name="honorsShowSchool" defaultChecked={prefs.school} disabled={!on} className="h-5 w-5" /> แสดงโรงเรียน/หน่วยงานและตำแหน่ง</label>
+        <label className="block space-y-1">
+          <span className="text-sm font-medium">ข้อความแนะนำตัวสั้นๆ (ไม่บังคับ ไม่เกิน {bioMax} ตัวอักษร)</span>
+          <textarea name="honorsBio" rows={2} maxLength={bioMax} defaultValue={prefs.bio} disabled={!on} className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2" />
+        </label>
+      </div>
+      {state?.error && <p role="alert" className="text-sm text-red-600">{state.error}</p>}
+      {state?.saved && <p role="status" className="text-sm text-green-700">บันทึกแล้ว</p>}
+      <Submit>บันทึก</Submit>
     </form>
   );
 }
