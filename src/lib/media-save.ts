@@ -3,6 +3,7 @@
  * so it can be tested against the real database; the server actions in src/app/dashboard/media/actions.ts do the
  * sign-in check and the cache refresh around it.
  */
+import { SCHOOL_ACCOUNT_NOTE, isSchoolAccount } from "@/lib/school-account";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { audit } from "@/lib/audit";
@@ -56,6 +57,7 @@ const safeDelete = (keys: (string | null | undefined)[]) => Promise.all(keys.fil
 
 /** Create or edit one media item. `payload` is JSON, files travel as `cover` and `file_<n>` in the same form data. */
 export async function saveMediaAs(actor: Actor, mediaId: string | null, formData: FormData): Promise<MediaFormResult> {
+  if (!mediaId && (await isSchoolAccount(actor.id))) return { error: SCHOOL_ACCOUNT_NOTE };
 
   let raw: unknown;
   try { raw = JSON.parse(String(formData.get("payload") ?? "")); } catch { return { error: "ข้อมูลไม่ถูกต้อง" }; }

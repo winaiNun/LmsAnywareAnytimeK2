@@ -96,13 +96,18 @@ model RegistrationCode {
   school      School?    @relation("CodeSchool", fields: [schoolId], references: [id], onDelete: SetNull)
   expiresAt   DateTime?
   maxUses     Int? // null = unlimited
-  usedCount   Int        @default(0)
+  usedCount   Int        @default(0) // sign-ups through THIS code
+  groupUsed   Int        @default(0) // on a top-level code: sign-ups through it AND all its sub-codes (what maxUses limits)
   active      Boolean    @default(true)
+  parentId    String? // a sub-code (e.g. one per school) of a group code; only two levels
+  parent      RegistrationCode?  @relation("CodeTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children    RegistrationCode[] @relation("CodeTree")
   createdById String?
   createdAt   DateTime   @default(now())
   users       User[]     @relation("CodeUsers")
 
   @@index([active, expiresAt])
+  @@index([parentId])
 }
 
 /// A phone that signed in with a password once and then chose a 6-digit PIN. The PIN only works together

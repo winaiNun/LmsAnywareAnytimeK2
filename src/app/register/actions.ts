@@ -19,7 +19,7 @@ export async function checkRegistrationCode(raw: string, turnstile?: string): Pr
   const code = normalizeCode(String(raw ?? ""));
   const bad = { ok: false as const, error: "รหัสสมัครไม่ถูกต้อง หมดอายุ หรือถูกใช้ครบแล้ว" }; // same text for every failure
   if (code.length < 6) return bad;
-  const rc = await db.registrationCode.findUnique({ where: { code }, include: { school: { select: { id: true, name: true, active: true } } } });
-  if (!rc || codeStatus(rc) !== "ok") return bad;
+  const rc = await db.registrationCode.findUnique({ where: { code }, include: { school: { select: { id: true, name: true, active: true } }, parent: true } });
+  if (!rc || codeStatus(rc, new Date(), rc.parent) !== "ok") return bad;
   return { ok: true, label: rc.label, memberType: rc.memberType, school: rc.school?.active ? { id: rc.school.id, name: rc.school.name } : null };
 }

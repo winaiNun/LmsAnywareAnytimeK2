@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { MEMBER_TYPES } from "@/lib/members";
 import { assertRole, isAdmin } from "@/lib/permissions";
 import { generateCode } from "@/lib/registration";
+import { MAX_SUBCODES_PER_RUN } from "@/lib/registration-limits";
 import { parseInstant } from "@/lib/thai-date";
 
 export type CodeFormState = { error?: string; saved?: boolean; id?: string } | undefined;
@@ -28,6 +29,7 @@ const schema = z.object({
   label: z.string().trim().min(1, "กรุณากรอกป้ายกำกับ เช่น “ครู รร.บ้านตัวอย่าง”").max(100),
   memberType: z.enum(MEMBER_TYPES),
   schoolId: z.string().optional().transform((v) => v || null),
+  parentId: z.string().optional().transform((v) => v || null),
   expiresAt: optionalDate,
   maxUses: z
     .string()
@@ -54,11 +56,20 @@ export async function createCode(_prev: CodeFormState, formData: FormData): Prom
   if (d.expiresAt && d.expiresAt <= new Date()) return { error: "วันหมดอายุต้องเป็นอนาคต" };
   const bad = await checkSchool(d.schoolId);
   if (bad) return { error: bad };
+  // a sub-code belongs to a top-level group code, always gives the same member type, and can not outlive the group
+  let memberType = d.memberType;
+  if (d.parentId) {
+    const parent = await db.registrationCode.findUnique({ where: { id: d.parentId }, select: { parentId: true, memberType: true, expiresAt: true } });
+    if (!parent) return { error: "ไม่พบรหัสกลุ่มที่เลือก" };
+    if (parent.parentId) return { error: "รหัสย่อยสร้างใต้รหัสย่อยอีกชั้นไม่ได้ (มีได้ 2 ชั้น: กลุ่มใหญ่ → ย่อย)" };
+    if (parent.expiresAt && d.expiresAt && d.expiresAt > parent.expiresAt) return { error: "วันหมดอายุของรหัสย่อยต้องไม่เลยวันหมดอายุของรหัสกลุ่ม" };
+    memberType = parent.memberType;
+  }
 
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      const rc = await db.registrationCode.create({ data: { code: generateCode(), label: d.label, memberType: d.memberType, schoolId: d.schoolId, expiresAt: d.expiresAt, maxUses: d.maxUses, createdById: actor.id } });
-      await audit({ actorId: actor.id, action: "code.create", entity: "RegistrationCode", entityId: rc.id, meta: { label: d.label, memberType: d.memberType } });
+      const rc = await db.registrationCode.create({ data: { code: generateCode(), label: d.label, memberType, schoolId: d.schoolId, parentId: d.parentId, expiresAt: d.expiresAt, maxUses: d.maxUses, createdById: actor.id } });
+      await audit({ actorId: actor.id, action: "code.create", entity: "RegistrationCode", entityId: rc.id, meta: { label: d.label, memberType, parentId: d.parentId } });
       refresh();
       return { saved: true, id: rc.id };
     } catch (e) {
@@ -73,16 +84,23 @@ export async function updateCode(id: string, _prev: CodeFormState, formData: For
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const d = parsed.data;
-  const cur = await db.registrationCode.findUnique({ where: { id }, select: { usedCount: true } });
+  const cur = await db.registrationCode.findUnique({ where: { id }, select: { usedCount: true, groupUsed: true, parentId: true, memberType: true, parent: { select: { memberType: true, expiresAt: true } } } });
   if (!cur) return { error: "ไม่พบรหัสนี้" };
-  if (d.maxUses !== null && d.maxUses < cur.usedCount) return { error: `ตั้งจำนวนครั้งต่ำกว่าที่ใช้ไปแล้ว (${cur.usedCount}) ไม่ได้` };
+  const spent = cur.parentId ? cur.usedCount : cur.groupUsed; // a group code's limit counts its sub-codes too
+  if (cur.parentId && cur.parent?.expiresAt && d.expiresAt && d.expiresAt > cur.parent.expiresAt) return { error: "วันหมดอายุของรหัสย่อยต้องไม่เลยวันหมดอายุของรหัสกลุ่ม" };
+  if (d.maxUses !== null && d.maxUses < spent) return { error: `ตั้งจำนวนครั้งต่ำกว่าที่ใช้ไปแล้ว (${cur.usedCount}) ไม่ได้` };
   const bad = await checkSchool(d.schoolId);
   if (bad) return { error: bad };
 
-  await db.registrationCode.update({
-    where: { id },
-    data: { label: d.label, memberType: d.memberType, schoolId: d.schoolId, expiresAt: d.expiresAt, maxUses: d.maxUses, active: formData.get("active") === "on" },
-  });
+  const memberType = cur.parentId ? cur.parent?.memberType ?? d.memberType : d.memberType; // a sub-code always follows its group
+  await db.$transaction([
+    db.registrationCode.update({
+      where: { id },
+      data: { label: d.label, memberType, schoolId: d.schoolId, expiresAt: d.expiresAt, maxUses: d.maxUses, active: formData.get("active") === "on" },
+    }),
+    // changing the type of a group code changes it for its sub-codes (people who already signed up keep their account)
+    ...(!cur.parentId && memberType !== cur.memberType ? [db.registrationCode.updateMany({ where: { parentId: id }, data: { memberType } })] : []),
+  ]);
   await audit({ actorId: actor.id, action: "code.update", entity: "RegistrationCode", entityId: id });
   refresh(id);
   return { saved: true, id };
@@ -99,11 +117,65 @@ export async function setCodeActive(id: string, active: boolean): Promise<void> 
 /** Only unused codes can be deleted; a used one stays so the member list and audit trail make sense. */
 export async function deleteCode(id: string): Promise<{ error?: string }> {
   const actor = await assertRole(isAdmin);
-  const rc = await db.registrationCode.findUnique({ where: { id }, select: { usedCount: true, label: true } });
+  const rc = await db.registrationCode.findUnique({ where: { id }, select: { usedCount: true, groupUsed: true, label: true, _count: { select: { children: true } } } });
   if (!rc) return { error: "ไม่พบรหัสนี้" };
-  if (rc.usedCount > 0) return { error: "รหัสนี้ถูกใช้สมัครไปแล้ว ลบไม่ได้ — ให้ปิดใช้งานแทน" };
+  if (rc._count.children > 0) return { error: "รหัสนี้มีรหัสย่อยอยู่ — ลบรหัสย่อยก่อน หรือปิดใช้งานรหัสกลุ่มแทน" };
+  if (rc.usedCount > 0 || rc.groupUsed > 0) return { error: "รหัสนี้ถูกใช้สมัครไปแล้ว ลบไม่ได้ — ให้ปิดใช้งานแทน" };
   await db.registrationCode.delete({ where: { id } });
   await audit({ actorId: actor.id, action: "code.delete", entity: "RegistrationCode", entityId: id, meta: { label: rc.label } });
   refresh();
   return {};
+}
+
+const subSchema = z.object({
+  scope: z.enum(["all", "district", "center"]),
+  value: z.string().trim().max(120).default(""),
+  maxUses: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim() ? Number(v) : null))
+    .refine((v) => v === null || (Number.isInteger(v) && v >= 1 && v <= 100000), "จำนวนครั้งต่อรหัสย่อยต้องเป็นจำนวนเต็ม 1–100,000 (เว้นว่าง = ไม่จำกัด)"),
+});
+
+/**
+ * One sub-code per school under a group code (all schools, one district or one network centre), each locked to its school so people who
+ * use it land in the right school and the usage per school can be read off the list. Schools that already have a sub-code under this
+ * group are skipped, so running it twice is harmless. The sub-codes inherit the group's member type and expiry.
+ */
+export async function createSubCodes(parentId: string, _prev: CodeFormState, formData: FormData): Promise<CodeFormState> {
+  const actor = await assertRole(isAdmin);
+  const p = subSchema.safeParse(Object.fromEntries(formData));
+  if (!p.success) return { error: p.error.issues[0].message };
+  const parent = await db.registrationCode.findUnique({ where: { id: parentId }, select: { parentId: true, memberType: true, expiresAt: true, label: true } });
+  if (!parent) return { error: "ไม่พบรหัสกลุ่ม" };
+  if (parent.parentId) return { error: "ต้องสร้างรหัสย่อยใต้รหัสกลุ่มใหญ่ (ระดับบนสุด) เท่านั้น" };
+  const { scope, value, maxUses } = p.data;
+  if (scope !== "all" && !value) return { error: scope === "district" ? "กรุณาเลือกอำเภอ" : "กรุณาเลือกศูนย์เครือข่าย" };
+
+  const schools = await db.school.findMany({
+    where: { active: true, ...(scope === "district" ? { district: value } : scope === "center" ? { center: value } : {}), NOT: { registrationCodes: { some: { parentId } } } },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+    take: MAX_SUBCODES_PER_RUN + 1,
+  });
+  if (schools.length === 0) return { error: "ไม่มีโรงเรียนที่ต้องสร้างรหัสย่อยเพิ่ม (มีครบแล้ว หรือไม่พบโรงเรียนในกลุ่มที่เลือก)" };
+  if (schools.length > MAX_SUBCODES_PER_RUN) return { error: `สร้างได้ครั้งละไม่เกิน ${MAX_SUBCODES_PER_RUN} รหัส — เลือกเป็นอำเภอหรือศูนย์เครือข่ายทีละกลุ่ม` };
+
+  let made = 0;
+  for (const s of schools) {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        await db.registrationCode.create({
+          data: { code: generateCode(), label: s.name, memberType: parent.memberType, schoolId: s.id, parentId, expiresAt: parent.expiresAt, maxUses, createdById: actor.id },
+        });
+        made++;
+        break;
+      } catch (e) {
+        if (!(typeof e === "object" && e && "code" in e && e.code === "P2002")) throw e;
+      }
+    }
+  }
+  await audit({ actorId: actor.id, action: "code.create-sub", entity: "RegistrationCode", entityId: parentId, meta: { scope, value, made } });
+  refresh(parentId);
+  return { saved: true, id: parentId, error: undefined, ...(made < schools.length ? { error: `สร้างได้ ${made} จาก ${schools.length} รหัส ลองใหม่อีกครั้ง` } : {}) };
 }

@@ -5,6 +5,7 @@
 import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { rateLimited } from "@/lib/rate-limit";
+import { SCHOOL_ACCOUNT_NOTE, isSchoolAccount } from "@/lib/school-account";
 import { canDecideCourse, canEditCourse, canEnroll, canManageCourse, canReviewCourse, type CourseActor } from "./access";
 
 type Res<T extends object = object> = ({ ok: true } & T) | { error: string };
@@ -55,6 +56,7 @@ export async function enrollAs(userId: string, courseId: string): Promise<Res<{ 
     db.user.findUnique({ where: { id: userId }, select: { role: true, memberType: true, active: true } }),
   ]);
   if (!c || c.status !== "PUBLISHED" || !me?.active) return { error: "ไม่พบคอร์สนี้" };
+  if (await isSchoolAccount(userId)) return { error: SCHOOL_ACCOUNT_NOTE };
   const existing = await db.enrollment.findUnique({ where: { userId_courseId: { userId, courseId } }, select: { id: true } });
   if (existing) return { ok: true, already: true };
   if (!canEnroll(c, me)) return { error: c.audienceOnly && c.enrollOpen ? "คอร์สนี้เปิดเฉพาะกลุ่มเป้าหมายที่กำหนดเท่านั้น" : "คอร์สนี้ปิดรับลงทะเบียนแล้ว" };

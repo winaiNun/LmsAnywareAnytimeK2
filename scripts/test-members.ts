@@ -116,5 +116,19 @@ t("registration codes", () => {
   assert.equal(codeStatus({ ...base, maxUses: 2, usedCount: 2 }, now), "used-up");
   assert.equal(codeStatus({ ...base, maxUses: 2, usedCount: 1 }, now), "ok");
 });
+t("sub-codes: the group code's switch, expiry and total limit apply to every sub-code", () => {
+  const now = new Date("2026-10-11T00:00:00Z");
+  const sub = { active: true, expiresAt: null, maxUses: null, usedCount: 0 };
+  const group = { active: true, expiresAt: null, maxUses: null, usedCount: 0, groupUsed: 0 };
+  assert.equal(codeStatus(sub, now, group), "ok");
+  assert.equal(codeStatus(sub, now, { ...group, active: false }), "inactive", "group switched off");
+  assert.equal(codeStatus(sub, now, { ...group, expiresAt: new Date("2026-10-10T00:00:00Z") }), "expired", "group expired");
+  assert.equal(codeStatus(sub, now, { ...group, maxUses: 5, usedCount: 0, groupUsed: 5 }), "used-up", "group total reached (counted over all sub-codes, not the group's own count)");
+  assert.equal(codeStatus(sub, now, { ...group, maxUses: 5, usedCount: 5, groupUsed: 4 }), "ok", "a group code's own count is not its limit");
+  assert.equal(codeStatus({ ...sub, maxUses: 1, usedCount: 1 }, now, group), "used-up", "the sub-code's own limit");
+  assert.equal(codeStatus({ ...sub, active: false }, now, group), "inactive");
+  // a top-level code without sub-codes still behaves as before
+  assert.equal(codeStatus({ ...group, maxUses: 2, usedCount: 2, groupUsed: 2 }, now), "used-up");
+});
 
 console.log(`members: ${passed} passed`);

@@ -64,12 +64,14 @@ const Icon = ({ name, className = "h-5 w-5" }: { name: string; className?: strin
 );
 
 type Props = {
+  /** how many items wait for a decision, by menu link */
+  badges?: Record<string, number>;
   site: { systemName: string; logoUrl: string | null };
   user: { name: string; role: string; typeLabel: string; canReview: boolean; avatar: AvatarData | null };
   children: React.ReactNode;
 };
 
-export default function AdminShell({ site, user, children }: Props) {
+export default function AdminShell({ site, user, children, badges = {} }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -105,7 +107,8 @@ export default function AdminShell({ site, user, children }: Props) {
                   className={`flex min-h-11 items-center gap-3 rounded-lg px-3 text-[15px] ${active ? "bg-brand-soft font-semibold text-brand" : "text-neutral-700 hover:bg-neutral-100"}`}
                 >
                   <Icon name={it.icon} />
-                  {it.label}
+                  <span className="min-w-0 flex-1 truncate">{it.label}</span>
+                  {(badges[it.href] ?? 0) > 0 && <span className="ml-auto min-w-5 rounded-full bg-red-500 px-1.5 text-center text-xs font-semibold leading-5 text-white" aria-label={`รอดำเนินการ ${badges[it.href]} รายการ`}>{badges[it.href]}</span>}
                 </Link>
               );
             })}

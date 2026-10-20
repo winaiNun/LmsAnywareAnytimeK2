@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { audit } from "@/lib/audit";
+import { SCHOOL_ACCOUNT_NOTE, isSchoolAccount } from "@/lib/school-account";
 import { BIO_MAX } from "@/lib/honors-rank";
 import { AVATAR_OUT, MAX_ZOOM, clampCenter } from "@/lib/avatar";
 import { parseDriveFileId, driveViewUrl } from "@/lib/drive";
@@ -74,6 +75,7 @@ export async function requestCreator(_prev: ProfileState, formData: FormData): P
   const reason = z.string().trim().min(10, "กรุณาบอกเหตุผลอย่างน้อย 10 ตัวอักษร").max(500).safeParse(formData.get("reason"));
   if (!reason.success) return { error: reason.error.issues[0].message };
 
+  if (await isSchoolAccount(session.user.id)) return { error: SCHOOL_ACCOUNT_NOTE };
   const user = await db.user.findUnique({ where: { id: session.user.id }, select: { role: true, creatorStatus: true } });
   if (!user) return { error: "ไม่พบบัญชีผู้ใช้" };
   if (user.role !== "STUDENT") return { error: "บัญชีของคุณมีสิทธิ์สร้างเนื้อหาอยู่แล้ว" };

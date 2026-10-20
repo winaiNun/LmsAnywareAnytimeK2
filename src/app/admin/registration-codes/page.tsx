@@ -15,7 +15,7 @@ export default async function RegistrationCodesPage() {
   const me = await requireManagerPage();
   if (!isAdmin(me.role)) return <p className="p-6">เฉพาะผู้ดูแลระบบเท่านั้น</p>;
   const [codes, schools, site] = await Promise.all([
-    db.registrationCode.findMany({ orderBy: { createdAt: "desc" }, include: { school: { select: { name: true } } } }),
+    db.registrationCode.findMany({ where: { parentId: null }, orderBy: { createdAt: "desc" }, include: { school: { select: { name: true } }, _count: { select: { children: true } } } }),
     db.school.findMany({ select: { id: true, name: true, district: true, center: true }, orderBy: { name: "asc" } }),
     db.siteSetting.findUnique({ where: { id: "main" }, select: { requireRegistrationCode: true } }),
   ]);
@@ -31,7 +31,7 @@ export default async function RegistrationCodesPage() {
         )}
       </div>
 
-      <CodeForm values={{ label: "", memberType: "STUDENT", schoolId: "", expiresAt: "", maxUses: "", active: true }} schools={schools} />
+      <CodeForm values={{ label: "", memberType: "STUDENT", schoolId: "", expiresAt: "", maxUses: "", active: true }} schools={schools} parents={codes.map((c) => ({ id: c.id, label: `${c.label} (${formatCode(c.code)})` }))} />
 
       <div className="overflow-x-auto rounded-xl bg-white p-2 shadow-sm">
         <table className="w-full min-w-[820px] text-left text-sm">
@@ -44,12 +44,12 @@ export default async function RegistrationCodesPage() {
               return (
                 <tr key={c.id} className="border-t border-neutral-100 align-top">
                   <td className="p-3"><code className="select-all rounded bg-neutral-100 px-2 py-1 text-base font-semibold tracking-wider">{formatCode(c.code)}</code></td>
-                  <td className="p-3 font-medium"><Link href={`/admin/registration-codes/${c.id}`} className="text-brand hover:underline">{c.label}</Link></td>
+                  <td className="p-3 font-medium"><Link href={`/admin/registration-codes/${c.id}`} className="text-brand hover:underline">{c.label}</Link>{c._count.children > 0 && <span className="ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-xs text-brand">รหัสกลุ่ม</span>}</td>
                   <td className="p-3 text-neutral-600">{MEMBER_TYPE_LABEL[c.memberType]}{c.school ? <span className="block text-xs">{c.school.name}</span> : null}</td>
-                  <td className="p-3 tabular-nums">{c.usedCount}{c.maxUses !== null ? ` / ${c.maxUses}` : " / ไม่จำกัด"}</td>
+                  <td className="p-3 tabular-nums">{c.groupUsed}{c.maxUses !== null ? ` / ${c.maxUses}` : " / ไม่จำกัด"}{c._count.children > 0 && <span className="block text-xs text-neutral-500">รวม {c._count.children} รหัสย่อย</span>}</td>
                   <td className="p-3 text-neutral-600">{c.expiresAt ? formatThaiDate(c.expiresAt, { time: true }) : "—"}</td>
                   <td className="p-3"><span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${TONE[st]}`}>{STATUS_LABEL[st]}</span></td>
-                  <td className="p-3"><RowActions id={c.id} code={formatCode(c.code)} active={c.active} used={c.usedCount} /></td>
+                  <td className="p-3"><RowActions id={c.id} code={formatCode(c.code)} active={c.active} used={c.groupUsed} /></td>
                 </tr>
               );
             })}

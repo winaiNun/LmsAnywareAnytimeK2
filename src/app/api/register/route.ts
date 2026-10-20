@@ -36,8 +36,8 @@ export async function POST(req: Request) {
   let rc = null;
   if (code) {
     if (await rateLimitedDb(`code:${clientIp(req)}`, 15, 15 * 60 * 1000)) return NextResponse.json({ error: "ลองรหัสบ่อยเกินไป กรุณารอสักครู่" }, { status: 429 });
-    rc = await db.registrationCode.findUnique({ where: { code } });
-    if (!rc || codeStatus(rc) !== "ok") return NextResponse.json({ error: BAD_CODE }, { status: 400 });
+    rc = await db.registrationCode.findUnique({ where: { code }, include: { parent: true } });
+    if (!rc || codeStatus(rc, new Date(), rc.parent) !== "ok") return NextResponse.json({ error: BAD_CODE }, { status: 400 });
   }
 
   // 2) Then the form itself.
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
   const passwordHash = await bcrypt.hash(d.password, 12); // slow on purpose: keep it out of the transaction
   try {
     const user = await db.$transaction(async (tx) => {
-      if (rc && !(await redeemCode(tx, rc.id))) throw new Error("code");
+      if (rc && !(await redeemCode(tx, rc.id, rc.parentId))) throw new Error("code");
       return tx.user.create({
         data: { ...profileData(d), email: d.email ?? null, username: d.username ?? null, passwordHash, registrationCodeId: rc?.id ?? null },
         select: { id: true },
