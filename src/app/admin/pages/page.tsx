@@ -31,7 +31,7 @@ export default async function PagesAdmin() {
         }}
       />
       <TextsForm saved={resolveTexts(site?.texts)} />
-      <PageEditor pages={pages} />
+      <PageEditor pages={pages} uploadsOpen={site?.allowServerUploads ?? false} />
     </div>
   );
 }

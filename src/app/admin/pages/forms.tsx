@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import RichTextEditor from "@/components/rich-text-editor";
 import ThaiDateField from "@/components/thai-date-field";
 import { TEXT_DEFS, type SiteTexts } from "@/lib/site-texts";
 import { resetPage, saveFooterSettings, savePage, saveTexts, type PagesFormState } from "./actions";
@@ -53,7 +54,7 @@ export function FooterSettingsForm({ v }: { v: FooterValues }) {
 
 export type PageValues = { slug: string; label: string; path: string; title: string; body: string; custom: boolean };
 
-export function PageEditor({ pages }: { pages: PageValues[] }) {
+export function PageEditor({ pages, uploadsOpen }: { pages: PageValues[]; uploadsOpen: boolean }) {
   const [slug, setSlug] = useState(pages[0].slug);
   const p = pages.find((x) => x.slug === slug)!;
   const [state, action] = useFormState<PagesFormState, FormData>(savePage.bind(null, slug), undefined);
@@ -75,10 +76,10 @@ export function PageEditor({ pages }: { pages: PageValues[] }) {
       </div>
       <form action={action} key={slug} className="space-y-3">
         <label className="block space-y-1"><span className="text-sm font-medium">หัวข้อ</span><input name="title" required maxLength={100} defaultValue={p.title} className={input} /></label>
-        <label className="block space-y-1"><span className="text-sm font-medium">เนื้อหา</span>
-          <textarea name="body" required rows={16} maxLength={20000} defaultValue={p.body} className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 font-mono text-sm leading-relaxed" />
-        </label>
-        <p className="text-xs text-neutral-500">รูปแบบ: เว้นบรรทัด = ย่อหน้าใหม่ · <code>## หัวข้อ</code> · <code>- รายการ</code> · <code>[ข้อความ](https://…)</code> หรือ <code>[ข้อความ](/library)</code> · ไม่รองรับ HTML</p>
+        <div className="space-y-1"><span className="text-sm font-medium">เนื้อหา</span>
+          <RichTextEditor name="body" required rows={16} maxLength={150000} defaultValue={p.body} allowHtml uploadsOpen={uploadsOpen} />
+        </div>
+        <p className="text-xs text-neutral-500">รูปแบบ: เว้นบรรทัด = ย่อหน้าใหม่ · <code>## หัวข้อ</code> · <code>- รายการ</code> · <code>[ข้อความ](https://…)</code> หรือ <code>[ข้อความ](/library)</code> · แทรกรูป A4 / ลิงก์ Drive (PDF) / บล็อก HTML ด้วยปุ่มด้านบน (HTML แสดงในกรอบแยกที่ปลอดภัย ไม่เกิน 3 บล็อก บล็อกละ 100 KB)</p>
         {state?.error && <p role="alert" className="text-sm text-red-600">{state.error}</p>}
         {state?.saved && <p role="status" className="text-sm text-green-700">บันทึกแล้ว</p>}
         {msg && <p role="alert" className="text-sm text-red-600">{msg}</p>}

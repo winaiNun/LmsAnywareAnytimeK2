@@ -6,6 +6,7 @@ import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { safeHttpsUrl } from "@/lib/embed";
 import { assertRole, isAdmin } from "@/lib/permissions";
+import { checkRichBody } from "@/lib/page-markup";
 import { PAGE_META, isPageSlug } from "@/lib/site-pages";
 import { MAX_LINES, TEXT_DEFS, allowsBreaks, lineParts } from "@/lib/site-texts";
 import { parseInstant } from "@/lib/thai-date";
@@ -51,7 +52,7 @@ export async function saveFooterSettings(_prev: PagesFormState, f: FormData): Pr
 
 const pageSchema = z.object({
   title: z.string().trim().min(1, "กรุณากรอกหัวข้อ").max(100, "หัวข้อไม่เกิน 100 ตัวอักษร"),
-  body: z.string().trim().min(1, "กรุณากรอกเนื้อหา").max(20000, "เนื้อหายาวเกินไป (ไม่เกิน 20,000 ตัวอักษร)"),
+  body: z.string().trim().min(1, "กรุณากรอกเนื้อหา").max(150000, "เนื้อหายาวเกินไป (ไม่เกิน 150,000 ตัวอักษร)"),
 });
 
 export async function savePage(slug: string, _prev: PagesFormState, f: FormData): Promise<PagesFormState> {
@@ -59,6 +60,8 @@ export async function savePage(slug: string, _prev: PagesFormState, f: FormData)
   if (!isPageSlug(slug)) return { error: "ไม่พบหน้า" };
   const p = pageSchema.safeParse(Object.fromEntries(f));
   if (!p.success) return { error: p.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" };
+  const rich = checkRichBody(p.data.body, { allowHtml: true });
+  if (rich) return { error: rich };
   await db.sitePage.upsert({ where: { slug }, update: p.data, create: { slug, ...p.data } });
   await audit({ actorId: actor.id, action: "site.page-save", entity: "SitePage", entityId: slug });
   revalidatePath(PAGE_META[slug].path);

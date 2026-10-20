@@ -28,7 +28,7 @@ export default async function CreatorGuidePage() {
       <Link href="/dashboard/courses" className="text-sm text-brand">← คอร์สของฉัน</Link>
       <h1 className="text-2xl font-bold sm:text-3xl">{page.title}</h1>
       <div className="rounded-2xl bg-white p-5 shadow-sm sm:p-7">
-        <SitePageBody body={page.body} />
+        <SitePageBody body={page.body} allowHtml />
       </div>
     </main>
   );

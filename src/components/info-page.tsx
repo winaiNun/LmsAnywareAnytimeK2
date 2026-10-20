@@ -31,7 +31,7 @@ export default async function InfoPage({ slug }: { slug: PageSlug }) {
       <main className="mx-auto max-w-3xl space-y-6 px-4 pb-12 pt-24">
         <Breadcrumb items={[{ label: page.title }]} />
         <h1 className="text-2xl font-bold sm:text-3xl">{page.title}</h1>
-        <SitePageBody body={page.body} />
+        <SitePageBody body={page.body} allowHtml />
         {rows.length > 0 && (
           <ul className="grid gap-3 sm:grid-cols-2">
             {rows.map((r) => {

@@ -360,3 +360,16 @@ src/components/             navbar, hero, carousel, admin shell/charts
 
 ## 7.27 PWA ตามชื่อ/โลโก้ที่ตั้งในระบบ (20 ต.ค.)
 - `manifest.webmanifest`, ชื่อแท็บ, `apple-mobile-web-app-title`, สีธีม (= สีพื้นแบนเนอร์) สร้างจากตั้งค่าเขตพื้นที่ทุกครั้งที่ร้องขอ (`lib/pwa.ts`, `app/manifest.ts`, `generateMetadata/generateViewport` ใน `layout.tsx`) · ไอคอนติดตั้งสร้างจากโลโก้ที่อัปโหลดด้วย sharp ที่ `/pwa-icon/[192|512|maskable-192|maskable-512|apple-180]` (ไม่มีโลโก้ = ใช้ไอคอนมาตรฐานใน `public/icons`) · เขตอื่น deploy แล้วตั้งชื่อ/โลโก้ที่หลังบ้านได้เลย ไม่ต้องแก้โค้ด · แอปที่ติดตั้งไปแล้วจะอัปเดตชื่อ/ไอคอนเองตามรอบของเบราว์เซอร์ (iOS ต้องลบแล้วติดตั้งใหม่) · `short_name` ตัดที่ 12 ตัวอักษร
+
+## 7.28 แอนิเมชันตอนเลื่อนหน้า (20 ต.ค.)
+- `components/reveal.tsx` (observer ตัวเดียว เล่นครั้งเดียว) + `.reveal` ใน `globals.css` (เฉพาะ opacity/transform) · ใช้กับหัวข้อ/เนื้อหาทุกเซกชันใน `Block` (`page.tsx`) และการ์ดในกริด `CenterGrid` (ซูม ไล่ทีละใบ จำกัด 6 ขั้น) · สไลด์/แถบข่าว/MediaRail เข้าทั้งก้อนไม่ทำรายใบ
+- ความปลอดภัย: ซ่อนเฉพาะเมื่อ JS ทำงาน (`@media (scripting: enabled)`), ถ้าสคริปต์ไม่ขึ้นภายใน 2.5 วินาที CSS เปิดให้เห็นเอง (`data-armed` ยกเลิกตัวสำรอง), `prefers-reduced-motion` = แสดงทันที · ทดสอบด้วย Edge headless: เลื่อนแล้วได้ `data-in`, ปิด JS เห็นครบ, reduced-motion ไม่ซ่อน
+- **สวิตช์รวม (ทำแล้ว)**: แอดมิน › ตั้งค่าเขตพื้นที่ › "เอฟเฟกต์ตอนเลื่อนหน้าแรก" ปิด/เบา(ค่าเริ่มต้น)/เต็ม · `SiteSetting.motionLevel` (migration `motion_level`) → `<html data-motion>` ใน `layout.tsx` → CSS คุมทั้งหมด · เบา = เฟด+ลอยขึ้นสั้นๆ ไม่ซูม/ไม่ไล่ใบ · ไม่ทำแบบรายเซกชัน (ตัดสินใจแล้ว)
+
+## 7.29 เนื้อหาหน้าข้อมูล/บทเรียนแทรกรูป A4, ลิงก์ Drive (PDF), HTML (20 ต.ค.)
+- **ไม่เปลี่ยนฐานข้อมูล:** ใช้ "คำสั่งบรรทัดเดียว" ในข้อความเดิม (`lib/page-markup.ts`): `{{img content/<ชื่อ>.webp | คำอธิบาย}}`, `{{drive <fileId> | content/<ชื่อ>.webp | ชื่อ}}`, `{{html}} … {{/html}}` · หน้าเดิม/ข้อความเริ่มต้นไม่เปลี่ยน · คีย์ที่ไม่ใช่ `content/*.webp` และ id ที่ไม่ใช่รูปแบบ Drive ถูกแสดงเป็นข้อความธรรมดา
+- **ตัวแก้ไข** `components/rich-text-editor.tsx` (แถบปุ่ม แทรกรูป A4 / แทรกลิงก์ Drive-PDF / แทรก HTML / ดูตัวอย่าง): ใช้ที่ `/admin/pages` (ทุกหน้า รวมคู่มือผู้สร้างคอร์ส — ใส่ HTML ได้) และบล็อกข้อความในบทเรียน (ไม่ใส่ HTML ได้ ใช้ชนิด "HTML ฝังในบท" เดิม) · FAQ ยังเป็นข้อความล้วน
+- **รูป:** ครอบ A4 แนวตั้ง/นอน/16:9 ด้วย `CropImageField` → เซิร์ฟเวอร์ย่อ ≤1240 px เป็น WebP เก็บ `content/<uuid>.webp` (`lib/content-actions.ts`) · อัปโหลดต้องเปิดสวิตช์ "อนุญาตอัปโหลดรูปเข้าเซิร์ฟเวอร์" ถ้าปิดให้ใช้ Drive · เสิร์ฟผ่าน `/api/files/content/…`
+- **PDF = ลิงก์ Drive เท่านั้น** (ไม่รับอัปโหลด PDF): ดึงภาพหน้าแรกจาก Drive เก็บเป็น WebP ≤900 px, ผู้ชมกด "เปิดเต็มจอ" → `drive.google.com/file/d/<id>/preview` ใน dialog เต็มจอ (โหลดตอนเปิด) + ลิงก์เปิดใน Drive
+- **HTML:** แสดงใน iframe `sandbox="allow-scripts allow-popups allow-modals"` (ไม่มี allow-same-origin) เท่านั้น, เฉพาะหน้าที่แอดมินแก้, ≤3 บล็อก/หน้า, ≤100 KB/บล็อก, ตรวจตอนบันทึก (`checkRichBody`) · เนื้อหาหน้าสูงสุด 150,000 ตัวอักษร (เดิม 20,000)
+- ทดสอบ: `npm run test:site` (กลุ่มใหม่ rich blocks) + เบราว์เซอร์ (Edge headless: เรนเดอร์, เต็มจอ, แถบเครื่องมือ, ดูตัวอย่าง) · **ยังไม่ได้ลองอัปโหลดรูป/ลิงก์ Drive จริงผ่านหน้าแอดมิน**

@@ -20,7 +20,7 @@ const INLINE = new Set(["png", "jpg", "jpeg", "webp", "mp4", "webm", "pdf", "mp3
 
 // Only public site assets are served here. Member-only files (books, lessons)
 // will get their own permission-checked route.
-const PUBLIC_PREFIXES = ["banners/", "site/", "schools/", "avatars/", "media/"];
+const PUBLIC_PREFIXES = ["content/", "banners/", "site/", "schools/", "avatars/", "media/"];
 
 export async function GET(req: Request, { params }: { params: { key: string[] } }) {
   const key = params.key.join("/");

@@ -3,6 +3,7 @@
  * a YouTube link becomes the video id the tracked player uses. Shared by the server (save) and the editor (preview).
  */
 import { isParsed, parseMediaLink } from "@/lib/embed";
+import { checkRichBody } from "@/lib/page-markup";
 import type { BlockKind } from "./rules";
 
 export const BLOCK_KINDS: BlockKind[] = ["VIDEO", "LINK", "MEDIA", "TEXT", "HTML", "QUIZ"];
@@ -96,6 +97,8 @@ export function cleanBlock(input: BlockInput): { ok: true; block: CleanBlock } |
       const text = (input.text ?? "").trim();
       if (!text) return { ok: false, error: "กรุณาพิมพ์ข้อความ" };
       if (text.length > MAX_TEXT) return { ok: false, error: `ข้อความยาวเกิน ${MAX_TEXT.toLocaleString("th-TH")} ตัวอักษร` };
+      const rich = checkRichBody(text, { allowHtml: false });
+      if (rich) return { ok: false, error: rich };
       return { ok: true, block: { ...base, kind: "TEXT", text } };
     }
     case "HTML": {

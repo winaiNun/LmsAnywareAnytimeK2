@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import Glyph from "@/components/glyph";
 import { Spinner } from "@/components/icons";
+import RichTextEditor from "@/components/rich-text-editor";
 import SitePageBody from "@/components/site-page-body";
 import { BLOCK_KINDS, BLOCK_LABEL, MAX_BLOCK_HTML_BYTES, MAX_HTML_BLOCKS_PER_LESSON, MAX_TEXT, cleanBlock, youtubeVideoId } from "@/lib/course/blocks";
 import { MAX_BLOCKS_PER_LESSON } from "@/lib/course/access";
@@ -110,7 +111,7 @@ function BlockPreview({ b }: { b: BlockValues }) {
 }
 
 /** One block: shown as an editor card. `isNew` = not saved yet (the Save button creates it). */
-function BlockCard({ courseId, lessonId, initial, quizzes, index, count, isNew, onDone }: { courseId: string; lessonId: string; initial: BlockValues; quizzes: QuizOption[]; index: number; count: number; isNew: boolean; onDone: () => void }) {
+function BlockCard({ courseId, lessonId, initial, quizzes, index, count, isNew, onDone, uploadsOpen }: { uploadsOpen: boolean; courseId: string; lessonId: string; initial: BlockValues; quizzes: QuizOption[]; index: number; count: number; isNew: boolean; onDone: () => void }) {
   const router = useRouter();
   const [b, setB] = useState(initial);
   const [error, setError] = useState("");
@@ -169,9 +170,8 @@ function BlockCard({ courseId, lessonId, initial, quizzes, index, count, isNew, 
       {b.kind === "MEDIA" && <MediaPicker value={b.mediaId} title={b.mediaTitle} onPick={(id, t) => setB({ ...b, mediaId: id, mediaTitle: t })} />}
       {b.kind === "TEXT" && (
         <div className="space-y-2">
-          <textarea value={b.text} onChange={(e) => setB({ ...b, text: e.target.value })} rows={8} maxLength={MAX_TEXT} aria-label="ข้อความอธิบาย" className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 font-mono text-sm leading-relaxed" />
-          <p className="text-xs text-neutral-500">เว้นบรรทัด = ย่อหน้าใหม่ · <code>## หัวข้อ</code> · <code>- รายการ</code> · <code>[ข้อความ](https://…)</code> · ไม่รองรับ HTML</p>
-          <BlockPreview b={b} />
+          <RichTextEditor name="text" defaultValue={b.text} onChange={(text) => setB({ ...b, text })} rows={8} maxLength={MAX_TEXT} uploadsOpen={uploadsOpen} ariaLabel="ข้อความอธิบาย" />
+          <p className="text-xs text-neutral-500">เว้นบรรทัด = ย่อหน้าใหม่ · <code>## หัวข้อ</code> · <code>- รายการ</code> · <code>[ข้อความ](https://…)</code> · แทรกรูป A4 หรือไฟล์ PDF/รูปจาก Google Drive ได้ด้วยปุ่มด้านบน · ไม่รองรับ HTML (ใช้ชนิด “HTML ฝังในบท” แทน)</p>
         </div>
       )}
       {b.kind === "HTML" && <HtmlField value={b.html} onChange={(html) => setB({ ...b, html })} />}
@@ -229,7 +229,7 @@ function HtmlField({ value, onChange }: { value: string; onChange: (v: string) =
 }
 
 // ------------------------------------------------------------------------------------------------ the list of blocks
-export function BlocksEditor({ courseId, lessonId, blocks, quizzes }: { courseId: string; lessonId: string; blocks: BlockValues[]; quizzes: QuizOption[] }) {
+export function BlocksEditor({ courseId, lessonId, blocks, quizzes, uploadsOpen }: { uploadsOpen: boolean; courseId: string; lessonId: string; blocks: BlockValues[]; quizzes: QuizOption[] }) {
   const [adding, setAdding] = useState<BlockKind | null>(null);
   const full = blocks.length >= MAX_BLOCKS_PER_LESSON;
 
@@ -237,8 +237,8 @@ export function BlocksEditor({ courseId, lessonId, blocks, quizzes }: { courseId
     <section className="space-y-3">
       <h2 className="font-semibold">เนื้อหาในบทเรียน</h2>
       {blocks.length === 0 && !adding && <p className="rounded-2xl border border-dashed border-neutral-300 bg-white p-6 text-center text-neutral-600">ยังไม่มีเนื้อหา — เลือกชนิดที่ต้องการเพิ่มด้านล่าง</p>}
-      {blocks.map((b, i) => <BlockCard key={`${b.id}-${JSON.stringify([b.url, b.text, b.html, b.required, b.label, b.quizId, b.mediaId])}`} courseId={courseId} lessonId={lessonId} initial={b} quizzes={quizzes} index={i} count={blocks.length} isNew={false} onDone={() => {}} />)}
-      {adding && <BlockCard key={`new-${adding}`} courseId={courseId} lessonId={lessonId} initial={blank(adding)} quizzes={quizzes} index={blocks.length} count={blocks.length + 1} isNew onDone={() => setAdding(null)} />}
+      {blocks.map((b, i) => <BlockCard key={`${b.id}-${JSON.stringify([b.url, b.text, b.html, b.required, b.label, b.quizId, b.mediaId])}`} courseId={courseId} lessonId={lessonId} initial={b} quizzes={quizzes} index={i} count={blocks.length} isNew={false} onDone={() => {}} uploadsOpen={uploadsOpen} />)}
+      {adding && <BlockCard key={`new-${adding}`} courseId={courseId} lessonId={lessonId} initial={blank(adding)} quizzes={quizzes} index={blocks.length} count={blocks.length + 1} isNew onDone={() => setAdding(null)} uploadsOpen={uploadsOpen} />}
       {!adding && (
         <div className="rounded-2xl bg-white p-4 shadow-sm">
           <p className="mb-2 text-sm font-medium">เพิ่มเนื้อหา {full && <span className="text-red-600">(ครบ {MAX_BLOCKS_PER_LESSON} ส่วนแล้ว)</span>}</p>

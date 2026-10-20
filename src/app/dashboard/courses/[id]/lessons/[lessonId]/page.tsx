@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { canEditCourse } from "@/lib/course/access";
 import { getCourseActor } from "@/lib/course/course-server";
 import { db } from "@/lib/db";
+import { getSiteInfo } from "@/lib/site";
 import { BlocksEditor, LessonSettings } from "./lesson-editor";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,7 @@ export default async function EditLessonPage({ params }: { params: { id: string;
         sections={lesson.course.sections.map((s) => s.title)}
       />
       <BlocksEditor
+        uploadsOpen={(await getSiteInfo()).allowServerUploads}
         courseId={params.id}
         lessonId={lesson.id}
         quizzes={lesson.course.quizzes}
