@@ -1,5 +1,6 @@
 /* Run with: npm run test:course  (pure logic of the course system: permissions, rules, the quiz engine) */
 import assert from "node:assert/strict";
+import { checkMandatory, dueState, dueText, isMandatoryFor } from "../src/lib/course/deadline";
 import { canCreateCourse, canEditCourse, canEnroll, canLearn, isForAudience, canPreviewCourse, canReviewCourse, courseReadiness, courseStatusAfterSave, type CourseActor } from "../src/lib/course/access";
 import { courseProgress, doneLessonIds, isLessonDone, isLessonUnlocked, needsConfirm, nextLesson, type LearnerFacts, type LessonFacts } from "../src/lib/course/rules";
 import { cleanBlock, parseVideoLink, youtubeStart, youtubeVideoId } from "../src/lib/course/blocks";
@@ -87,6 +88,37 @@ t("course audience: recommended vs only-for", () => {
   assert.equal(isForAudience(rec, "SCHOOL_ADMIN"), true);
   assert.equal(isForAudience(rec, "GENERAL"), false);
   assert.equal(isForAudience({}, "GENERAL"), false);
+});
+
+t("must-take and finish-by are independent and off by default", () => {
+  const now = new Date("2026-10-20T05:00:00Z"); // 20 Oct 12:00 Bangkok
+  const end = (iso: string) => new Date(iso); // due dates are the END of a Bangkok day
+  // nothing set: nothing changes for anyone
+  assert.equal(dueState(null, now, null), "none");
+  assert.equal(dueState(null, now, new Date()), "done");
+  assert.equal(isMandatoryFor({ mandatory: false, audienceTypes: ["SCHOOL_ADMIN"] }, "SCHOOL_ADMIN"), false);
+  assert.equal(checkMandatory({ mandatory: false, audienceTypes: [] }), null);
+  // due date only
+  const due = end("2026-10-25T16:59:59.999Z"); // 25 Oct 23:59 Bangkok
+  assert.equal(dueState(due, now, null), "soon", "5 days left");
+  assert.equal(dueState(end("2026-12-25T16:59:59.999Z"), now, null), "open");
+  assert.equal(dueState(end("2026-10-20T16:59:59.999Z"), now, null), "today");
+  assert.equal(dueState(end("2026-10-19T16:59:59.999Z"), now, null), "overdue", "yesterday end of day has passed");
+  assert.equal(dueState(due, now, new Date("2026-10-22T00:00:00Z")), "done");
+  assert.equal(dueState(due, now, new Date("2026-10-26T00:00:00Z")), "done-late", "finishing late is allowed and only marked");
+  assert.equal(dueState(due, new Date("2026-10-25T16:00:00Z"), null), "today", "still today until midnight Bangkok");
+  assert.equal(dueState(due, new Date("2026-10-25T17:00:00Z"), null), "overdue", "one minute after the end of the day");
+  assert.match(dueText("overdue", end("2026-10-19T16:59:59.999Z"), now).text, /เกินกำหนด 1 วัน/);
+  assert.match(dueText("soon", due, now).text, /เหลือ 5 วัน/);
+  // must-take
+  const c = { mandatory: true, audienceTypes: ["SCHOOL_ADMIN", "DISTRICT_STAFF"] };
+  assert.equal(isMandatoryFor(c, "SCHOOL_ADMIN"), true);
+  assert.equal(isMandatoryFor(c, "TEACHER"), false, "only the chosen audience");
+  assert.equal(isMandatoryFor({ mandatory: true, audienceTypes: ["STUDENT", "TEACHER"] }, "STUDENT"), false, "never students");
+  assert.equal(isMandatoryFor(c, null), false);
+  assert.match(checkMandatory({ mandatory: true, audienceTypes: [] }) ?? "", /เลือกกลุ่มเป้าหมาย/);
+  assert.match(checkMandatory({ mandatory: true, audienceTypes: ["STUDENT"] }) ?? "", /นักเรียน/);
+  assert.equal(checkMandatory(c), null);
 });
 
 t("enrol and learn", () => {

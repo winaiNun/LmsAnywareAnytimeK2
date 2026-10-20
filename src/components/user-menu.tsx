@@ -7,8 +7,9 @@ import { useEffect, useRef, useState } from "react";
 import type { AvatarData } from "@/lib/avatar";
 import Avatar from "./avatar";
 import Glyph from "./glyph";
+import TodoBadge, { type TodoInfo } from "./todo-badge";
 
-export type MenuUser = { name: string; typeLabel: string; isStaff: boolean; canReview: boolean; canTeach?: boolean; avatar: AvatarData | null };
+export type MenuUser = { name: string; typeLabel: string; isStaff: boolean; canReview: boolean; canTeach?: boolean; avatar: AvatarData | null; todo?: TodoInfo };
 
 const item = "flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium text-neutral-800 outline-none hover:bg-neutral-100 focus-visible:bg-neutral-100";
 
@@ -54,7 +55,10 @@ export default function UserMenu({ user, context = "site" }: { user: MenuUser; c
         aria-controls="user-menu"
         className={`flex min-h-10 items-center gap-2 rounded-full py-1 pl-1 text-sm font-semibold transition ${admin ? `pr-2 text-white hover:bg-white/15 sm:pr-3 ${open ? "bg-white/20" : "bg-white/10"}` : `pr-3 text-brand hover:bg-brand-soft/70 ${open ? "bg-brand-soft" : "bg-brand-soft/60"}`}`}
       >
-        <Avatar avatar={user.avatar} name={user.name || "?"} size={32} className="ring-2 ring-white" />
+        <span className="relative">
+          <Avatar avatar={user.avatar} name={user.name || "?"} size={32} className="ring-2 ring-white" />
+          {user.todo && <TodoBadge count={user.todo.count} urgent={user.todo.urgent} className="absolute -right-1.5 -top-1.5" />}
+        </span>
         <span className={`max-w-[10rem] truncate ${admin ? "hidden sm:inline" : ""}`}>{user.name || "บัญชีของฉัน"}</span>
         <Glyph name="chevron-down" size={16} strokeWidth={2} className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
@@ -70,6 +74,12 @@ export default function UserMenu({ user, context = "site" }: { user: MenuUser; c
           </div>
           <div className="my-1 h-px bg-neutral-100" role="separator" />
           <Link role="menuitem" href="/dashboard" className={item}><Glyph name="users" size={18} className="text-neutral-500" />บัญชีของฉัน</Link>
+          {!admin && user.todo && user.todo.count > 0 && (
+            <Link role="menuitem" href="/dashboard#todo" className={`${item} ${user.todo.urgent ? "text-red-700" : "text-amber-800"}`}>
+              <Glyph name="clipboard-check" size={18} />คอร์สที่ต้องเรียน
+              <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-bold text-white ${user.todo.urgent ? "bg-red-500" : "bg-amber-500"}`}>{user.todo.count}</span>
+            </Link>
+          )}
           <Link role="menuitem" href="/dashboard/media" className={item}><Glyph name="file-text" size={18} className="text-neutral-500" />สื่อของฉัน</Link>
           <Link role="menuitem" href="/dashboard/learning" className={item}><Glyph name="book-open" size={18} className="text-neutral-500" />คอร์สที่ฉันเรียน</Link>
           <Link role="menuitem" href="/dashboard/certificates" className={item}><Glyph name="trophy" size={18} className="text-neutral-500" />เกียรติบัตรของฉัน</Link>

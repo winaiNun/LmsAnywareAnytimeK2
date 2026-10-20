@@ -203,7 +203,7 @@ export async function getAudienceCourses() {
     where: { status: "PUBLISHED", NOT: { audienceTypes: { isEmpty: true } } },
     orderBy: { publishedAt: "desc" },
     take: 8,
-    select: { id: true, title: true, audienceTypes: true, audienceOnly: true, _count: { select: { enrollments: true } } },
+    select: { id: true, title: true, audienceTypes: true, audienceOnly: true, mandatory: true, dueAt: true, _count: { select: { enrollments: true } } },
   });
   return Promise.all(
     courses.map(async (c) => {
@@ -212,7 +212,7 @@ export async function getAudienceCourses() {
         db.enrollment.count({ where: { courseId: c.id, completedAt: { not: null }, user: { memberType: { in: c.audienceTypes } } } }),
       ]);
       const joined = await db.enrollment.count({ where: { courseId: c.id, user: { memberType: { in: c.audienceTypes } } } });
-      return { id: c.id, title: c.title, audience: c.audienceTypes as string[], only: c.audienceOnly, population, joined, completed, others: c._count.enrollments - joined };
+      return { id: c.id, title: c.title, audience: c.audienceTypes as string[], only: c.audienceOnly, mandatory: c.mandatory, dueAt: c.dueAt, population, joined, completed, others: c._count.enrollments - joined };
     }),
   );
 }

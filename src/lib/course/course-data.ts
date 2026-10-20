@@ -22,6 +22,8 @@ export const courseCardSelect = {
   coverFy: true,
   audienceTypes: true,
   audienceOnly: true,
+  mandatory: true,
+  dueAt: true,
   area: { select: { id: true, slug: true, name: true, icon: true, color: true } },
   createdBy: { select: { id: true, name: true, memberType: true } },
   _count: { select: { lessons: true, enrollments: true } },
@@ -43,6 +45,9 @@ export type CourseCardData = {
   /** Member types the course is for (Thai labels; empty = everyone) and whether it is closed to the others. */
   audience: string[];
   audienceOnly: boolean;
+  /** "must take" for the audience, and the finish-by date (ISO) when there is one */
+  mandatory: boolean;
+  dueAt: string | null;
 };
 
 /** The teacher's name as shown to the public; a student creator is shown as "ผู้สอน" only (same privacy rule as media). */
@@ -66,6 +71,8 @@ export function toCourseCard(c: CourseCardRow): CourseCardData {
     learners: c._count.enrollments,
     audience: audienceLabels(c.audienceTypes),
     audienceOnly: c.audienceOnly && c.audienceTypes.length > 0,
+    mandatory: c.mandatory && c.audienceTypes.length > 0,
+    dueAt: c.dueAt ? c.dueAt.toISOString() : null,
   };
 }
 

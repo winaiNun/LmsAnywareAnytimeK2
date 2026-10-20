@@ -8,6 +8,7 @@ import { formatThaiDate } from "@/lib/thai-date";
 import Link from "next/link";
 import Avatar from "@/components/avatar";
 import CourseCard from "@/components/course-card";
+import { getTodoCourses } from "@/lib/course/todo";
 import { courseCardSelect, toCourseCard } from "@/lib/course/course-data";
 import { Icon, type IconName } from "@/components/icons";
 import AvatarEditor from "@/components/avatar-editor";
@@ -38,6 +39,9 @@ export default async function DashboardPage() {
   const isReviewer = reviewerCount > 0;
   const honors = await getHonorsSettings();
   if (!user) redirect("/login");
+  // "courses I have to take": must-take courses for my type and any joined course with a finish-by date; finished ones drop out
+  const todo = await getTodoCourses(user.id, user.memberType);
+  const todoIds = new Set(todo.map((c) => c.id));
   // courses made for this member type that they have not joined yet
   const forYou = (
     await db.course.findMany({
@@ -46,7 +50,7 @@ export default async function DashboardPage() {
       take: 3,
       select: courseCardSelect,
     })
-  ).map(toCourseCard);
+  ).filter((c) => !todoIds.has(c.id)).map(toCourseCard);
   const isStaff = user.role !== "STUDENT";
 
   const links: { href: string; label: string; icon: IconName; primary?: boolean }[] = [
@@ -83,6 +87,27 @@ export default async function DashboardPage() {
           </Link>
         ))}
       </nav>
+
+      {todo.length > 0 && (
+        <section id="todo" aria-label="คอร์สที่ต้องเรียน" className="scroll-mt-20 space-y-3 rounded-xl border border-amber-200 bg-amber-50/50 p-5">
+          <h2 className="font-semibold">คอร์สที่ต้องเรียน <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">{todo.length}</span></h2>
+          <ul className="divide-y divide-amber-100">
+            {todo.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+                <div className="min-w-0">
+                  <Link href={`/courses/${c.id}`} className="font-medium hover:text-brand">{c.title}</Link>
+                  <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
+                    {c.must && <span className="rounded-full bg-red-50 px-2 py-0.5 font-semibold text-red-700">บังคับ</span>}
+                    {c.due.text && <span className={`rounded-full px-2 py-0.5 font-medium ${c.due.tone}`}>{c.due.text}</span>}
+                    <span className="text-neutral-500">{c.enrolled ? "กำลังเรียน" : "ยังไม่ได้ลงทะเบียน"}</span>
+                  </p>
+                </div>
+                <Link href={`/courses/${c.id}`} className="shrink-0 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">{c.enrolled ? "เรียนต่อ" : "ลงทะเบียน"}</Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {forYou.length > 0 && (
         <section aria-label="คอร์สแนะนำสำหรับคุณ" className="space-y-3">

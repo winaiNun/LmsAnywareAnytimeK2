@@ -10,7 +10,7 @@ import Avatar from "./avatar";
 import Glyph, { IconTile } from "./glyph";
 
 export type DrawerArea = { slug: string; name: string; icon: string; color: string };
-export type DrawerUser = { name: string; isStaff: boolean; canReview: boolean; canTeach?: boolean; avatar: AvatarData | null };
+export type DrawerUser = { name: string; isStaff: boolean; canReview: boolean; canTeach?: boolean; avatar: AvatarData | null; todo?: { count: number; urgent: boolean } };
 
 const row = "flex min-h-12 items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-neutral-800 active:bg-neutral-100";
 
@@ -118,6 +118,12 @@ export default function NavDrawer({ user, areas, aboutLabel = "เกี่ย�
             </section>
 
             <section aria-label="เมนูอื่น" className="space-y-0.5 border-t border-neutral-100 pt-3">
+              {user?.todo && user.todo.count > 0 && (
+                <Link href="/dashboard#todo" className={`${row} ${user.todo.urgent ? "text-red-700" : "text-amber-800"}`}>
+                  <Glyph name="clipboard-check" size={20} />คอร์สที่ต้องเรียน
+                  <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-bold text-white ${user.todo.urgent ? "bg-red-500" : "bg-amber-500"}`}>{user.todo.count}</span>
+                </Link>
+              )}
               {user && <Link href="/dashboard/media" className={row}><Glyph name="file-text" size={20} className="text-neutral-500" />สื่อของฉัน</Link>}
               {user && <Link href="/dashboard/learning" className={row}><Glyph name="book-open" size={20} className="text-neutral-500" />คอร์สที่ฉันเรียน</Link>}
               {user && <Link href="/dashboard/certificates" className={row}><Glyph name="trophy" size={20} className="text-neutral-500" />เกียรติบัตรของฉัน</Link>}

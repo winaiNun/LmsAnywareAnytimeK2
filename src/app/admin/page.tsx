@@ -162,8 +162,8 @@ export default async function AdminDashboard() {
               {audienceCourses.map((c) => (
                 <li key={c.id}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Link href={`/courses/${c.id}`} className="font-medium hover:text-brand">{c.title}</Link>
-                    <span className="text-xs text-neutral-500">{c.only ? "เปิดเฉพาะ" : "แนะนำสำหรับ"} {audienceLabels(c.audience).join(" · ")}</span>
+                    <span className="flex min-w-0 items-center gap-3"><Link href={`/courses/${c.id}`} className="font-medium hover:text-brand">{c.title}</Link><Link href={`/dashboard/courses/${c.id}/report`} className="shrink-0 text-xs font-medium text-brand hover:underline">รายงานรายโรงเรียน</Link></span>
+                    <span className="flex flex-wrap items-center gap-1.5 text-xs text-neutral-500">{c.mandatory && <span className="rounded-full bg-red-50 px-2 py-0.5 font-semibold text-red-700">บังคับ</span>}{c.dueAt && <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800">ภายใน {formatThaiDate(c.dueAt, { style: "medium" })}</span>}{c.only ? "เปิดเฉพาะ" : "แนะนำสำหรับ"} {audienceLabels(c.audience).join(" · ")}</span>
                   </div>
                   <div className="mt-1.5 grid grid-cols-[1fr_auto] items-center gap-3">
                     <div className="space-y-1">

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Glyph from "@/components/glyph";
 import type { CourseCardData } from "@/lib/course/course-data";
+import { formatThaiDate } from "@/lib/thai-date";
 
 const nf = new Intl.NumberFormat("th-TH");
 
@@ -20,6 +21,12 @@ export default function CourseCard({ course: c, priority = false }: { course: Co
       <div className="flex flex-1 flex-col gap-1 p-4">
         <h3 className="line-clamp-2 min-h-[2.75rem] font-semibold leading-snug group-hover:text-brand">{c.title}</h3>
         <p className="truncate text-sm text-neutral-500">{c.instructor}</p>
+        {(c.mandatory || c.dueAt) && (
+          <p className="flex flex-wrap items-center gap-1.5 text-xs">
+            {c.mandatory && <span className="rounded-full bg-red-50 px-2 py-0.5 font-semibold text-red-700">คอร์สบังคับ</span>}
+            {c.dueAt && <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800">ภายใน {formatThaiDate(new Date(c.dueAt), { style: "medium" })}</span>}
+          </p>
+        )}
         {c.audience.length > 0 && (
           <p className="truncate text-xs font-medium text-brand" title={c.audience.join(", ")}>{c.audienceOnly ? "เฉพาะ" : "แนะนำสำหรับ"} {c.audience.join(" · ")}</p>
         )}

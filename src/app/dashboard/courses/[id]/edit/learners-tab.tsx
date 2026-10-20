@@ -2,6 +2,7 @@ import Link from "next/link";
 import LiveFilter from "@/components/live-filter";
 import Pager from "@/components/pager";
 import { LEARNER_STATUSES, LEARNER_STATUS_LABEL, LEARNERS_PER_PAGE, type LearnerStatus, listLearners } from "@/lib/course/course-learners";
+import { db } from "@/lib/db";
 import { MEMBER_TYPE_LABEL } from "@/lib/members";
 import { formatThaiDate } from "@/lib/thai-date";
 
@@ -9,7 +10,9 @@ const input = "min-h-11 w-full rounded-lg border border-neutral-300 bg-white px-
 
 /** Who joined the course and how far they are. Shown to the author and admins only. */
 export default async function LearnersTab({ courseId, q, status, page }: { courseId: string; q: string; status: LearnerStatus; page: number }) {
-  const { rows, total, pages, counts } = await listLearners(courseId, { q, status, page });
+  const [{ rows, total, pages, counts }, due] = await Promise.all([listLearners(courseId, { q, status, page }), db.course.findUnique({ where: { id: courseId }, select: { dueAt: true } })]);
+  const dueAt = due?.dueAt ?? null;
+  const now = new Date();
   const base = `/dashboard/courses/${courseId}/edit`;
   const params = (extra: Record<string, string | undefined>) => {
     const p = new URLSearchParams({ tab: "learners" });
@@ -43,6 +46,7 @@ export default async function LearnersTab({ courseId, q, status, page }: { cours
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-neutral-600" aria-live="polite">พบ {total.toLocaleString("th-TH")} คน</p>
+          <Link href={`${base.replace("/edit", "")}/report`} className="flex min-h-10 items-center rounded-lg border border-neutral-300 bg-white px-4 text-sm font-medium hover:border-brand">รายงานรายโรงเรียน</Link>
           {total > 0 && <Link href={exportHref} prefetch={false} className="flex min-h-10 items-center rounded-lg border border-neutral-300 bg-white px-4 text-sm font-medium hover:border-brand">ดาวน์โหลด Excel</Link>}
         </div>
 
@@ -60,6 +64,7 @@ export default async function LearnersTab({ courseId, q, status, page }: { cours
                   {r.completedAt
                     ? <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">เรียนจบ {formatThaiDate(r.completedAt)}</span>
                     : <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600">{r.progress > 0 ? "กำลังเรียน" : "ยังไม่เริ่ม"}</span>}
+                  {dueAt && (r.completedAt ? r.completedAt > dueAt : now > dueAt) && <span className="ml-2 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">{r.completedAt ? "จบหลังกำหนด" : "เกินกำหนด"}</span>}
                 </div>
                 <div className="mt-3 flex items-center gap-3">
                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-100" role="progressbar" aria-valuenow={r.progress} aria-valuemin={0} aria-valuemax={100} aria-label="ความคืบหน้า"><div className={`h-full rounded-full ${r.completedAt ? "bg-green-500" : "bg-brand"}`} style={{ width: `${r.progress}%` }} /></div>

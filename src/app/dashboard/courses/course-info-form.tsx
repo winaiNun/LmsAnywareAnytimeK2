@@ -5,6 +5,7 @@ import { useRef, useState, useTransition } from "react";
 import CoverField, { type CoverValue } from "@/components/cover-field";
 import { Spinner } from "@/components/icons";
 import { saveCourseInfo } from "./actions";
+import ThaiDateField from "@/components/thai-date-field";
 import { MEMBER_TYPES, MEMBER_TYPE_LABEL } from "@/lib/members";
 
 type Option = { id: string; name: string };
@@ -19,6 +20,8 @@ export type CourseInfoValues = {
   enrollOpen: boolean;
   audienceTypes: string[];
   audienceOnly: boolean;
+  mandatory: boolean;
+  dueAt: string; // ISO or ""
   coverUrl: string | null;
   coverDrive: string;
   coverFx: number;
@@ -40,6 +43,7 @@ export default function CourseInfoForm({ values, areas, levels, allowUpload }: {
   const [enrollOpen, setEnrollOpen] = useState(values.enrollOpen);
   const [audienceTypes, setAudienceTypes] = useState(values.audienceTypes);
   const [audienceOnly, setAudienceOnly] = useState(values.audienceOnly);
+  const [mandatory, setMandatory] = useState(values.mandatory);
   const [cover, setCover] = useState<CoverValue>({ mode: "keep", fx: values.coverFx, fy: values.coverFy });
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -52,7 +56,7 @@ export default function CourseInfoForm({ values, areas, levels, allowUpload }: {
     const fd = new FormData(formRef.current ?? undefined);
     const h = hours.trim() ? Number(hours.replace(",", ".")) : null;
     if (h !== null && !Number.isFinite(h)) return setError("จำนวนชั่วโมงต้องเป็นตัวเลข");
-    fd.set("payload", JSON.stringify({ title, description, areaId, levelIds, instructorName, hours: h, enrollOpen, audienceTypes, audienceOnly: audienceOnly && audienceTypes.length > 0, cover }));
+    fd.set("payload", JSON.stringify({ title, description, areaId, levelIds, instructorName, hours: h, enrollOpen, audienceTypes, audienceOnly: audienceOnly && audienceTypes.length > 0, mandatory: mandatory && audienceTypes.length > 0, dueAt: String(fd.get("dueAt") ?? "") || null, cover }));
     start(async () => {
       const r = await saveCourseInfo(values.id ?? null, fd);
       if ("error" in r && r.error) { setError(r.error); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
@@ -113,6 +117,15 @@ export default function CourseInfoForm({ values, areas, levels, allowUpload }: {
             </div>
           )}
         </fieldset>
+        <div className="space-y-3 rounded-xl border border-neutral-200 p-3">
+          <p className="text-sm font-medium">บังคับและกำหนดส่ง <span className="font-normal text-neutral-500">(ไม่บังคับ — เลือกอย่างใดอย่างหนึ่งหรือทั้งสองอย่างก็ได้ ไม่ตั้ง = เหมือนเดิม)</span></p>
+          <label className={`flex min-h-11 items-start gap-3 ${audienceTypes.length === 0 ? "opacity-60" : ""}`}>
+            <input type="checkbox" checked={mandatory && audienceTypes.length > 0} disabled={audienceTypes.length === 0} onChange={(e) => setMandatory(e.target.checked)} className="mt-0.5 h-5 w-5" />
+            <span><strong>เป็นคอร์สบังคับสำหรับกลุ่มเป้าหมายข้างบน</strong><span className="block text-sm text-neutral-500">ขึ้นในกล่อง “คอร์สที่ต้องเรียน” ของคนในกลุ่มจนกว่าจะเรียนจบ (ไม่ลงทะเบียนให้อัตโนมัติ) · ต้องเลือกกลุ่มเป้าหมายก่อน · ไม่บังคับนักเรียน</span></span>
+          </label>
+          <ThaiDateField name="dueAt" label="กำหนดส่ง — ควรเรียนให้จบภายในวันที่ (พ.ศ. ว่างได้ = ไม่มีกำหนด)" defaultValue={values.dueAt} />
+          <p className="text-xs text-neutral-500">เลยกำหนดแล้วยังเรียนต่อและรับเกียรติบัตรได้ ระบบแค่ทำเครื่องหมาย “เรียนจบหลังกำหนด” · ถ้าจะปิดจริง ให้ปิดรับลงทะเบียนด้านบน</p>
+        </div>
       </section>
 
       <section className="space-y-4 rounded-2xl bg-white p-5 shadow-sm">

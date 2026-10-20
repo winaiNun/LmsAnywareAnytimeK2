@@ -15,8 +15,10 @@ import { rateLimited } from "@/lib/rate-limit";
 import { storageIsDurable } from "@/lib/schools";
 import { getSiteInfo } from "@/lib/site";
 import { getStorage } from "@/lib/storage";
+import { endOfDayBangkok, parseInstant } from "@/lib/thai-date";
 import { DAILY_COURSE_LIMIT, MAX_BLOCKS_PER_LESSON, MAX_LESSONS, MAX_QUESTIONS_PER_QUIZ, canCreateCourse, canEditCourse, courseReadiness, courseStatusAfterSave, type CourseActor, type CourseStatus } from "./access";
 import { MAX_HTML_BLOCKS_PER_LESSON, cleanBlock, type BlockInput } from "./blocks";
+import { checkMandatory } from "./deadline";
 import { parseQuestion, QUESTION_TYPES } from "./quiz/schemas";
 
 export type Res<T extends object = object> = ({ ok: true } & T) | { error: string };
@@ -56,6 +58,8 @@ const infoSchema = z.object({
   enrollOpen: z.boolean().default(true),
   audienceTypes: z.array(z.enum(["STUDENT", "TEACHER", "SCHOOL_ADMIN", "SUPERVISOR", "DISTRICT_STAFF", "GENERAL"])).max(6).default([]),
   audienceOnly: z.boolean().default(false),
+  mandatory: z.boolean().default(false),
+  dueAt: z.string().max(40).nullable().default(null),
   cover: z.object({ mode: z.enum(["keep", "none", "drive", "upload"]), link: z.string().max(500).optional(), fx: z.number().min(0).max(1).default(0.5), fy: z.number().min(0).max(1).default(0.5) }).default({ mode: "keep", fx: 0.5, fy: 0.5 }),
 });
 
@@ -67,7 +71,16 @@ export async function saveCourseInfoAs(actor: CourseActor, courseId: string | nu
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" };
   const d = parsed.data;
 
+  const audienceTypes = Array.from(new Set(d.audienceTypes));
+  const mandatoryProblem = checkMandatory({ mandatory: d.mandatory, audienceTypes });
+  if (mandatoryProblem) return { error: mandatoryProblem };
+  // the due date is the END of the chosen day (Bangkok); a new or changed date must still be ahead of us
+  const due = d.dueAt ? parseInstant(d.dueAt) : null;
+  if (d.dueAt && !due) return { error: "วันกำหนดส่งไม่ถูกต้อง" };
+  const dueAt = due ? endOfDayBangkok(due) : null;
+
   const existing = courseId ? await db.course.findUnique({ where: { id: courseId } }) : null;
+  if (dueAt && existing?.dueAt?.getTime() !== dueAt.getTime() && dueAt.getTime() <= Date.now()) return { error: "วันกำหนดส่งต้องเป็นวันในอนาคต" };
   if (courseId && !existing) return { error: NOT_FOUND.error };
   if (existing && !canEditCourse(actor, existing)) return { error: NO_RIGHT.error };
   if (!existing) {
@@ -113,7 +126,7 @@ export async function saveCourseInfoAs(actor: CourseActor, courseId: string | nu
 
   const status = existing ? courseStatusAfterSave(actor, existing.status, false) : "DRAFT";
   const data = {
-    title: d.title, description: d.description, areaId: d.areaId, instructorName: d.instructorName || null, hours: d.hours, enrollOpen: d.enrollOpen, audienceTypes: Array.from(new Set(d.audienceTypes)), audienceOnly: d.audienceOnly && d.audienceTypes.length > 0,
+    title: d.title, description: d.description, areaId: d.areaId, instructorName: d.instructorName || null, hours: d.hours, enrollOpen: d.enrollOpen, audienceTypes, audienceOnly: d.audienceOnly && audienceTypes.length > 0, mandatory: d.mandatory, dueAt,
     coverKey, coverDriveId, coverFx, coverFy, status,
     ...(status === "PENDING" ? { reviewNote: null } : {}),
   };

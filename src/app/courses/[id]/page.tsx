@@ -5,6 +5,8 @@ import Glyph from "@/components/glyph";
 import SiteNavbar from "@/components/site-navbar";
 import { canEnroll, canPreviewCourse } from "@/lib/course/access";
 import { audienceLabels, courseCardSelect, instructorOf } from "@/lib/course/course-data";
+import { dueState, dueText, isMandatoryFor } from "@/lib/course/deadline";
+import { formatThaiDate } from "@/lib/thai-date";
 import { coverOf, getCourseActor } from "@/lib/course/course-server";
 import { db } from "@/lib/db";
 import { plainText } from "@/lib/site-texts";
@@ -42,6 +44,11 @@ export default async function CoursePage({ params }: { params: { id: string } })
   const first = course.lessons[0];
   const audience = audienceLabels(course.audienceTypes);
   const audienceOnly = course.audienceOnly && audience.length > 0;
+  const now = new Date();
+  const mandatory = course.mandatory && audience.length > 0;
+  const mandatoryForMe = isMandatoryFor(course, actor?.memberType);
+  const dueAt = course.dueAt;
+  const due = dueText(dueState(dueAt, now, enrollment?.completedAt ?? null), dueAt, now);
   const eligible = canEnroll({ status: course.status, enrollOpen: course.enrollOpen, audienceTypes: course.audienceTypes, audienceOnly: course.audienceOnly }, actor);
 
   return (
@@ -75,6 +82,18 @@ export default async function CoursePage({ params }: { params: { id: string } })
                 <strong>{audienceOnly ? "เปิดเฉพาะ" : "แนะนำสำหรับ"}:</strong> {audience.join(" · ")}
                 {audienceOnly && !eligible && !enrollment && published && course.enrollOpen && <span className="block text-neutral-700">ประเภทสมาชิกของคุณไม่อยู่ในกลุ่มนี้ จึงลงทะเบียนไม่ได้ (หากประเภทสมาชิกของคุณไม่ถูกต้อง ให้ติดต่อผู้ดูแลระบบ)</span>}
               </p>
+            )}
+            {(mandatory || dueAt) && published && (
+              <div className="space-y-1.5 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm">
+                {mandatory && <p><span className="mr-2 rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">คอร์สบังคับ</span>สำหรับ {audience.join(" · ")}{mandatoryForMe && !enrollment?.completedAt ? <strong className="text-red-700"> — คุณต้องเรียนคอร์สนี้ให้จบ</strong> : null}</p>}
+                {dueAt && (
+                  <p>
+                    <span className="mr-2 font-medium">กำหนดส่ง:</span>{formatThaiDate(dueAt, { style: "long" })}
+                    {due.text && <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${due.tone}`}>{due.text}</span>}
+                  </p>
+                )}
+                {dueAt && !enrollment && <p className="text-xs text-neutral-500">เลยกำหนดแล้วยังลงทะเบียนและเรียนต่อได้ ระบบจะทำเครื่องหมายว่าเรียนจบหลังกำหนด</p>}
+              </div>
             )}
             <EnrollButton courseId={course.id} signedIn={!!actor} enrolled={!!enrollment} open={course.enrollOpen && published && (eligible || !!enrollment)} continueHref={first ? `/courses/${course.id}/learn/${first.id}` : null} preview={preview} />
           </div>

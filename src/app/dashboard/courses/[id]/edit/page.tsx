@@ -70,7 +70,7 @@ export default async function EditCoursePage({ params, searchParams }: { params:
         <CourseInfoForm
           values={{
             id: course.id, title: course.title, description: course.description, areaId: course.areaId, levelIds: course.levels.map((l) => l.levelId),
-            instructorName: course.instructorName ?? "", hours: course.hours === null ? "" : String(course.hours), enrollOpen: course.enrollOpen, audienceTypes: course.audienceTypes, audienceOnly: course.audienceOnly,
+            instructorName: course.instructorName ?? "", hours: course.hours === null ? "" : String(course.hours), enrollOpen: course.enrollOpen, audienceTypes: course.audienceTypes, audienceOnly: course.audienceOnly, mandatory: course.mandatory, dueAt: course.dueAt ? course.dueAt.toISOString() : "",
             coverUrl: coverOf(course), coverDrive: course.coverDriveId ? `https://drive.google.com/file/d/${course.coverDriveId}/view` : "", coverFx: course.coverFx, coverFy: course.coverFy,
           }}
           areas={areas}

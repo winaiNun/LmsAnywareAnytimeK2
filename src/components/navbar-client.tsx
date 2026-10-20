@@ -7,6 +7,7 @@ import { plainText } from "@/lib/site-texts";
 import Avatar from "./avatar";
 import NavDrawer, { type DrawerArea } from "./nav-drawer";
 import UserMenu from "./user-menu";
+import TodoBadge, { type TodoInfo } from "./todo-badge";
 import { Icon, type IconName } from "./icons";
 
 const LINKS = [
@@ -18,7 +19,7 @@ const LINKS = [
   { href: "/about", key: "nav.about" },
 ];
 
-type Props = { user: { name: string; isStaff: boolean; canReview: boolean; canTeach: boolean; typeLabel: string; avatar: AvatarData | null } | null; name: string; areaName?: string; logoUrl: string | null; areas: DrawerArea[]; texts: Record<string, string> };
+type Props = { user: { name: string; isStaff: boolean; canReview: boolean; canTeach: boolean; typeLabel: string; avatar: AvatarData | null; todo?: TodoInfo } | null; name: string; areaName?: string; logoUrl: string | null; areas: DrawerArea[]; texts: Record<string, string> };
 type Tab = { href: string; label: string; icon: IconName; avatar?: boolean };
 
 export default function NavbarClient({ user, name, areaName, logoUrl, areas, texts }: Props) {
@@ -104,7 +105,8 @@ export default function NavbarClient({ user, name, areaName, logoUrl, areas, tex
                   aria-current={active ? "page" : undefined}
                   className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium transition-colors ${active ? "text-brand" : "text-neutral-500 active:bg-neutral-100"}`}
                 >
-                  <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${active ? "bg-brand-soft" : ""}`}>
+                  <span className={`relative flex h-7 w-12 items-center justify-center rounded-full transition-colors ${active ? "bg-brand-soft" : ""}`}>
+                    {t.avatar && user?.todo && <TodoBadge count={user.todo.count} urgent={user.todo.urgent} className="absolute right-0.5 -top-1" />}
                     {t.avatar && user ? (
                       <Avatar avatar={user.avatar} name={user.name || "?"} size={26} className={active ? "ring-2 ring-brand" : "ring-1 ring-neutral-300"} />
                     ) : (
