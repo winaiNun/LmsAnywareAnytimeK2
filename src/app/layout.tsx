@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import ErrorReporter from "@/components/error-reporter";
 import FloatingTools from "@/components/floating-tools-server";
 import Pwa from "@/components/pwa";
 import SiteFooter from "@/components/site-footer";
@@ -38,6 +39,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <VisitBeacon />
         <FloatingTools />
         <Pwa />
+        <ErrorReporter />
       </body>
     </html>
   );

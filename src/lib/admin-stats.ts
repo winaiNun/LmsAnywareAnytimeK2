@@ -3,6 +3,8 @@
  * markup and the numbers can be checked against the database in a test.
  */
 import { db } from "@/lib/db";
+import { BACKUP_TEXT, backupState } from "@/lib/backup-status";
+import { recentOpenErrors } from "@/lib/error-log";
 import { MEMBER_TYPES, MEMBER_TYPE_LABEL, type MemberTypeKey } from "@/lib/members";
 import { bangkokDay, topViewedIds } from "@/lib/media-counters";
 import { codeStatus } from "@/lib/registration";
@@ -25,7 +27,7 @@ export async function getDashboard(now: Date = new Date()) {
     mediaStatus, mediaTotals, views30, daily, areas, pendingList, topIds,
     schoolTotal, schoolActive, schoolActivated, schoolNoCard, schoolNoLink, districtRows,
     codes, codeUsers30, creatorPending, reviewerAreas, pendingByArea, recent,
-    visitStats, visitDaily, courseStatus, enrollTotal, completeTotal, faqOpen,
+    visitStats, visitDaily, courseStatus, enrollTotal, completeTotal, faqOpen, errorsRecent,
   ] = await Promise.all([
     db.siteSetting.findUnique({ where: { id: "main" }, select: { requireRegistrationCode: true, allowServerUploads: true } }),
     db.user.count(),
@@ -56,6 +58,7 @@ export async function getDashboard(now: Date = new Date()) {
     db.enrollment.count({ where: { course: { status: "PUBLISHED" } } }),
     db.enrollment.count({ where: { completedAt: { not: null }, course: { status: "PUBLISHED" } } }),
     db.faqUnanswered.count({ where: { status: "OPEN" } }),
+    recentOpenErrors(now),
   ]);
 
   // ---- members
@@ -92,6 +95,7 @@ export async function getDashboard(now: Date = new Date()) {
   if (pending > 0) alerts.push({ level: "warn", text: `มีสื่อรออนุมัติ ${pending} ชิ้น${pendingOldestDays > 0 ? ` (ชิ้นที่รอนานสุด ${pendingOldestDays} วัน)` : ""}`, href: "/admin/media?status=PENDING", action: "ตรวจสื่อ" });
   if (coursesPending > 0) alerts.push({ level: "warn", text: `มีคอร์สรออนุมัติ ${coursesPending} คอร์ส`, href: "/admin/courses?status=PENDING", action: "ตรวจคอร์ส" });
   if (faqOpen > 0) alerts.push({ level: "info", text: `มีคำถามในแชตถามตอบที่ยังตอบไม่ได้ ${faqOpen} ข้อ`, href: "/admin/faq?tab=unanswered", action: "เพิ่มคำตอบ" });
+  if (errorsRecent > 0) alerts.push({ level: "warn", text: `มีข้อผิดพลาดระบบที่ยังไม่แก้ ${errorsRecent} รายการในรอบ 24 ชั่วโมง`, href: "/admin/errors", action: "ดูรายการ" });
   if (creatorPending > 0) alerts.push({ level: "warn", text: `มีคำขอเป็นผู้สร้างคอร์ส ${creatorPending} รายการรอพิจารณา`, href: "/admin/users?creator=pending", action: "พิจารณา" });
   if ((site?.requireRegistrationCode ?? true) && valid.length === 0) alerts.push({ level: "danger", text: "ไม่มีรหัสสมัครที่ใช้งานได้ — ผู้สมัครใหม่จะสมัครไม่ได้", href: "/admin/registration-codes", action: "สร้างรหัส" });
   if (expiring.length > 0) alerts.push({ level: "info", text: `รหัสสมัคร ${expiring.length} รหัสจะหมดอายุภายใน 7 วัน`, href: "/admin/registration-codes", action: "ดูรหัส" });
@@ -132,13 +136,14 @@ export type Check = { ok: boolean; level: "danger" | "warn" | "info"; text: stri
 
 /** Numbers shown as little badges in the side menu (what is waiting for a decision). */
 export async function getAdminBadges(): Promise<Record<string, number>> {
-  const [media, courses, creators, faq] = await Promise.all([
+  const [media, courses, creators, faq, errors] = await Promise.all([
     db.media.count({ where: { status: "PENDING" } }),
     db.course.count({ where: { status: "PENDING" } }),
     db.user.count({ where: { creatorStatus: "PENDING" } }),
     db.faqUnanswered.count({ where: { status: "OPEN" } }),
+    recentOpenErrors(),
   ]);
-  return { "/admin/media": media, "/admin/courses": courses, "/admin/users": creators, "/admin/faq": faq };
+  return { "/admin/media": media, "/admin/courses": courses, "/admin/users": creators, "/admin/faq": faq, "/admin/errors": errors };
 }
 
 const DEFAULT_ADMIN_PASSWORD = "ChangeMe123!";
@@ -148,13 +153,15 @@ const DEFAULT_ADMIN_PASSWORD = "ChangeMe123!";
  * Each one says what is wrong and where to fix it; the dashboard shows only the ones that are not fine yet.
  */
 export async function getReadiness(): Promise<Check[]> {
-  const [admins, pages, faqShown, site, validCodes] = await Promise.all([
+  const [admins, pages, faqShown, site, validCodes, backupRow] = await Promise.all([
     db.user.findMany({ where: { role: "ADMIN", active: true }, select: { name: true, passwordHash: true } }),
     db.sitePage.findMany({ where: { slug: { in: ["privacy", "terms"] } }, select: { slug: true } }),
     db.faqItem.count({ where: { active: true } }),
     db.siteSetting.findUnique({ where: { id: "main" }, select: { allowServerUploads: true, requireRegistrationCode: true } }),
     db.registrationCode.count({ where: { active: true, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] } }),
+    db.siteSetting.findUnique({ where: { id: "main" }, select: { lastBackupAt: true, lastRestoreCheckAt: true } }),
   ]);
+  const backup = backupState(backupRow?.lastBackupAt ?? null);
   const { compare } = await import("bcryptjs");
   const defaults: string[] = [];
   for (const a of admins) if (await compare(DEFAULT_ADMIN_PASSWORD, a.passwordHash)) defaults.push(a.name);
@@ -167,6 +174,8 @@ export async function getReadiness(): Promise<Check[]> {
     { ok: has("privacy") && has("terms"), level: "warn", text: "นโยบายความเป็นส่วนตัวและเงื่อนไขการใช้งานยังเป็นฉบับร่างเริ่มต้น — ให้ผู้รับผิดชอบตรวจและบันทึกฉบับจริง", href: "/admin/pages", action: "แก้ไขหน้า" },
     { ok: !(site?.requireRegistrationCode ?? true) || validCodes > 0, level: "danger", text: "เปิดโหมดสมัครด้วยรหัส แต่ยังไม่มีรหัสที่ใช้งานได้", href: "/admin/registration-codes", action: "สร้างรหัส" },
     { ok: !(site?.allowServerUploads ?? false) || durable, level: "warn", text: "เปิดให้อัปโหลดรูปเข้าเซิร์ฟเวอร์ แต่ที่เก็บไฟล์ยังไม่ถาวร (ไฟล์อาจหาย) — ตั้งค่า R2/S3 หรือปิดสวิตช์", href: "/admin/settings", action: "ดูตั้งค่า" },
+    { ok: backup.state === "ok", level: backup.state === "ok" || backup.state === "old" ? "warn" : "danger", text: `${BACKUP_TEXT[backup.state]} — สำรองฐานข้อมูลก่อนให้คนจริงใช้ และทำเป็นประจำ`, href: "/admin/system", action: "วิธีสำรอง" },
+    { ok: !!backupRow?.lastRestoreCheckAt, level: "info", text: "ยังไม่เคยทดสอบว่าไฟล์สำรองกู้คืนได้จริง", href: "/admin/system", action: "วิธีทดสอบ" },
     { ok: faqShown > 0, level: "info", text: "แชตถามตอบยังไม่แสดงเพราะยังไม่มีคำถามที่เปิดแสดง", href: "/admin/faq", action: "จัดการ FAQ" },
     { ok: !process.env.VERCEL || !!process.env.TURNSTILE_SECRET_KEY, level: "info", text: "ยังไม่ได้เปิดตัวตรวจบอตหน้าสมัครสมาชิก (Cloudflare Turnstile)", href: "/admin/settings", action: "ดูตั้งค่า" },
   ];

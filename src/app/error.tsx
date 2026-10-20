@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import Glyph from "@/components/glyph";
+import { reportClientError } from "@/lib/report-client";
 
-export default function ErrorPage({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  // tell the admin (message, page, and the server digest when there is one); a retry reports again only if it breaks again
+  useEffect(() => reportClientError({ source: "boundary", message: error.message, stack: error.stack, digest: error.digest }), [error]);
   return (
     <main className="mx-auto flex min-h-[70vh] max-w-xl flex-col items-center justify-center px-4 py-12 text-center">
       <span className="flex h-20 w-20 items-center justify-center rounded-3xl bg-red-50 text-red-600"><Glyph name="help-circle" size={38} /></span>

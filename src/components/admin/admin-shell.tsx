@@ -27,7 +27,7 @@ const ICONS: Record<string, string> = {
   page: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5",
 };
 
-type NavItem = { href: string; label: string; icon: string; exact?: boolean; teacher?: boolean };
+type NavItem = { href: string; label: string; icon: string; exact?: boolean; teacher?: boolean; adminOnly?: boolean };
 const GROUPS: { title: string; items: NavItem[] }[] = [
   { title: "ภาพรวม", items: [{ href: "/admin", label: "แดชบอร์ด", icon: "dashboard", exact: true }] },
   {
@@ -53,6 +53,9 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/admin/registration-codes", label: "รหัสสมัคร", icon: "users" },
       { href: "/admin/pages", label: "หน้าข้อมูลและ Footer", icon: "page" },
       { href: "/admin/settings", label: "ตั้งค่าเขตพื้นที่", icon: "settings" },
+      { href: "/admin/system", label: "สถานะระบบ", icon: "dashboard", adminOnly: true },
+      { href: "/admin/errors", label: "ข้อผิดพลาดระบบ", icon: "page", adminOnly: true },
+      { href: "/admin/audit", label: "บันทึกการใช้งาน", icon: "page", adminOnly: true },
     ],
   },
 ];
@@ -77,7 +80,7 @@ export default function AdminShell({ site, user, children, badges = {} }: Props)
 
   // Teachers (lesson creators) only get the pages they may use.
   const manager = user.role === "ADMIN" || user.role === "LIBRARIAN";
-  const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter((it) => manager || it.teacher) })).filter((g) => g.items.length > 0);
+  const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter((it) => (manager || it.teacher) && (!it.adminOnly || user.role === "ADMIN")) })).filter((g) => g.items.length > 0);
 
   const pages = groups.flatMap((g) => g.items.map((it) => ({ href: it.href, label: it.label })));
 

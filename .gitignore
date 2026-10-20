@@ -41,3 +41,6 @@ next-env.d.ts
 
 # private data (school lists, issued credentials) — never commit
 /data/
+
+# database backups (scripts/backup-db.ts) - never commit
+/backups

@@ -556,6 +556,9 @@ model SiteSetting {
   heroImageAnimated       Boolean  @default(false)
   faqEnabled              Boolean  @default(true) // floating FAQ chat on the public pages
   heroGlobe               Boolean  @default(true) // animated dot-globe over the home banner (follows the pointer)
+  lastBackupAt            DateTime? // written by scripts/backup-db.ts
+  lastBackupNote          String? // where the copy went and how big it is
+  lastRestoreCheckAt      DateTime? // written by scripts/restore-check.ts (a backup was really restored and counted)
   honorsEnabled           Boolean  @default(true) // honours page + home section on/off
   honorsMinItems          Int      @default(1) // published media + courses needed to be ranked
   motionLevel             String   @default("light") // scroll-in effects on the home page: off | light | full
@@ -650,6 +653,24 @@ model AuditLog {
 
   @@index([entity, entityId])
   @@index([createdAt])
+}
+
+/// A problem seen by the site (a page that broke in someone's browser, an unhandled server error), one row per kind of problem.
+/// No IP address and no browser string are kept; the same problem raises `count` instead of adding rows.
+model ErrorLog {
+  id          String    @id @default(cuid())
+  fingerprint String    @unique // digest of the server error when there is one, else a hash of message + place
+  source      String // client | server | boundary
+  message     String
+  stack       String?
+  path        String // the page, without query string
+  userId      String? // who was signed in on the last occurrence (an id only)
+  count       Int       @default(1)
+  firstAt     DateTime  @default(now())
+  lastAt      DateTime  @default(now())
+  resolvedAt  DateTime?
+
+  @@index([resolvedAt, lastAt])
 }
 
 /// One row per counted attempt (sign-in failure, code guess, sign-up): the limiter counts rows in a time window,
