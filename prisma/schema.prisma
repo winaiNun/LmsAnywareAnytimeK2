@@ -538,6 +538,7 @@ model SiteSetting {
   heroImageAnimated       Boolean  @default(false)
   faqEnabled              Boolean  @default(true) // floating FAQ chat on the public pages
   heroGlobe               Boolean  @default(true) // animated dot-globe over the home banner (follows the pointer)
+  motionLevel             String   @default("light") // scroll-in effects on the home page: off | light | full
   heroGlobeStrength       Int      @default(100) // 20-100: how strong the globe looks (its opacity, in %)
   heroBgColor             String   @default("#0B2A6F") // behind / under the video
   overlayOpacity          Int      @default(45) // 0-90, dark layer over the video

@@ -1,3 +1,5 @@
+import Reveal from "@/components/reveal";
+
 /**
  * Card grid whose last, incomplete row is centred (a plain CSS grid would leave it hugging the left edge).
  * Rows are flex-wrapped and centred; every item gets the exact width a column of the matching grid would have,
@@ -20,8 +22,10 @@ export default function CenterGrid({ variant, items }: { variant: CenterGridVari
   const v = VARIANTS[variant];
   return (
     <ul className={`flex flex-wrap justify-center ${v.gap}`}>
-      {items.map((it) => (
-        <li key={it.key} className={`min-w-0 ${v.item}`}>{it.node}</li>
+      {items.map((it, i) => (
+        <li key={it.key} className={`min-w-0 ${v.item}`}>
+          <Reveal variant="zoom" index={i % 6} className="h-full">{it.node}</Reveal>
+        </li>
       ))}
     </ul>
   );

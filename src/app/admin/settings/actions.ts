@@ -45,6 +45,7 @@ const schema = z.object({
   heroBgColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "สีไม่ถูกต้อง"),
   overlayOpacity: z.coerce.number().int().min(0).max(90),
   fadeSeconds: z.coerce.number().min(0).max(5),
+  motionLevel: z.enum(["off", "light", "full"]).default("light"),
   heroGlobeStrength: z.coerce.number().int().min(20, "ความเข้มของลูกโลกต้อง 20–100%").max(100, "ความเข้มของลูกโลกต้อง 20–100%").default(100),
 });
 

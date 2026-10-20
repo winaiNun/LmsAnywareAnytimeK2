@@ -22,6 +22,7 @@ type Initial = {
   requireRegistrationCode: boolean;
   heroGlobe: boolean;
   heroGlobeStrength: number;
+  motionLevel: string;
 };
 
 const HERO_ASPECTS = [
@@ -147,6 +148,21 @@ export default function SettingsForm({ initial }: { initial: Initial }) {
           <input type="range" name="heroGlobeStrength" min={20} max={100} step={5} value={strength} onChange={(e) => setStrength(+e.target.value)} className="w-full max-w-md" />
           <span className="block text-xs text-neutral-500">ลดลง = จางลง กลืนไปกับพื้นหลัง · เพิ่ม = เห็นจุดและเส้นชัดขึ้น (หลังบันทึก ดูผลที่หน้าแรก) · ถ้าพื้นหลังสว่างมากแล้วลูกโลกรบกวนตัวหนังสือ ให้ลดลงหรือเพิ่ม “ความมืดทับพื้นหลัง” ด้านล่าง</span>
         </label>
+      </fieldset>
+
+      <fieldset className="space-y-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+        <legend className="px-1 text-sm font-medium">เอฟเฟกต์ตอนเลื่อนหน้าแรก</legend>
+        {[
+          ["off", "ปิด", "ไม่มีเอฟเฟกต์ เนื้อหาแสดงทันที (เหมาะกับเครื่องเก่าหรืออินเทอร์เน็ตช้า)"],
+          ["light", "เบา (แนะนำ)", "เซกชันและการ์ดเฟดและลอยขึ้นเบาๆ เมื่อเลื่อนมาถึง"],
+          ["full", "เต็ม", "การ์ดซูมเข้าและไล่ทีละใบ ดูว้าวขึ้น"],
+        ].map(([v, label, hint]) => (
+          <label key={v} className="flex min-h-11 items-start gap-3 text-sm">
+            <input type="radio" name="motionLevel" value={v} defaultChecked={initial.motionLevel === v} className="mt-0.5 h-5 w-5 shrink-0" />
+            <span><strong>{label}</strong><span className="mt-0.5 block text-neutral-500">{hint}</span></span>
+          </label>
+        ))}
+        <p className="text-xs text-neutral-500">ผู้ที่ตั้งค่า “ลดการเคลื่อนไหว” ในเครื่องจะไม่เห็นเอฟเฟกต์เสมอ</p>
       </fieldset>
 
       <div className="grid gap-5 sm:grid-cols-3">

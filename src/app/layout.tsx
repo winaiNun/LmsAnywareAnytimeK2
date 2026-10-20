@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import FloatingTools from "@/components/floating-tools-server";
 import Pwa from "@/components/pwa";
 import SiteFooter from "@/components/site-footer";
+import { getSiteInfo } from "@/lib/site";
 import { getPwaIdentity, iconUrl } from "@/lib/pwa";
 import VisitBeacon from "@/components/visit-beacon";
 import "./globals.css";
@@ -27,9 +28,10 @@ export async function generateViewport(): Promise<Viewport> {
   return { themeColor: id.themeColor, width: "device-width", initialScale: 1, viewportFit: "cover" };
 }
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const { motionLevel } = await getSiteInfo();
   return (
-    <html lang="th">
+    <html lang="th" data-motion={motionLevel}>
       <body className="font-sans antialiased">
         {children}
         <SiteFooter />

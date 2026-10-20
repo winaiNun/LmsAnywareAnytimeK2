@@ -63,3 +63,24 @@ body {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(300%); }
 }
+
+/* Scroll-in effect (components/reveal.tsx). Only opacity/transform are animated. Hidden only when scripting is on;
+   the fail-safe reveals anything the script has not "armed" after 2.5 s (script never ran). */
+.reveal { transition: opacity 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); transition-delay: calc(var(--i, 0) * 70ms); }
+@media (scripting: enabled) {
+  .reveal:not([data-in]) { opacity: 0; }
+  .reveal:not([data-in]):not([data-armed]) { animation: reveal-failsafe 0s 2.5s forwards; } /* script never started */
+  .reveal[data-reveal="rise"]:not([data-in]) { transform: translateY(26px); }
+  .reveal[data-reveal="zoom"]:not([data-in]) { transform: scale(0.92) translateY(12px); }
+}
+/* Admin setting (html[data-motion]): off = nothing hidden; light = fade + short rise, no zoom or stagger; full = as above. */
+html[data-motion="off"] .reveal { opacity: 1 !important; transform: none !important; transition: none; animation: none !important; }
+html[data-motion="light"] .reveal { transition-delay: 0s; }
+@media (scripting: enabled) {
+  html[data-motion="light"] .reveal[data-reveal="zoom"]:not([data-in]) { transform: translateY(14px); }
+}
+@keyframes reveal-failsafe { to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .reveal { transition: none; }
+  .reveal:not([data-in]) { opacity: 1; transform: none; animation: none; }
+}

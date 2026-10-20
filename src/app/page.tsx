@@ -17,6 +17,7 @@ import { db } from "@/lib/db";
 import { areaCounts, latestMedia, popularMedia } from "@/lib/media-list";
 import SectionHeading from "@/components/section-heading";
 import { sectionBackground } from "@/lib/section-styles";
+import Reveal from "@/components/reveal";
 import { getHomeSections, type HomeSectionConfig } from "@/lib/sections";
 import { countPublicSchools, getRandomSchools } from "@/lib/schools";
 import { resourceImageOf } from "@/lib/resource-image";
@@ -29,7 +30,7 @@ export const dynamic = "force-dynamic";
 
 /** One home-page block: full-width background, centered content, styled heading. */
 // moreBelow: the block draws its own "see all" button at the bottom (the news block), so the heading does not
-function Block({ cfg, anchor, bleed = false, alt = false, moreBelow = false, children }: { cfg: HomeSectionConfig; anchor?: string; bleed?: boolean; alt?: boolean; moreBelow?: boolean; children: React.ReactNode }) {
+function Block({ cfg, anchor, bleed = false, alt = false, moreBelow = false, selfReveal = false, children }: { cfg: HomeSectionConfig; anchor?: string; bleed?: boolean; alt?: boolean; moreBelow?: boolean; selfReveal?: boolean; children: React.ReactNode }) {
   const bg = sectionBackground({ mode: cfg.bgMode, color: cfg.bgColor, color2: cfg.bgColor2, direction: cfg.bgDirection, imageUrl: cfg.bgImageUrl, overlay: cfg.bgOverlay });
   return (
     <section
@@ -40,6 +41,7 @@ function Block({ cfg, anchor, bleed = false, alt = false, moreBelow = false, chi
     >
       {bg.overlay > 0 && <div className="absolute inset-0 bg-black" style={{ opacity: bg.overlay / 100 }} aria-hidden />}
       <div className="relative mx-auto max-w-6xl space-y-6 px-4">
+        <Reveal>
         <SectionHeading
           id={`sec-${cfg.key}`}
           style={cfg.headingStyle}
@@ -54,10 +56,11 @@ function Block({ cfg, anchor, bleed = false, alt = false, moreBelow = false, chi
           icon={cfg.icon}
           onDark={bg.tone === "light"}
         />
-        {!bleed && children}
+        </Reveal>
+        {!bleed && (selfReveal ? children : <Reveal>{children}</Reveal>)}
       </div>
       {/* edge-to-edge content (full-width slideshow) sits outside the centred container */}
-      {bleed && <div className="relative mt-6">{children}</div>}
+      {bleed && <div className="relative mt-6"><Reveal variant="fade">{children}</Reveal></div>}
     </section>
   );
 }
@@ -158,7 +161,7 @@ export default async function HomePage() {
       {sections
         .filter((s) => s.visible && content[s.key])
         .map((s, i) => (
-          <Block key={s.key} cfg={s} anchor={anchors[s.key]} alt={i % 2 === 1} bleed={s.key === "recommended" && slideshow.layout === "full"} moreBelow={s.key === "news"}>
+          <Block key={s.key} cfg={s} anchor={anchors[s.key]} alt={i % 2 === 1} bleed={s.key === "recommended" && slideshow.layout === "full"} moreBelow={s.key === "news"} selfReveal={["areas", "courses", "schools", "resources"].includes(s.key)}>
             {content[s.key]}
           </Block>
         ))}

@@ -1,6 +1,10 @@
 import { db } from "@/lib/db";
 import { getStorage } from "@/lib/storage";
 
+export const MOTION_LEVELS = ["off", "light", "full"] as const;
+export type MotionLevel = (typeof MOTION_LEVELS)[number];
+export const toMotionLevel = (v: unknown): MotionLevel => (MOTION_LEVELS as readonly unknown[]).includes(v) ? (v as MotionLevel) : "light";
+
 export type SiteInfo = {
   systemName: string;
   areaName: string;
@@ -17,6 +21,7 @@ export type SiteInfo = {
   requireRegistrationCode: boolean;
   heroGlobe: boolean;
   heroGlobeStrength: number;
+  motionLevel: MotionLevel;
 };
 
 /** URL for a stored file: straight from the CDN/public bucket when configured, else via /api/files. */
@@ -40,6 +45,7 @@ export async function getSiteInfo(): Promise<SiteInfo> {
     requireRegistrationCode: s?.requireRegistrationCode ?? true,
     heroGlobe: s?.heroGlobe ?? true,
     heroGlobeStrength: s?.heroGlobeStrength ?? 100,
+    motionLevel: toMotionLevel(s?.motionLevel),
   };
 }
 
