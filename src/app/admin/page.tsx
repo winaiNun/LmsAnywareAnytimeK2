@@ -2,7 +2,7 @@ import Link from "next/link";
 import { audienceLabels } from "@/lib/course/course-data";
 import { BarChart, Donut } from "@/components/admin/charts";
 import Glyph, { IconTile } from "@/components/glyph";
-import { getAudienceCourses, getDashboard, getEngagement, getReadiness, type Alert, type Check } from "@/lib/admin-stats";
+import { getAudienceCourses, getDashboard, getEngagement, getReadiness, type Alert } from "@/lib/admin-stats";
 import { MEMBER_TYPE_LABEL } from "@/lib/members";
 import { isAdmin, requireManagerPage } from "@/lib/permissions";
 import { THAI_MONTHS_SHORT, formatThaiDate } from "@/lib/thai-date";

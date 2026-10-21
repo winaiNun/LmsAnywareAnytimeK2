@@ -35,6 +35,7 @@ export async function getTodoCourses(userId: string, memberType: string, now = n
       return { id: c.id, title: c.title, must: isMandatoryFor(c, memberType), dueAt: c.dueAt, enrolled: !!e, done: !!e?.completedAt, state, due: dueText(state, c.dueAt, now) };
     })
     .filter((c) => !c.done)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     .map(({ done: _done, ...c }) => c)
     .sort((a, b) => (a.dueAt?.getTime() ?? Infinity) - (b.dueAt?.getTime() ?? Infinity) || a.title.localeCompare(b.title, "th"));
 }
