@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import type { AvatarData } from "@/lib/avatar";
 import { driveThumbnailUrl } from "@/lib/drive";
+import { youtubeThumbUrl } from "@/lib/embed";
 import { showsOwnerIdentity } from "@/lib/media-access";
 import { ITEM_BADGE } from "@/lib/media-server";
 import { avatarOf, fileUrl } from "@/lib/site";
@@ -19,6 +20,7 @@ export const cardSelect = {
   likeCount: true,
   coverKey: true,
   coverDriveId: true,
+  coverYoutubeId: true,
   coverFx: true,
   coverFy: true,
   authorName: true,
@@ -53,8 +55,8 @@ export type MediaCardData = {
   owner: { id: string; name: string; avatar: AvatarData | null; subtitle: string | null };
 };
 
-export const coverUrlOf = (m: { coverKey: string | null; coverDriveId: string | null }) =>
-  m.coverKey ? fileUrl(m.coverKey) : m.coverDriveId ? driveThumbnailUrl(m.coverDriveId, 640) : null;
+export const coverUrlOf = (m: { coverKey: string | null; coverDriveId: string | null; coverYoutubeId?: string | null }) =>
+  m.coverKey ? fileUrl(m.coverKey) : m.coverDriveId ? driveThumbnailUrl(m.coverDriveId, 640) : m.coverYoutubeId ? youtubeThumbUrl(m.coverYoutubeId) : null;
 
 /** The owner as the public may see them: a student (a minor) is shown only as "นักเรียน" with their school. */
 export function ownerOf(m: Pick<CardRow, "authorName" | "createdBy">): MediaCardData["owner"] {
@@ -137,7 +139,9 @@ export function formValuesOf(m: EditMedia): import("@/app/dashboard/media/media-
       i.kind === "HTML"
         ? { id: i.id, kind: "HTML" as const, label: i.label, url: "", html: i.html ?? "" }
         : i.kind === "UPLOAD"
-          ? { id: i.id, kind: "UPLOAD" as const, label: i.label, url: "", html: "", existingFile: i.storageKey?.split("/").pop() ?? "ไฟล์" }
+          ? i.mimeType?.startsWith("image/")
+            ? { id: i.id, kind: "IMAGE" as const, label: i.label, url: "", html: "", imageUrl: fileUrl(i.storageKey) ?? undefined }
+            : { id: i.id, kind: "UPLOAD" as const, label: i.label, url: "", html: "", existingFile: i.storageKey?.split("/").pop() ?? "ไฟล์" }
           : { id: i.id, kind: "LINK" as const, label: i.label, url: i.url ?? "", html: "" },
     ),
   };

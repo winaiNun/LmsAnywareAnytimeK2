@@ -1,7 +1,7 @@
 import Avatar from "@/components/avatar";
 import Glyph from "@/components/glyph";
 import MediaViewer from "@/components/media-viewer";
-import { type FullMedia, ownerOf } from "@/lib/media-data";
+import { type FullMedia, coverUrlOf, ownerOf } from "@/lib/media-data";
 import { toViewItem } from "@/lib/media-view";
 import { formatThaiDate } from "@/lib/thai-date";
 
@@ -29,7 +29,7 @@ export default function MediaDetailBody({ media, countMediaId, actions }: { medi
         </div>
       </header>
 
-      {main ? <MediaViewer item={main} mediaId={countMediaId} /> : <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">สื่อนี้ยังไม่มีรายการให้เปิด</p>}
+      {main ? <MediaViewer item={main} mediaId={countMediaId} cover={coverUrlOf(media)} /> : <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">สื่อนี้ยังไม่มีรายการให้เปิด</p>}
 
       {actions}
 

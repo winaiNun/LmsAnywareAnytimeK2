@@ -18,7 +18,7 @@ import { LikeButton, ShareButton, ViewCounter } from "./media-actions";
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const m = await db.media.findFirst({ where: { id: params.id, status: "PUBLISHED" }, select: { title: true, description: true, coverKey: true, coverDriveId: true } });
+  const m = await db.media.findFirst({ where: { id: params.id, status: "PUBLISHED" }, select: { title: true, description: true, coverKey: true, coverDriveId: true, coverYoutubeId: true } });
   if (!m) return { title: "คลังสื่อการเรียนรู้" };
   const image = coverUrlOf(m);
   return { title: m.title, description: m.description.slice(0, 160) || "สื่อการเรียนรู้", openGraph: { title: m.title, description: m.description.slice(0, 160), ...(image ? { images: [image] } : {}) } };

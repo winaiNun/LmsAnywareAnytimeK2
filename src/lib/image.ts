@@ -30,6 +30,11 @@ export async function processCover(
     .toBuffer();
 }
 
+/** A picture the browser already cropped (any ratio): honour EXIF, bound the size, WebP. Throws if the buffer is not an image. */
+export async function processPicture(input: Buffer, maxWidth = 1280) {
+  return sharp(input, { failOn: "error" }).rotate().resize({ width: maxWidth, height: 2400, fit: "inside", withoutEnlargement: true }).webp({ quality: 82 }).toBuffer();
+}
+
 /** Logos keep their own shape (no crop); just bound the size, keep transparency. */
 export async function processLogo(input: Buffer, max = 512) {
   return sharp(input, { failOn: "error" })

@@ -75,6 +75,11 @@ function seconds(t: string | null): number {
   return m ? Math.min(Number(m[1] ?? 0) * 3600 + Number(m[2] ?? 0) * 60 + Number(m[3] ?? 0), 86400) : 0;
 }
 
+/** The video id of a normalised YouTube link (null for playlists and every other link). */
+export const youtubeVideoId = (url: string | null | undefined): string | null => /^https:\/\/www\.youtube\.com\/watch\?v=([A-Za-z0-9_-]{11})(?:&|$)/.exec(url ?? "")?.[1] ?? null;
+/** Thumbnail of a YouTube video: the 4:3 "hq" picture has black bars that a 16:9 centre crop removes. */
+export const youtubeThumbUrl = (id: string) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+
 function youtube(u: URL): ParsedLink | { error: string } | null {
   const h = u.hostname.replace(/^www\./, "");
   if (!hostIs(h, "youtube.com", "youtu.be", "youtube-nocookie.com")) return null;

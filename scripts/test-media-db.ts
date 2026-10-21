@@ -9,7 +9,7 @@ const db = new PrismaClient();
 const YT = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 const DRIVE = "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view";
 
-type Item = { id?: string; kind: "LINK" | "HTML" | "UPLOAD"; label?: string; url?: string; html?: string };
+type Item = { id?: string; kind: "LINK" | "HTML" | "UPLOAD" | "IMAGE"; label?: string; url?: string; html?: string };
 function form(over: Partial<{ title: string; areaId: string; items: Item[]; submit: boolean; levelIds: string[]; tags: string; cover: object; typeId: string | null }> & { areaId: string }) {
   const fd = new FormData();
   fd.set("payload", JSON.stringify({
@@ -173,7 +173,41 @@ async function main() {
     await assert.rejects(() => getStorage().get(upItem.storageKey!), "the file is deleted with the media");
     await setUploads(false);
 
-    console.log("media db: 15 groups passed");
+    // 16) YouTube cover (nothing stored) and picture items (cropped by the browser, re-encoded to WebP)
+    const yt = await saveMediaAs(author, null, form({ areaId: math.id, cover: { mode: "youtube" } }));
+    assert.equal(yt.error, undefined);
+    assert.equal((await db.media.findUniqueOrThrow({ where: { id: yt.id! } })).coverYoutubeId, "dQw4w9WgXcQ");
+    assert.match((await saveMediaAs(author, null, form({ areaId: math.id, cover: { mode: "youtube" }, items: [{ kind: "LINK", url: DRIVE }] }))).error ?? "", /YouTube/);
+    const auto = await saveMediaAs(author, null, form({ areaId: math.id, cover: { mode: "keep" } })); // no cover yet + first item YouTube = its thumbnail
+    assert.equal((await db.media.findUniqueOrThrow({ where: { id: auto.id! } })).coverYoutubeId, "dQw4w9WgXcQ");
+    const none = await saveMediaAs(author, null, form({ areaId: math.id, cover: { mode: "none" } })); // an explicit "no cover" stays
+    assert.equal((await db.media.findUniqueOrThrow({ where: { id: none.id! } })).coverYoutubeId, null);
+    const swapped = await saveMediaAs(author, yt.id!, form({ areaId: math.id, cover: { mode: "keep" }, items: [{ kind: "LINK", url: DRIVE }] })); // the video is gone -> its cover goes too
+    assert.equal((await db.media.findUniqueOrThrow({ where: { id: swapped.id! } })).coverYoutubeId, null);
+
+    await setUploads(true);
+    const sharp = (await import("sharp")).default;
+    const png = await sharp({ create: { width: 900, height: 1600, channels: 3, background: "#336699" } }).png().toBuffer();
+    const pic = (buf: Buffer) => { const fd = form({ areaId: math.id, items: [{ kind: "IMAGE", label: "", fileField: "img_a" } as unknown as Item] }); fd.set("img_a", new File([new Uint8Array(buf)], "x.webp", { type: "image/webp" })); return fd; };
+    assert.match((await saveMediaAs(kid, null, pic(png))).error ?? "", /นักเรียน/);
+    assert.match((await saveMediaAs(author, null, pic(Buffer.from("not an image")))).error ?? "", /รูปภาพ/);
+    const im = await saveMediaAs(author, null, pic(png));
+    assert.equal(im.error, undefined);
+    const imItem = await db.mediaItem.findFirstOrThrow({ where: { mediaId: im.id! } });
+    assert.equal(imItem.kind, "UPLOAD");
+    assert.equal(imItem.mimeType, "image/webp");
+    const { getStorage: gs } = await import("../src/lib/storage");
+    const meta = await sharp(await gs().get(imItem.storageKey!)).metadata();
+    assert.equal(meta.format, "webp");
+    assert.ok(Math.abs(meta.width! / meta.height! - 9 / 16) < 0.01);
+    // editing without choosing a new picture keeps the stored one
+    const keep = await saveMediaAs(author, im.id!, form({ areaId: math.id, items: [{ id: imItem.id, kind: "IMAGE", label: "ภาพ" }] }));
+    assert.equal(keep.error, undefined);
+    assert.equal((await db.mediaItem.findUniqueOrThrow({ where: { id: imItem.id } })).storageKey, imItem.storageKey);
+    assert.equal((await deleteMediaAs(author, im.id!)).error, undefined);
+    await setUploads(false);
+
+    console.log("media db: 16 groups passed");
   } finally {
     if (prevSetting) await db.siteSetting.update({ where: { id: "main" }, data: { allowServerUploads: prevSetting.allowServerUploads } });
     else await db.siteSetting.deleteMany({ where: { id: "main" } });

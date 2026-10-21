@@ -197,6 +197,7 @@ model Media {
   // cover: an uploaded 16:9 WebP, or a public Drive file shown through its thumbnail (focus point = where to crop)
   coverKey     String?
   coverDriveId String?
+  coverYoutubeId String? // cover taken from the item's YouTube video thumbnail (hotlinked, nothing stored)
   coverFx      Float        @default(0.5)
   coverFy      Float        @default(0.5)
 

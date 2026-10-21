@@ -9,8 +9,8 @@ import { z } from "zod";
 import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { parseDriveFileId } from "@/lib/drive";
-import { isParsed, parseMediaLink } from "@/lib/embed";
-import { processCover } from "@/lib/image";
+import { isParsed, parseMediaLink, youtubeVideoId } from "@/lib/embed";
+import { processCover, processPicture } from "@/lib/image";
 import { DAILY_SUBMIT_LIMIT, MAX_HTML_BYTES, MAX_ITEMS, canAddItemKind, canDecide, canEditMedia, canManageMedia, canReviewMedia, statusAfterSave, type Actor } from "@/lib/media-access";
 import { parseTags } from "@/lib/media-server";
 import { rateLimited } from "@/lib/rate-limit";
@@ -33,7 +33,7 @@ const UPLOAD_TYPES: Record<string, string[]> = {
 
 const itemSchema = z.object({
   id: z.string().optional(), // an item that already exists (kept / edited)
-  kind: z.enum(["LINK", "HTML", "UPLOAD"]),
+  kind: z.enum(["LINK", "HTML", "UPLOAD", "IMAGE"]),
   label: z.string().trim().max(80).default(""),
   url: z.string().max(600).optional(),
   html: z.string().optional(),
@@ -48,7 +48,7 @@ const payloadSchema = z.object({
   levelIds: z.array(z.string()).max(10).default([]),
   tags: z.string().max(400).default(""),
   authorName: z.string().trim().max(100).default(""),
-  cover: z.object({ mode: z.enum(["keep", "none", "drive", "upload"]), link: z.string().max(500).optional(), fx: z.number().min(0).max(1).default(0.5), fy: z.number().min(0).max(1).default(0.5) }),
+  cover: z.object({ mode: z.enum(["keep", "none", "drive", "upload", "youtube"]), link: z.string().max(500).optional(), fx: z.number().min(0).max(1).default(0.5), fy: z.number().min(0).max(1).default(0.5) }),
   items: z.array(itemSchema).min(1, "กรุณาเพิ่มสื่ออย่างน้อย 1 รายการ").max(MAX_ITEMS, `เพิ่มได้ไม่เกิน ${MAX_ITEMS} รายการ`),
   submit: z.boolean().default(false),
 });
@@ -107,6 +107,13 @@ export async function saveMediaAs(actor: Actor, mediaId: string | null, formData
       if (!html.trim()) return { error: `รายการที่ ${n}: ยังไม่ได้วางโค้ด HTML` };
       if (Buffer.byteLength(html, "utf8") > MAX_HTML_BYTES) return { error: `รายการที่ ${n}: HTML ใหญ่เกิน ${MAX_HTML_BYTES / 1024} KB` };
       items.push({ id: old?.id, kind: "HTML", label: it.label, url: null, html, storageKey: null, mimeType: null, sizeBytes: null, sortOrder: index });
+    } else if (it.kind === "IMAGE" && !(old && old.kind === "UPLOAD" && !it.fileField)) {
+      const file = it.fileField ? formData.get(it.fileField) : null;
+      if (!(file instanceof File) || file.size === 0) return { error: `รายการที่ ${n}: ยังไม่ได้เลือกรูปภาพ` };
+      if (file.size > MAX_UPLOAD_BYTES) return { error: `รายการที่ ${n}: รูปภาพต้องไม่เกิน 4 MB` };
+      let data: Buffer;
+      try { data = await processPicture(Buffer.from(await file.arrayBuffer())); } catch { return { error: `รายการที่ ${n}: ไฟล์รูปภาพอ่านไม่ได้` }; }
+      items.push({ id: old?.id, kind: "UPLOAD", label: it.label || "รูปภาพ", url: null, html: null, storageKey: null, mimeType: "image/webp", sizeBytes: data.length, sortOrder: index, newFile: { data, ext: "webp", mime: "image/webp" } });
     } else if (old && old.kind === "UPLOAD" && !it.fileField) {
       items.push({ id: old.id, kind: "UPLOAD", label: it.label, url: null, html: null, storageKey: old.storageKey, mimeType: old.mimeType, sizeBytes: old.sizeBytes, sortOrder: index });
     } else {
@@ -124,22 +131,35 @@ export async function saveMediaAs(actor: Actor, mediaId: string | null, formData
   // ---- cover
   let coverKey = existing?.coverKey ?? null;
   let coverDriveId = existing?.coverDriveId ?? null;
+  let coverYoutubeId = existing?.coverYoutubeId ?? null;
   let coverFx = existing?.coverFx ?? 0.5;
   let coverFy = existing?.coverFy ?? 0.5;
   const staleKeys: (string | null)[] = [];
   let newCover: Buffer | null = null;
-  if (d.cover.mode === "none") { staleKeys.push(coverKey); coverKey = null; coverDriveId = null; }
+  if (d.cover.mode === "none") { staleKeys.push(coverKey); coverKey = null; coverDriveId = null; coverYoutubeId = null; }
+  else if (d.cover.mode === "youtube") {
+    // the id comes from the saved items, never from the browser
+    const id = items.map((i) => (i.kind === "YOUTUBE" ? youtubeVideoId(i.url) : null)).find(Boolean);
+    if (!id) return { error: "ต้องมีลิงก์วิดีโอ YouTube (ไม่ใช่เพลย์ลิสต์) ในรายการสื่อก่อน จึงจะใช้ภาพปกจาก YouTube ได้" };
+    staleKeys.push(coverKey); coverKey = null; coverDriveId = null; coverYoutubeId = id; coverFx = 0.5; coverFy = 0.5;
+  }
   else if (d.cover.mode === "drive") {
     const id = parseDriveFileId(d.cover.link);
     if (!id) return { error: "ลิงก์ภาพปกต้องเป็นลิงก์ไฟล์จาก drive.google.com" };
-    staleKeys.push(coverKey); coverKey = null; coverDriveId = id; coverFx = d.cover.fx; coverFy = d.cover.fy;
+    staleKeys.push(coverKey); coverKey = null; coverDriveId = id; coverYoutubeId = null; coverFx = d.cover.fx; coverFy = d.cover.fy;
   } else if (d.cover.mode === "upload") {
     if (!uploadsAllowed) return { error: "ขณะนี้ปิดการอัปโหลดรูปเข้าเซิร์ฟเวอร์ — ใช้ลิงก์ Google Drive แทน" };
     const file = formData.get("cover");
     if (!(file instanceof File) || file.size === 0) return { error: "ยังไม่ได้เลือกภาพปก" };
     if (file.size > MAX_UPLOAD_BYTES) return { error: "ภาพปกต้องไม่เกิน 4 MB" };
     try { newCover = await processCover(Buffer.from(await file.arrayBuffer()), { aspect: 16 / 9, maxWidth: 960 }); } catch { return { error: "ไฟล์ภาพปกอ่านไม่ได้" }; }
-    staleKeys.push(coverKey); coverDriveId = null;
+    staleKeys.push(coverKey); coverDriveId = null; coverYoutubeId = null;
+  }
+  // no picture at all and the first item is a YouTube video: use its thumbnail (also for students, who cannot upload)
+  if (d.cover.mode === "keep") {
+    const ytIds = items.map((i) => (i.kind === "YOUTUBE" ? youtubeVideoId(i.url) : null));
+    if (coverYoutubeId && !ytIds.includes(coverYoutubeId)) coverYoutubeId = null; // the video was removed or replaced
+    if (!coverKey && !coverDriveId && !coverYoutubeId) coverYoutubeId = ytIds[0] ?? null;
   }
 
   // ---- status
@@ -168,7 +188,7 @@ export async function saveMediaAs(actor: Actor, mediaId: string | null, formData
   const now = new Date();
   const base = {
     title: d.title, description: d.description, authorName: actor.role === "ADMIN" ? d.authorName || null : existing?.authorName ?? null,
-    areaId: d.areaId, typeId: d.typeId, tags: parseTags(d.tags), coverKey, coverDriveId, coverFx, coverFy, status,
+    areaId: d.areaId, typeId: d.typeId, tags: parseTags(d.tags), coverKey, coverDriveId, coverYoutubeId, coverFx, coverFy, status,
     publishedAt: status === "PUBLISHED" ? existing?.publishedAt ?? now : existing?.publishedAt ?? null,
     ...(status === "PENDING" || status === "PUBLISHED" ? { reviewNote: null } : {}),
     ...(actor.role === "ADMIN" && status === "PUBLISHED" ? { reviewedById: actor.id, reviewedAt: now } : {}),

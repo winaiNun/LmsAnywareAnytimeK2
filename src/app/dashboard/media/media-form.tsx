@@ -1,17 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import CropImageField from "@/components/admin/crop-image-field";
 import { Spinner } from "@/components/icons";
 import { driveThumbnailUrl, parseDriveFileId } from "@/lib/drive";
-import { KIND_LABEL, isParsed, parseMediaLink } from "@/lib/embed";
+import { KIND_LABEL, isParsed, parseMediaLink, youtubeThumbUrl, youtubeVideoId } from "@/lib/embed";
 import { MAX_HTML_BYTES, MAX_ITEMS } from "@/lib/media-access";
 import { saveMedia } from "./actions";
 
 type Option = { id: string; name: string; icon?: string };
-export type RowKind = "LINK" | "HTML" | "UPLOAD";
-export type FormItem = { id?: string; kind: RowKind; label: string; url: string; html: string; existingFile?: string };
+export type RowKind = "LINK" | "HTML" | "UPLOAD" | "IMAGE";
+export type FormItem = { id?: string; kind: RowKind; label: string; url: string; html: string; existingFile?: string; imageUrl?: string };
 export type MediaFormValues = {
   id?: string;
   title: string;
@@ -30,8 +30,17 @@ export type MediaFormValues = {
   reviewNote?: string | null;
 };
 
-type Row = FormItem & { key: string; file?: File };
-type CoverMode = "keep" | "none" | "drive" | "upload";
+type Row = FormItem & { key: string; file?: File; picked?: string | null /* preview of a newly cropped picture */ };
+type CoverMode = "keep" | "none" | "drive" | "upload" | "youtube";
+
+// crop ratios offered for a picture item
+const PICTURE_ASPECTS = [
+  { label: "16:9", value: 16 / 9 },
+  { label: "9:16", value: 9 / 16 },
+  { label: "4:3", value: 4 / 3 },
+  { label: "A4 แนวตั้ง", value: 210 / 297 },
+  { label: "1:1", value: 1 },
+];
 
 const input = "min-h-11 w-full rounded-lg border border-neutral-300 bg-white px-3";
 const kb = (n: number) => `${Math.round(n / 1024)} KB`;
@@ -73,7 +82,12 @@ export default function MediaForm({ values, areas, types, levels, allowUpload, i
   const [showHtml, setShowHtml] = useState<string | null>(null);
 
   const driveId = parseDriveFileId(coverLink);
-  const shownCover = coverMode === "upload" ? preview : coverMode === "drive" ? (driveId ? driveThumbnailUrl(driveId, 640) : null) : coverMode === "keep" ? values.coverUrl : null;
+  // the first YouTube video among the links can lend its thumbnail as the cover
+  const ytId = rows.map((r) => (r.kind === "LINK" && r.url.trim() ? (() => { const p = parseMediaLink(r.url); return isParsed(p) && p.kind === "YOUTUBE" ? youtubeVideoId(p.url) : null; })() : null)).find(Boolean) ?? null;
+  const shownCover = coverMode === "upload" ? preview : coverMode === "drive" ? (driveId ? driveThumbnailUrl(driveId, 640) : null) : coverMode === "youtube" ? (ytId ? youtubeThumbUrl(ytId) : null) : coverMode === "keep" ? values.coverUrl : null;
+  // no cover yet and a YouTube link appears: take its thumbnail (the person can still change it)
+  useEffect(() => { if (ytId && coverMode === "keep" && !values.coverUrl) setCoverMode("youtube"); }, [ytId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!ytId && coverMode === "youtube") setCoverMode("keep"); }, [ytId, coverMode]);
 
   const patch = (key: string, p: Partial<Row>) => setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...p } : r)));
   const move = (i: number, d: -1 | 1) => setRows((rs) => { const j = i + d; if (j < 0 || j >= rs.length) return rs; const c = [...rs]; [c[i], c[j]] = [c[j], c[i]]; return c; });
@@ -86,7 +100,7 @@ export default function MediaForm({ values, areas, types, levels, allowUpload, i
       id: r.id, kind: r.kind, label: r.label,
       url: r.kind === "LINK" ? r.url : undefined,
       html: r.kind === "HTML" ? r.html : undefined,
-      fileField: r.kind === "UPLOAD" && r.file ? `file_${i}` : undefined,
+      fileField: r.kind === "UPLOAD" && r.file ? `file_${i}` : r.kind === "IMAGE" && r.picked ? `img_${r.key}` : undefined, // a cropped picture travels in its own hidden field
     }));
     rows.forEach((r, i) => { if (r.kind === "UPLOAD" && r.file) fd.set(`file_${i}`, r.file); });
     fd.set("payload", JSON.stringify({
@@ -177,7 +191,7 @@ export default function MediaForm({ values, areas, types, levels, allowUpload, i
             return (
               <li key={r.key} className="space-y-3 rounded-xl border border-neutral-200 p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-semibold">{i + 1}. {r.kind === "LINK" ? "ลิงก์" : r.kind === "HTML" ? "แอปพลิเคชัน HTML" : "ไฟล์อัปโหลด"}</span>
+                  <span className="text-sm font-semibold">{i + 1}. {r.kind === "LINK" ? "ลิงก์" : r.kind === "HTML" ? "แอปพลิเคชัน HTML" : r.kind === "IMAGE" ? "รูปภาพ" : "ไฟล์อัปโหลด"}</span>
                   <span className="flex gap-1">
                     <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label="เลื่อนขึ้น" className="min-h-9 min-w-9 rounded-lg border border-neutral-300 disabled:opacity-30">↑</button>
                     <button type="button" onClick={() => move(i, 1)} disabled={i === rows.length - 1} aria-label="เลื่อนลง" className="min-h-9 min-w-9 rounded-lg border border-neutral-300 disabled:opacity-30">↓</button>
@@ -205,6 +219,17 @@ export default function MediaForm({ values, areas, types, levels, allowUpload, i
                   </div>
                 )}
 
+                {r.kind === "IMAGE" && (
+                  <div className="space-y-2">
+                    {(r.picked ?? r.imageUrl) && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={(r.picked ?? r.imageUrl)!} alt="รูปภาพที่เลือก" className="max-h-72 w-auto max-w-full rounded-lg border border-neutral-200" />
+                    )}
+                    <CropImageField name={`img_${r.key}`} label={r.picked || r.imageUrl ? "เปลี่ยนรูปภาพ (เลือกแล้วครอป)" : "เลือกรูปภาพและครอป"} aspects={PICTURE_ASPECTS} maxWidth={1280} onPreview={(u) => patch(r.key, { picked: u })} />
+                    <p className={hint}>เลือกสัดส่วนได้ตอนครอป: 16:9, 9:16, 4:3, A4, 1:1 — ระบบย่อเป็น WebP ให้เล็กอัตโนมัติ</p>
+                  </div>
+                )}
+
                 {r.kind === "UPLOAD" && (
                   <div className="space-y-1">
                     {r.existingFile && !r.file && <p className="text-sm text-neutral-600">ไฟล์ปัจจุบัน: {r.label || r.existingFile} (เลือกไฟล์ใหม่เพื่อแทนที่)</p>}
@@ -224,7 +249,7 @@ export default function MediaForm({ values, areas, types, levels, allowUpload, i
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => add("LINK")} className="min-h-11 rounded-lg border border-brand bg-brand-soft px-4 text-sm font-semibold text-brand">+ ลิงก์</button>
             {!isStudent && <button type="button" onClick={() => add("HTML")} className="min-h-11 rounded-lg border border-neutral-300 px-4 text-sm font-semibold">+ แอป HTML</button>}
-            {!isStudent && allowUpload && <button type="button" onClick={() => add("UPLOAD")} className="min-h-11 rounded-lg border border-neutral-300 px-4 text-sm font-semibold">+ อัปโหลดไฟล์</button>}
+            {!isStudent && allowUpload && <button type="button" onClick={() => add("IMAGE")} className="min-h-11 rounded-lg border border-neutral-300 px-4 text-sm font-semibold">+ รูปภาพ</button>}
           </div>
         )}
         <div className="rounded-xl bg-brand-soft/60 p-4 text-sm text-neutral-700">
@@ -242,12 +267,13 @@ export default function MediaForm({ values, areas, types, levels, allowUpload, i
       <section className="space-y-4 rounded-xl bg-white p-5 shadow-sm">
         <h2 className="font-semibold">ภาพปก</h2>
         <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="ที่มาของภาพปก">
-          {([["keep", values.coverUrl ? "ใช้ภาพเดิม" : "ยังไม่มี"], ["drive", "ลิงก์ Google Drive"], ...(allowUpload && !isStudent ? [["upload", "อัปโหลด/ครอป"]] : []), ["none", "ไม่มีปก"]] as [CoverMode, string][]).map(([m, text]) => (
+          {([["keep", values.coverUrl ? "ใช้ภาพเดิม" : "ยังไม่มี"], ["drive", "ลิงก์ Google Drive"], ...(ytId ? [["youtube", "ภาพจาก YouTube"]] : []), ...(allowUpload && !isStudent ? [["upload", "อัปโหลด/ครอป"]] : []), ["none", "ไม่มีปก"]] as [CoverMode, string][]).map(([m, text]) => (
             <label key={m} className={`flex min-h-11 cursor-pointer items-center rounded-full border px-4 text-sm ${coverMode === m ? "border-brand bg-brand-soft font-semibold text-brand" : "border-neutral-300"}`}>
               <input type="radio" name="coverMode" checked={coverMode === m} onChange={() => setCoverMode(m)} className="sr-only" />{text}
             </label>
           ))}
         </div>
+        {coverMode === "youtube" && <p className={hint}>ใช้ภาพตัวอย่างของวิดีโอ YouTube ที่ใส่ไว้ (ไม่ต้องอัปโหลด) — เปลี่ยนวิดีโอแล้วภาพปกเปลี่ยนตาม</p>}
         {coverMode === "drive" && (
           <div className="space-y-3">
             <input value={coverLink} onChange={(e) => setCoverLink(e.target.value)} placeholder="https://drive.google.com/file/d/…/view" className={input} aria-label="ลิงก์ภาพปกจาก Google Drive" />

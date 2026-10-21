@@ -41,12 +41,12 @@ export function statusAfterSave(a: Actor, current: MediaStatus | null, submit: b
 }
 
 /** Students may add links only (no pasted HTML, no uploads): less risk, less to review. */
-export type ItemKindInput = "LINK" | "HTML" | "UPLOAD";
+export type ItemKindInput = "LINK" | "HTML" | "UPLOAD" | "IMAGE";
 export function canAddItemKind(a: Pick<Actor, "memberType" | "role">, kind: ItemKindInput, uploadsAllowed: boolean): { ok: true } | { ok: false; error: string } {
   const student = a.memberType === "STUDENT" && a.role !== "ADMIN";
   if (kind === "LINK") return { ok: true };
   if (student) return { ok: false, error: "นักเรียนเพิ่มได้เฉพาะลิงก์" };
-  if (kind === "UPLOAD" && !uploadsAllowed) return { ok: false, error: "ขณะนี้ปิดการอัปโหลดไฟล์เข้าเซิร์ฟเวอร์ — ใช้ลิงก์ Google Drive แทน" };
+  if ((kind === "UPLOAD" || kind === "IMAGE") && !uploadsAllowed) return { ok: false, error: "ขณะนี้ปิดการอัปโหลดไฟล์เข้าเซิร์ฟเวอร์ — ใช้ลิงก์ Google Drive แทน" };
   return { ok: true };
 }
 

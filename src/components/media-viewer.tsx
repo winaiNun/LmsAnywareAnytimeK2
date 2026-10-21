@@ -12,8 +12,9 @@ const btn = "inline-flex min-h-11 items-center gap-2 rounded-xl border border-ne
 /**
  * Opens one media item. Framed (sandboxed) when the site allows it, otherwise a clear "open link" card.
  * `mediaId` is set on the public page so a click on download/open is counted; reviewers' previews pass null.
+ * `cover` = the media's cover picture, shown at the left of the "open link" card.
  */
-export default function MediaViewer({ item, mediaId }: { item: ViewItem; mediaId: string | null }) {
+export default function MediaViewer({ item, mediaId, cover = null }: { item: ViewItem; mediaId: string | null; cover?: string | null }) {
   const box = useRef<HTMLDivElement>(null);
   const [canFull, setCanFull] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -41,14 +42,35 @@ export default function MediaViewer({ item, mediaId }: { item: ViewItem; mediaId
     </div>
   );
 
-  // Not frameable (most websites forbid it): a card with one obvious button.
+  // A picture we store: shown as is (any ratio), click opens the full size.
+  if (item.imageSrc) {
+    return (
+      <div className="space-y-3">
+        <div className="flex justify-center rounded-2xl border border-neutral-200 bg-neutral-100 p-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={item.imageSrc} alt={item.label} loading="lazy" decoding="async" className="max-h-[80vh] w-auto max-w-full rounded-xl object-contain" />
+        </div>
+        {actions}
+      </div>
+    );
+  }
+
+  // Not frameable (most websites forbid it): a card with the cover at the left and one obvious button.
   if (!item.frameSrc) {
     return (
-      <div className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">{item.kindLabel} · {item.provider}</p>
-        <p className="text-lg font-semibold">{item.label || item.provider}</p>
-        <p className="text-sm text-neutral-500">สื่อนี้เปิดบนเว็บไซต์ต้นทาง กดปุ่มเพื่อเปิดในแท็บใหม่</p>
-        {actions}
+      <div className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-4 sm:flex-row sm:items-center sm:p-5">
+        {cover && (
+          <div className="aspect-video w-full shrink-0 overflow-hidden rounded-xl bg-neutral-100 sm:w-64">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={cover} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1 space-y-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">{item.kindLabel} · {item.provider}</p>
+          <p className="text-lg font-semibold">{item.label || item.provider}</p>
+          <p className="text-sm text-neutral-500">สื่อนี้เปิดบนเว็บไซต์ต้นทาง กดปุ่มเพื่อเปิดในแท็บใหม่</p>
+          {actions}
+        </div>
       </div>
     );
   }

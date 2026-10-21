@@ -18,12 +18,14 @@ export type ViewItem = {
   downloadUrl: string | null;
   isHtml: boolean;
   sizeBytes: number | null;
+  /** a picture we store: shown as an image instead of a frame */
+  imageSrc?: string | null;
 };
 
 const AUDIO = new Set(["Spotify", "SoundCloud"]);
 
 export function toViewItem(it: RawItem): ViewItem {
-  const base = { id: it.id, kind: it.kind, kindLabel: KIND_LABEL[it.kind as keyof typeof KIND_LABEL] ?? it.kind, label: it.label, sizeBytes: it.sizeBytes, isHtml: it.kind === "HTML" };
+  const base = { id: it.id, kind: it.kind, kindLabel: KIND_LABEL[it.kind as keyof typeof KIND_LABEL] ?? it.kind, label: it.label, sizeBytes: it.sizeBytes, isHtml: it.kind === "HTML", imageSrc: null as string | null };
 
   if (it.kind === "HTML") {
     // served by our own sandboxed route (see src/app/library/html/[itemId]/route.ts)
@@ -32,6 +34,7 @@ export function toViewItem(it: RawItem): ViewItem {
   if (it.kind === "UPLOAD") {
     const url = fileUrl(it.storageKey);
     const pdf = it.mimeType === "application/pdf";
+    if (it.mimeType?.startsWith("image/")) return { ...base, provider: "รูปภาพ", frameSrc: null, shape: "tall", openUrl: url, downloadUrl: null, imageSrc: url };
     return { ...base, provider: "ไฟล์", frameSrc: pdf ? url : null, shape: "tall", openUrl: url, downloadUrl: url };
   }
   const r = it.url ? parseMediaLink(it.url) : null;
