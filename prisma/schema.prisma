@@ -72,6 +72,7 @@ model User {
   passwordHash       String
   role               Role              @default(STUDENT)
   active             Boolean           @default(true)
+  pendingApproval    Boolean           @default(false) // signed up in training mode: inactive until an admin approves (rejected = deleted)
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 
@@ -577,6 +578,7 @@ model SiteSetting {
   slideRandom             Boolean  @default(false) // use every effect, picked at random for each change
   slideShuffle            Boolean  @default(false) // shuffle slide order on each page load (pinned stay first)
   requireRegistrationCode Boolean  @default(true) // sign-up only with an admin-issued code (turn off to allow open sign-up)
+  registrationApproval    Boolean  @default(false) // training mode: sign up without a code, an admin approves each new account on the spot
   allowServerUploads      Boolean  @default(false) // may members upload images to our storage? (off until there is a server; Drive links work without)
   // footer / contact page
   contactAddress          String?

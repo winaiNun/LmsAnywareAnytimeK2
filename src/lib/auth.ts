@@ -5,13 +5,13 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { PIN_MAX_FAILS, hashToken, pinAllowed } from "@/lib/pin";
-import { clearHits, limitReached, recordHit } from "@/lib/rate-limit-db";
+import { LIMITS, clearHits, limitReached, recordHit } from "@/lib/rate-limit-db";
 import { verifyTurnstile } from "@/lib/turnstile";
 
-// Wrong-password guesses are counted in the database (so it holds on serverless): per account and per address.
-const FAIL_WINDOW = 15 * 60 * 1000;
-const FAILS_PER_ACCOUNT = 8;
-const FAILS_PER_IP = 40;
+// Wrong-password guesses are counted in the database (so it holds on serverless): per account and per address (LIMITS).
+// A thrown Error reaches the login form as `result.error`, so the person learns WHY (locked / bot check / awaiting approval)
+// instead of a misleading "wrong password". Its text is one of the codes in SIGN_IN_ERRORS.
+export const SIGN_IN_ERRORS = { locked: "locked", bot: "bot", pending: "pending" } as const;
 
 const credentialsSchema = z.object({
   email: z.string().trim().min(3).max(120), // e-mail or username
@@ -43,15 +43,18 @@ export const authOptions: NextAuthOptions = {
         const id = parsed.data.email.toLowerCase();
         const idKey = `login-id:${id}`;
         const ipKey = `login-ip:${ip}`;
-        if ((await limitReached(idKey, FAILS_PER_ACCOUNT, FAIL_WINDOW)) || (await limitReached(ipKey, FAILS_PER_IP, FAIL_WINDOW))) return null; // too many wrong tries: same "wrong" answer, no hint
-        if (!(await verifyTurnstile(raw?.turnstile, ip))) return null;
+        if ((await limitReached(idKey, LIMITS.loginFailsPerAccount, LIMITS.window)) || (await limitReached(ipKey, LIMITS.loginFailsPerIp, LIMITS.window))) throw new Error(SIGN_IN_ERRORS.locked);
+        if (!(await verifyTurnstile(raw?.turnstile, ip))) throw new Error(SIGN_IN_ERRORS.bot);
 
         const user = await db.user.findUnique({ where: id.includes("@") ? { email: id } : { username: id } });
-        const ok = !!user && user.active && (await bcrypt.compare(parsed.data.password, user.passwordHash));
-        if (!ok || !user) {
+        const passwordOk = !!user && (await bcrypt.compare(parsed.data.password, user.passwordHash));
+        if (!passwordOk || !user) {
           await Promise.all([recordHit(idKey), recordHit(ipKey)]);
           return null;
         }
+        // told only to someone who knows the password
+        if (user.pendingApproval) throw new Error(SIGN_IN_ERRORS.pending);
+        if (!user.active) return null;
         await clearHits(idKey);
 
         return { id: user.id, email: user.email ?? undefined, name: user.name, role: user.role, remember: raw?.remember === "true", mustChange: user.mustChangePassword };

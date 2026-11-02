@@ -5,7 +5,7 @@ import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { emailField, profileData, profileSchema, usernameField } from "@/lib/members";
 import { clientIp } from "@/lib/rate-limit";
-import { rateLimitedDb } from "@/lib/rate-limit-db";
+import { LIMITS, limitReached, rateLimitedDb, recordHit } from "@/lib/rate-limit-db";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { codeStatus, normalizeCode, redeemCode } from "@/lib/registration";
 import { getSiteInfo } from "@/lib/site";
@@ -22,22 +22,30 @@ const schema = z
 const BAD_CODE = "รหัสสมัครไม่ถูกต้อง หมดอายุ หรือถูกใช้ครบแล้ว"; // one message for every failure: no hints for guessers
 
 export async function POST(req: Request) {
-  if (await rateLimitedDb(`register:${clientIp(req)}`, 10, 15 * 60 * 1000)) {
-    return NextResponse.json({ error: "ลองสมัครบ่อยเกินไป กรุณารอสักครู่" }, { status: 429 });
+  const ip = clientIp(req);
+  // a flood guard only: a training room on one IP signs up dozens of people in a few minutes
+  if (await rateLimitedDb(`register:${ip}`, LIMITS.signupsPerIp, LIMITS.window)) {
+    return NextResponse.json({ error: "มีการสมัครจากเครือข่ายนี้มากเกินไป กรุณารอ 15 นาที หรือแจ้งผู้ดูแลระบบให้ปลดล็อก" }, { status: 429 });
   }
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== "object") return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
-  if (!(await verifyTurnstile(body.turnstile, clientIp(req)))) return NextResponse.json({ error: "ตรวจสอบบอตไม่ผ่าน กรุณาลองใหม่อีกครั้ง" }, { status: 400 });
+  if (!(await verifyTurnstile(body.turnstile, ip))) return NextResponse.json({ error: "ตรวจสอบบอตไม่ผ่าน กรุณาลองใหม่อีกครั้ง" }, { status: 400 });
 
   // 1) The code first: it decides the member type and (if set) the school; the browser cannot override them.
+  // Training mode: no code at all, the admin approves each account instead.
   const site = await getSiteInfo();
-  const code = typeof body.code === "string" ? normalizeCode(body.code) : "";
-  if (site.requireRegistrationCode && !code) return NextResponse.json({ error: "กรุณากรอกรหัสสมัคร" }, { status: 400 });
+  const approval = site.registrationApproval;
+  const code = !approval && typeof body.code === "string" ? normalizeCode(body.code) : "";
+  if (site.requireRegistrationCode && !approval && !code) return NextResponse.json({ error: "กรุณากรอกรหัสสมัคร" }, { status: 400 });
   let rc = null;
   if (code) {
-    if (await rateLimitedDb(`code:${clientIp(req)}`, 15, 15 * 60 * 1000)) return NextResponse.json({ error: "ลองรหัสบ่อยเกินไป กรุณารอสักครู่" }, { status: 429 });
+    // only wrong codes count (the code step already checked this one once)
+    if (await limitReached(`code:${ip}`, LIMITS.codeFailsPerIp, LIMITS.window)) return NextResponse.json({ error: "ใส่รหัสสมัครผิดหลายครั้งเกินไป กรุณารอ 15 นาที หรือแจ้งผู้ดูแลระบบให้ปลดล็อก" }, { status: 429 });
     rc = await db.registrationCode.findUnique({ where: { code }, include: { parent: true } });
-    if (!rc || codeStatus(rc, new Date(), rc.parent) !== "ok") return NextResponse.json({ error: BAD_CODE }, { status: 400 });
+    if (!rc || codeStatus(rc, new Date(), rc.parent) !== "ok") {
+      await recordHit(`code:${ip}`);
+      return NextResponse.json({ error: BAD_CODE }, { status: 400 });
+    }
   }
 
   // 2) Then the form itself.
@@ -59,12 +67,12 @@ export async function POST(req: Request) {
     const user = await db.$transaction(async (tx) => {
       if (rc && !(await redeemCode(tx, rc.id, rc.parentId))) throw new Error("code");
       return tx.user.create({
-        data: { ...profileData(d), email: d.email ?? null, username: d.username ?? null, passwordHash, registrationCodeId: rc?.id ?? null },
+        data: { ...profileData(d), email: d.email ?? null, username: d.username ?? null, passwordHash, registrationCodeId: rc?.id ?? null, ...(approval ? { active: false, pendingApproval: true } : {}) },
         select: { id: true },
       });
     });
-    await audit({ actorId: user.id, action: "user.register", entity: "User", entityId: user.id, meta: { memberType: d.memberType, code: rc ? rc.label : null } });
-    return NextResponse.json({ ok: true }, { status: 201 });
+    await audit({ actorId: user.id, action: "user.register", entity: "User", entityId: user.id, meta: { memberType: d.memberType, code: rc ? rc.label : null, pending: approval || undefined } });
+    return NextResponse.json({ ok: true, pending: approval }, { status: 201 });
   } catch (e) {
     if (e instanceof Error && e.message === "code") return NextResponse.json({ error: BAD_CODE }, { status: 400 });
     throw e;

@@ -1,6 +1,10 @@
 /** Thai wording for the actions the system writes to AuditLog (pure, no database). An action not listed here is shown as it is. */
 export const AUDIT_LABELS: Record<string, string> = {
   "user.register": "สมัครสมาชิก",
+  "user.approve": "อนุมัติผู้สมัคร (โหมดอบรม)",
+  "user.reject": "ไม่อนุมัติผู้สมัคร (ลบบัญชี)",
+  "signup.approval-mode": "เปิด/ปิดโหมดอบรม (อนุมัติผู้สมัครเอง)",
+  "signin.unlock": "ปลดล็อกการเข้าสู่ระบบ/สมัคร",
   "user.create": "แอดมินเพิ่มสมาชิก",
   "user.update": "แอดมินแก้ข้อมูล/สิทธิ์สมาชิก",
   "user.delete": "ลบสมาชิก",

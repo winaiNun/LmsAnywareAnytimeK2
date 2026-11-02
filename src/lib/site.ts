@@ -25,6 +25,8 @@ export type SiteInfo = {
   fadeSeconds: number;
   allowServerUploads: boolean;
   requireRegistrationCode: boolean;
+  /** Training mode: sign-up needs no code and every new account waits for an admin's approval. */
+  registrationApproval: boolean;
   heroGlobe: boolean;
   heroGlobeStrength: number;
   motionLevel: MotionLevel;
@@ -52,6 +54,7 @@ export async function getSiteInfo(): Promise<SiteInfo> {
     fadeSeconds: s?.fadeSeconds ?? 1.5,
     allowServerUploads: s?.allowServerUploads ?? false,
     requireRegistrationCode: s?.requireRegistrationCode ?? true,
+    registrationApproval: s?.registrationApproval ?? false,
     heroGlobe: s?.heroGlobe ?? true,
     heroGlobeStrength: s?.heroGlobeStrength ?? 100,
     motionLevel: toMotionLevel(s?.motionLevel),

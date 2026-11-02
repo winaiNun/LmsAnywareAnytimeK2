@@ -86,7 +86,7 @@ export async function saveUser(id: string, _prev: UserFormState, formData: FormD
 
   await db.user.update({
     where: { id },
-    data: { ...profileData(profile.data), email: account.data.email ?? null, username: account.data.username ?? null, role: account.data.role, active, selfPublish: formData.get("selfPublish") === "on" },
+    data: { ...profileData(profile.data), email: account.data.email ?? null, username: account.data.username ?? null, role: account.data.role, active, selfPublish: formData.get("selfPublish") === "on", ...(active ? { pendingApproval: false } : {}) }, // turning a waiting sign-up on = approving it
   });
   await audit({ actorId: actor.id, action: "user.update", entity: "User", entityId: id, meta: { role: account.data.role, active, selfPublish: formData.get("selfPublish") === "on" } });
   refresh(id);

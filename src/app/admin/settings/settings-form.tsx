@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { saveSettings, type SettingsState } from "./actions";
@@ -71,7 +72,7 @@ export default function SettingsForm({ initial }: { initial: Initial }) {
           <input type="checkbox" name="requireRegistrationCode" defaultChecked={initial.requireRegistrationCode} className="mt-0.5 h-5 w-5 shrink-0" />
           <span>
             <strong>สมัครได้เฉพาะผู้ที่มีรหัสสมัคร</strong>
-            <span className="mt-1 block text-neutral-500">เปิดไว้ = ต้องกรอกรหัสที่แอดมินออกให้ (สร้างที่เมนู “รหัสสมัคร”) รหัสกำหนดประเภทสมาชิกและโรงเรียนให้เอง · ปิด = ใครก็สมัครได้โดยเลือกประเภทเอง (เหมาะช่วงทดสอบเท่านั้น)</span>
+            <span className="mt-1 block text-neutral-500">เปิดไว้ = ต้องกรอกรหัสที่แอดมินออกให้ (สร้างที่เมนู “รหัสสมัคร”) รหัสกำหนดประเภทสมาชิกและโรงเรียนให้เอง · ปิด = ใครก็สมัครได้โดยเลือกประเภทเอง (เหมาะช่วงทดสอบเท่านั้น) · ช่วงอบรม ใช้ “โหมดอบรม” ที่เมนู <Link href="/admin/approvals" className="font-medium text-brand underline">อนุมัติผู้สมัคร</Link> แทน (สมัครไม่ต้องใช้รหัส แล้วผู้ดูแลอนุมัติเอง)</span>
           </span>
         </label>
       </fieldset>

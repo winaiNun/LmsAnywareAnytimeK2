@@ -29,7 +29,7 @@ export async function getDashboard(now: Date = new Date()) {
     codes, codeUsers30, creatorPending, reviewerAreas, pendingByArea, recent,
     visitStats, visitDaily, courseStatus, enrollTotal, completeTotal, faqOpen, errorsRecent,
   ] = await Promise.all([
-    db.siteSetting.findUnique({ where: { id: "main" }, select: { requireRegistrationCode: true, allowServerUploads: true } }),
+    db.siteSetting.findUnique({ where: { id: "main" }, select: { requireRegistrationCode: true, registrationApproval: true, allowServerUploads: true } }),
     db.user.count(),
     db.user.count({ where: { createdAt: { gte: since30 } } }),
     db.user.groupBy({ by: ["memberType"], _count: { _all: true } }),
@@ -97,7 +97,8 @@ export async function getDashboard(now: Date = new Date()) {
   if (faqOpen > 0) alerts.push({ level: "info", text: `มีคำถามในแชตถามตอบที่ยังตอบไม่ได้ ${faqOpen} ข้อ`, href: "/admin/faq?tab=unanswered", action: "เพิ่มคำตอบ" });
   if (errorsRecent > 0) alerts.push({ level: "warn", text: `มีข้อผิดพลาดระบบที่ยังไม่แก้ ${errorsRecent} รายการในรอบ 24 ชั่วโมง`, href: "/admin/errors", action: "ดูรายการ" });
   if (creatorPending > 0) alerts.push({ level: "warn", text: `มีคำขอเป็นผู้สร้างคอร์ส ${creatorPending} รายการรอพิจารณา`, href: "/admin/users?creator=pending", action: "พิจารณา" });
-  if ((site?.requireRegistrationCode ?? true) && valid.length === 0) alerts.push({ level: "danger", text: "ไม่มีรหัสสมัครที่ใช้งานได้ — ผู้สมัครใหม่จะสมัครไม่ได้", href: "/admin/registration-codes", action: "สร้างรหัส" });
+  if (site?.registrationApproval) alerts.push({ level: "info", text: "โหมดอบรมเปิดอยู่ — สมัครได้โดยไม่ใช้รหัส และต้องรอผู้ดูแลอนุมัติ (ปิดเมื่ออบรมเสร็จ)", href: "/admin/approvals", action: "ไปหน้าอนุมัติ" });
+  if ((site?.requireRegistrationCode ?? true) && !site?.registrationApproval && valid.length === 0) alerts.push({ level: "danger", text: "ไม่มีรหัสสมัครที่ใช้งานได้ — ผู้สมัครใหม่จะสมัครไม่ได้", href: "/admin/registration-codes", action: "สร้างรหัส" });
   if (expiring.length > 0) alerts.push({ level: "info", text: `รหัสสมัคร ${expiring.length} รหัสจะหมดอายุภายใน 7 วัน`, href: "/admin/registration-codes", action: "ดูรหัส" });
   const reviewerSet = new Set(reviewerAreas.map((r) => r.areaId));
   const noReviewer = pendingByArea.filter((p) => !reviewerSet.has(p.areaId));
@@ -136,14 +137,15 @@ export type Check = { ok: boolean; level: "danger" | "warn" | "info"; text: stri
 
 /** Numbers shown as little badges in the side menu (what is waiting for a decision). */
 export async function getAdminBadges(): Promise<Record<string, number>> {
-  const [media, courses, creators, faq, errors] = await Promise.all([
+  const [media, courses, creators, faq, errors, signups] = await Promise.all([
     db.media.count({ where: { status: "PENDING" } }),
     db.course.count({ where: { status: "PENDING" } }),
     db.user.count({ where: { creatorStatus: "PENDING" } }),
     db.faqUnanswered.count({ where: { status: "OPEN" } }),
     recentOpenErrors(),
+    db.user.count({ where: { pendingApproval: true } }),
   ]);
-  return { "/admin/media": media, "/admin/courses": courses, "/admin/users": creators, "/admin/faq": faq, "/admin/errors": errors };
+  return { "/admin/media": media, "/admin/courses": courses, "/admin/users": creators, "/admin/faq": faq, "/admin/errors": errors, "/admin/approvals": signups };
 }
 
 const DEFAULT_ADMIN_PASSWORD = "ChangeMe123!";
@@ -157,7 +159,7 @@ export async function getReadiness(): Promise<Check[]> {
     db.user.findMany({ where: { role: "ADMIN", active: true }, select: { name: true, passwordHash: true } }),
     db.sitePage.findMany({ where: { slug: { in: ["privacy", "terms"] } }, select: { slug: true } }),
     db.faqItem.count({ where: { active: true } }),
-    db.siteSetting.findUnique({ where: { id: "main" }, select: { allowServerUploads: true, requireRegistrationCode: true } }),
+    db.siteSetting.findUnique({ where: { id: "main" }, select: { allowServerUploads: true, requireRegistrationCode: true, registrationApproval: true } }),
     db.registrationCode.count({ where: { active: true, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] } }),
     db.siteSetting.findUnique({ where: { id: "main" }, select: { lastBackupAt: true, lastRestoreCheckAt: true } }),
   ]);
@@ -172,7 +174,7 @@ export async function getReadiness(): Promise<Check[]> {
     { ok: defaults.length === 0, level: "danger", text: `บัญชีแอดมินยังใช้รหัสผ่านเริ่มต้น (${defaults.join(", ")})`, href: "/admin/users", action: "ตั้งรหัสใหม่" },
     { ok: secret.length >= 32 && !/change|secret|example/i.test(secret), level: "danger", text: "NEXTAUTH_SECRET สั้นเกินไปหรือยังเป็นค่าตัวอย่าง (ตั้งค่าที่ตัวแปรสภาพแวดล้อมของเซิร์ฟเวอร์)", href: "/admin/settings", action: "ดูตั้งค่า" },
     { ok: has("privacy") && has("terms"), level: "warn", text: "นโยบายความเป็นส่วนตัวและเงื่อนไขการใช้งานยังเป็นฉบับร่างเริ่มต้น — ให้ผู้รับผิดชอบตรวจและบันทึกฉบับจริง", href: "/admin/pages", action: "แก้ไขหน้า" },
-    { ok: !(site?.requireRegistrationCode ?? true) || validCodes > 0, level: "danger", text: "เปิดโหมดสมัครด้วยรหัส แต่ยังไม่มีรหัสที่ใช้งานได้", href: "/admin/registration-codes", action: "สร้างรหัส" },
+    { ok: !(site?.requireRegistrationCode ?? true) || !!site?.registrationApproval || validCodes > 0, level: "danger", text: "เปิดโหมดสมัครด้วยรหัส แต่ยังไม่มีรหัสที่ใช้งานได้", href: "/admin/registration-codes", action: "สร้างรหัส" },
     { ok: !(site?.allowServerUploads ?? false) || durable, level: "warn", text: "เปิดให้อัปโหลดรูปเข้าเซิร์ฟเวอร์ แต่ที่เก็บไฟล์ยังไม่ถาวร (ไฟล์อาจหาย) — ตั้งค่า R2/S3 หรือปิดสวิตช์", href: "/admin/settings", action: "ดูตั้งค่า" },
     { ok: backup.state === "ok", level: backup.state === "ok" || backup.state === "old" ? "warn" : "danger", text: `${BACKUP_TEXT[backup.state]} — สำรองฐานข้อมูลก่อนให้คนจริงใช้ และทำเป็นประจำ`, href: "/admin/system", action: "วิธีสำรอง" },
     { ok: !!backupRow?.lastRestoreCheckAt, level: "info", text: "ยังไม่เคยทดสอบว่าไฟล์สำรองกู้คืนได้จริง", href: "/admin/system", action: "วิธีทดสอบ" },

@@ -51,6 +51,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/users", label: "สมาชิก", icon: "users" },
       { href: "/admin/registration-codes", label: "รหัสสมัคร", icon: "users" },
+      { href: "/admin/approvals", label: "อนุมัติผู้สมัคร", icon: "users" },
       { href: "/admin/pages", label: "หน้าข้อมูลและ Footer", icon: "page" },
       { href: "/admin/settings", label: "ตั้งค่าเขตพื้นที่", icon: "settings" },
       { href: "/admin/system", label: "สถานะระบบ", icon: "dashboard", adminOnly: true },

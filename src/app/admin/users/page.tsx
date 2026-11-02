@@ -103,7 +103,7 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
                 <td className="p-3">{MEMBER_TYPE_LABEL[u.memberType]}</td>
                 <td className="p-3 text-neutral-600">{u.memberSchool?.name ?? u.organization ?? "-"}</td>
                 <td className="p-3"><span className={`rounded-full px-3 py-1 text-xs font-medium ${ROLE[u.role][1]}`}>{ROLE[u.role][0]}</span></td>
-                <td className="p-3">{u.active ? <span className="text-green-700">ใช้งานอยู่</span> : <span className="text-neutral-400">ปิดใช้งาน</span>}</td>
+                <td className="p-3">{u.active ? <span className="text-green-700">ใช้งานอยู่</span> : u.pendingApproval ? <Link href="/admin/approvals" className="font-medium text-amber-700 underline">รออนุมัติ</Link> : <span className="text-neutral-400">ปิดใช้งาน</span>}</td>
               </tr>
             ))}
             {users.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-neutral-500">ไม่พบสมาชิก</td></tr>}

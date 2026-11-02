@@ -21,6 +21,13 @@ type Props = {
 // Staff land in the back office (teachers go straight to their slides), members on their own page.
 const home = (role?: string) => (role === "ADMIN" || role === "LIBRARIAN" ? "/admin" : role === "TEACHER" ? "/admin/banners" : "/dashboard");
 
+// Why a password sign-in was refused (codes thrown by authorize() in lib/auth.ts); anything else = wrong identifier/password.
+const SIGN_IN_MESSAGE: Record<string, string> = {
+  locked: "ใส่รหัสผ่านผิดหลายครั้งเกินไป ระบบล็อกไว้ชั่วคราว กรุณารอ 15 นาที หรือแจ้งผู้ดูแลระบบให้ปลดล็อก",
+  bot: "ตรวจสอบบอตไม่ผ่านหรือหมดเวลา กรุณารอให้กล่องตรวจสอบขึ้นเครื่องหมายถูก แล้วกดเข้าสู่ระบบอีกครั้ง",
+  pending: "บัญชีของคุณสมัครเรียบร้อยแล้ว กำลังรอผู้ดูแลระบบอนุมัติ — เมื่ออนุมัติแล้วเข้าสู่ระบบได้ทันที",
+};
+
 const field =
   "peer h-11 w-full border-0 border-b border-white/70 bg-transparent pl-9 text-white placeholder:text-white/80 focus:border-white focus:outline-none focus:ring-0";
 const fieldIcon = "pointer-events-none absolute left-0 top-1/2 h-5 w-5 -translate-y-1/2 text-white";
@@ -78,7 +85,7 @@ export default function LoginForm({ systemName, areaName, logoUrl, logoBackdrop,
       if (method === "pin") {
         setPin("");
         setError("PIN ไม่ถูกต้อง หรือเครื่องนี้ถูกยกเลิกแล้ว (ใส่ผิด 5 ครั้งเครื่องจะถูกยกเลิก) — ใช้รหัสผ่านเข้าสู่ระบบได้");
-      } else setError("อีเมล/ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้อง");
+      } else setError(SIGN_IN_MESSAGE[result.error] ?? "อีเมล/ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้อง");
       return;
     }
     try { if (email) localStorage.setItem("lms.lastLogin", email); } catch {}

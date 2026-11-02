@@ -8,9 +8,12 @@ import Turnstile, { turnstileOn } from "@/components/turnstile";
 import SchoolPicker, { type SchoolOption } from "@/components/school-picker";
 import PrefixField from "@/components/prefix-field";
 import { MEMBER_TYPES, MEMBER_TYPE_LABEL, needsOrganization, needsSchool, type MemberTypeKey } from "@/lib/members";
+import Lines from "@/components/lines";
 import { checkRegistrationCode } from "./actions";
 
-type Props = { requireCode: boolean; systemName: string; areaName: string; logoUrl: string | null; schools: SchoolOption[] };
+/** Training mode texts (null = normal sign-up): new accounts wait for an admin's approval. */
+type ApprovalTexts = { note: string; pendingTitle: string; pendingSubtitle: string };
+type Props = { requireCode: boolean; approval: ApprovalTexts | null; systemName: string; areaName: string; logoUrl: string | null; schools: SchoolOption[] };
 
 const TYPE_INFO: Record<MemberTypeKey, { icon: IconName; hint: string }> = {
   STUDENT: { icon: "book", hint: "เรียนรู้และอ่านสื่อ" },
@@ -27,7 +30,7 @@ const label = "block text-sm font-medium text-white/90";
 const input =
   "mt-1.5 min-h-12 w-full rounded-xl border border-white/30 bg-white/10 px-4 text-white placeholder:text-white/55 focus:border-white focus:outline-none focus:ring-2 focus:ring-white/40 [&>option]:text-neutral-900";
 
-export default function RegisterForm({ requireCode, systemName, areaName, logoUrl, schools }: Props) {
+export default function RegisterForm({ requireCode, approval, systemName, areaName, logoUrl, schools }: Props) {
   const STEPS = requireCode ? STEPS_CODE : STEPS_OPEN;
   const [codeText, setCodeText] = useState("");
   const [verified, setVerified] = useState<{ label: string; school: { id: string; name: string } | null } | null>(null);
@@ -35,6 +38,7 @@ export default function RegisterForm({ requireCode, systemName, areaName, logoUr
   const [type, setType] = useState<MemberTypeKey>("STUDENT");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [waiting, setWaiting] = useState(false); // signed up in training mode: account awaits approval
   // bot check: one token for the code step, one for the final submit (each works once)
   const [tok, setTok] = useState({ code: "", submit: "" });
   const [fresh, setFresh] = useState({ code: 0, submit: 0 });
@@ -94,6 +98,12 @@ export default function RegisterForm({ requireCode, systemName, areaName, logoUr
       return setBusy(false);
     }
     const login = String(f.get("email") || f.get("username"));
+    if ((await res.json().catch(() => ({}))).pending) {
+      try { localStorage.setItem("lms.lastLogin", login); } catch {} // the login form fills it in
+      setBusy(false);
+      setWaiting(true);
+      return window.scrollTo({ top: 0, behavior: "smooth" });
+    }
     const r = await signIn("credentials", { email: login, password: String(f.get("password")), redirect: false });
     window.location.href = r?.error ? "/login" : "/dashboard";
   }
@@ -122,6 +132,16 @@ export default function RegisterForm({ requireCode, systemName, areaName, logoUr
           <p className="mt-1 text-sm text-white/85">{areaName || systemName}</p>
         </div>
 
+        {waiting && approval ? (
+          <div role="status" className="rounded-3xl border border-white/20 bg-white/[0.08] p-6 text-center text-white shadow-[0_20px_80px_rgba(0,20,120,0.45)] backdrop-blur-md sm:p-8">
+            <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl text-[#0B2A6F]" aria-hidden>✓</span>
+            <h2 className="text-xl font-bold"><Lines text={approval.pendingTitle} /></h2>
+            <p className="mt-2 text-sm text-white/85"><Lines text={approval.pendingSubtitle} /></p>
+            <Link href="/login" className="mt-6 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#0B2A6F] font-semibold shadow-lg hover:bg-[#071d52]">
+              <Icon name="login" className="h-5 w-5" /> ไปหน้าเข้าสู่ระบบ
+            </Link>
+          </div>
+        ) : (<>
         {/* progress */}
         <ol className="mx-auto mb-6 flex max-w-xs items-center" aria-label="ขั้นตอนการสมัคร">
           {STEPS.map((s, i) => (
@@ -158,6 +178,8 @@ export default function RegisterForm({ requireCode, systemName, areaName, logoUr
                 </label>
               </>
             ) : (
+              <>
+              {approval && <p className="rounded-xl bg-white/15 px-3 py-2 text-sm"><Lines text={approval.note} /></p>}
               <fieldset>
                 <legend className="mb-3 text-lg font-semibold">คุณคือใคร?</legend>
                 <div className="grid grid-cols-2 gap-3">
@@ -171,6 +193,7 @@ export default function RegisterForm({ requireCode, systemName, areaName, logoUr
                   ))}
                 </div>
               </fieldset>
+              </>
             )}
           </div>
 
@@ -236,6 +259,7 @@ export default function RegisterForm({ requireCode, systemName, areaName, logoUr
             </button>
           </div>
         </form>
+        </>)}
 
         <p className="mt-6 text-center text-sm text-white/90">
           มีบัญชีแล้ว? <Link href="/login" className="font-semibold underline underline-offset-4">เข้าสู่ระบบ</Link>
